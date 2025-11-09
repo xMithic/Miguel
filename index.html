@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sinfonía Visual (Estable)</title>
+    <title>Sinfonía Visual (Modo Fiesta)</title>
     <style>
         :root { --cursor-size: 10px; --cursor-bg: white; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -177,6 +177,18 @@
                 e.stopPropagation();
                 muteBtn.style.display = 'none';
 
+                drawingCanvas.style.pointerEvents = 'auto';
+                drawingCanvas.addEventListener('mousedown', handleStart);
+                drawingCanvas.addEventListener('mousemove', draw);
+                drawingCanvas.addEventListener('mouseup', handleEnd);
+                drawingCanvas.addEventListener('mouseleave', handleEnd);
+                drawingCanvas.addEventListener('touchstart', handleStart, { passive: false });
+                drawingCanvas.addEventListener('touchmove', draw, { passive: false });
+                drawingCanvas.addEventListener('touchend', handleEnd);
+                fadeDrawingTrail();
+                
+                mainVideo.muted = false;
+
                 if (!audioContext) {
                     audioContext = new (window.AudioContext || window.webkitAudioContext)();
                     source = audioContext.createMediaElementSource(mainVideo);
@@ -184,60 +196,76 @@
                     source.connect(analyser);
                     analyser.connect(audioContext.destination);
                 }
+                audioContext.resume();
+                initParticles();
+                animateParticles();
+            }, { once: true });
 
-                // CORRECCIÓN: Primero se reanuda el motor de audio, y LUEGO se quita el silencio.
-                audioContext.resume().then(() => {
-                    mainVideo.muted = false;
-
-                    // Activar dibujo y partículas solo después de que el audio esté listo.
-                    drawingCanvas.style.pointerEvents = 'auto';
-                    drawingCanvas.addEventListener('mousedown', handleStart);
-                    drawingCanvas.addEventListener('mousemove', draw);
-                    drawingCanvas.addEventListener('mouseup', handleEnd);
-                    drawingCanvas.addEventListener('mouseleave', handleEnd);
-                    drawingCanvas.addEventListener('touchstart', handleStart, { passive: false });
-                    drawingCanvas.addEventListener('touchmove', draw, { passive: false });
-                    drawingCanvas.addEventListener('touchend', handleEnd);
-                    fadeDrawingTrail();
-                    
-                    initParticles();
-                    animateParticles();
-                });
-            });
-
-            // --- PARTÍCULAS DE AUDIO ---
+            // --- PARTÍCULAS DE AUDIO MEJORADAS ---
             let particlesArray;
             const resizeParticleCanvas = () => { particleCanvas.width = window.innerWidth; particleCanvas.height = window.innerHeight; };
             resizeParticleCanvas(); window.addEventListener('resize', resizeParticleCanvas);
+            
             class Particle {
                 constructor() {
-                    this.x = Math.random() * particleCanvas.width; this.y = Math.random() * particleCanvas.height;
-                    this.size = Math.random() * 2 + 1;
-                    this.speedX = Math.random() * 2 - 1; this.speedY = Math.random() * 2 - 1;
+                    this.x = particleCanvas.width / 2;
+                    this.y = particleCanvas.height / 2;
+                    this.radius = Math.random() * 1.5 + 0.5; // Más pequeñas
+                    this.baseSize = this.radius;
+                    this.angle = Math.random() * Math.PI * 2;
+                    this.speed = Math.random() * 0.02 + 0.01;
+                    this.distance = 0;
+                    this.baseDistance = Math.random() * 50 + 20;
+                    this.color = 'rgba(255, 255, 255, 0.8)';
                 }
                 update(bass, treble) {
-                    this.x += this.speedX; this.y += this.speedY;
-                    if (this.x > particleCanvas.width || this.x < 0) this.speedX *= -1;
-                    if (this.y > particleCanvas.height || this.y < 0) this.speedY *= -1;
-                    this.size = Math.max(1, (bass / 50) + (treble / 100));
+                    // Los graves empujan las partículas con fuerza
+                    this.distance = this.baseDistance + bass * 2; 
+
+                    // Las partículas regresan lentamente al centro
+                    this.distance *= 0.95;
+                    if (this.distance < this.baseDistance) this.distance = this.baseDistance;
+
+                    this.angle += this.speed;
+                    this.x = particleCanvas.width / 2 + Math.cos(this.angle) * this.distance;
+                    this.y = particleCanvas.height / 2 + Math.sin(this.angle) * this.distance;
+
+                    // Los agudos controlan el brillo y el tamaño
+                    let opacity = Math.max(0.3, Math.min(1, treble / 100));
+                    this.color = `rgba(255, 255, 255, ${opacity})`;
+                    this.radius = this.baseSize + (treble / 50);
                 }
                 draw() {
-                    pCtx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-                    pCtx.beginPath(); pCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2); pCtx.fill();
+                    pCtx.fillStyle = this.color;
+                    pCtx.beginPath();
+                    pCtx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                    pCtx.fill();
                 }
             }
+
             function initParticles() {
                 particlesArray = [];
-                for (let i = 0; i < 100; i++) particlesArray.push(new Particle());
+                for (let i = 0; i < 250; i++) { // Más partículas para un efecto más denso
+                    particlesArray.push(new Particle());
+                }
             }
+
             function animateParticles() {
+                if (!analyser) return; // No hacer nada si el analizador no está listo
+                
                 const bufferLength = analyser.frequencyBinCount;
                 const dataArray = new Uint8Array(bufferLength);
                 analyser.getByteFrequencyData(dataArray);
-                const bass = dataArray.slice(0, bufferLength / 4).reduce((a, b) => a + b) / (bufferLength / 4);
-                const treble = dataArray.slice(bufferLength / 2).reduce((a, b) => a + b) / (bufferLength / 2);
+                
+                const bass = dataArray.slice(0, Math.floor(bufferLength * 0.2)).reduce((a, b) => a + b, 0) / (bufferLength * 0.2);
+                const treble = dataArray.slice(Math.floor(bufferLength * 0.5)).reduce((a, b) => a + b, 0) / (bufferLength * 0.5);
+
                 pCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
-                particlesArray.forEach(p => { p.update(bass, treble); p.draw(); });
+                particlesArray.forEach(p => { 
+                    p.update(bass, treble);
+                    p.draw();
+                });
+                
                 requestAnimationFrame(animateParticles);
             }
         });
