@@ -1,4 +1,48 @@
-<video autoplay muted loop width="1000" height="1000">
-  <source src="BadHabit.mp4" type="video/mp4">
-  Tu navegador no soporta la etiqueta de video.
-</video>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Centrado</title>
+    <style>
+        /* Reseteo básico y estilo del fondo */
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background-color: black; /* Fondo negro para que el video resalte */
+        }
+
+        /* Contenedor para centrar el video */
+        body {
+            display: flex;
+            justify-content: center; /* Centra horizontalmente */
+            align-items: center;     /* Centra verticalmente */
+        }
+
+        /* Estilo para el video */
+        #miVideo {
+            max-width: 100%; /* Se asegura de que el video no sea más ancho que la pantalla */
+            height: auto;    /* Mantiene la proporción del video al ajustar el ancho */
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Etiqueta de video actualizada -->
+    <video id="miVideo" autoplay muted loop width="1024" height="1024">
+      <source src="BadHabit.mp4" type="video/mp4">
+      Tu navegador no soporta la etiqueta de video.
+    </video>
+
+    <!-- Script para activar/desactivar el sonido con un clic -->
+    <script>
+      const video = document.getElementById('miVideo');
+      video.addEventListener('click', function() {
+        // Alterna el estado de 'muted' (silenciado)
+        video.muted = !video.muted;
+      });
+    </script>
+
+</body>
+</html>
