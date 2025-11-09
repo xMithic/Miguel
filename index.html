@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video con Botón de Sonido</title>
+    <title>Video sin Chromecast</title>
     <style>
         /* Estilo general y fondo blanco */
         body, html {
@@ -38,8 +38,8 @@
             position: absolute; /* Posición sobre el video */
             top: 20px;
             left: 20px;
-            width: 50px;  /* Ancho del ícono */
-            height: 50px; /* Alto del ícono */
+            width: 25px;  /* Ancho del ícono */
+            height: 25px; /* Alto del ícono */
             cursor: pointer; /* Muestra una mano al pasar el cursor */
             z-index: 10; /* Asegura que esté por encima del video */
         }
@@ -53,8 +53,8 @@
         <!-- Botón de sonido (ícono) -->
         <img src="Sonido.png" id="soundButton" alt="Activar sonido">
 
-        <!-- Etiqueta de video -->
-        <video id="miVideo" autoplay muted loop>
+        <!-- Etiqueta de video con el atributo para deshabilitar Chromecast -->
+        <video id="miVideo" autoplay muted loop disableRemotePlayback>
           <source src="BadHabit.mp4" type="video/mp4">
           Tu navegador no soporta la etiqueta de video.
         </video>
@@ -78,4 +78,3 @@
 
 </body>
 </html>
-
