@@ -3,98 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video con Fondo Rápido</title>
+    <title>Video con Fondo Ambiental</title>
     <style>
-        /* Estilo general y fondo inicial */
         body, html {
             margin: 0;
             padding: 0;
             height: 100%;
-            background-color: white; /* Color inicial */
-            /* CAMBIO: La transición ahora dura 0.3 segundos. Más rápida pero suave. */
-            transition: background-color 0.3s ease; 
+            overflow: hidden; /* Evita barras de scroll */
         }
 
-        /* Contenedor para centrar */
-        body {
+        /* Video de fondo: expandido, desenfocado y detrás de todo */
+        #background-video {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            min-width: 100%;
+            min-height: 100%;
+            z-index: -1; /* ¡Importante! Lo pone detrás de todo */
+            
+            /* La magia del efecto: desenfoque y ajuste de color */
+            filter: blur(50px) brightness(0.8) saturate(1.5);
+            
+            /* Asegura que el video cubra todo el fondo sin deformarse */
+            object-fit: cover;
+        }
+        
+        /* Contenedor para centrar el video principal */
+        .content-wrapper {
             display: flex;
             justify-content: center;
             align-items: center;
-            overflow: hidden; /* Evita barras de scroll inesperadas */
+            height: 100%;
         }
 
-        /* Contenedor del video */
+        /* Contenedor del video principal */
         .video-container {
             position: relative;
             width: 640px;
             max-width: 90%;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3); /* Sombra más pronunciada */
+            border-radius: 12px; /* Bordes un poco más redondeados */
+            overflow: hidden; /* Asegura que el video se ajuste a los bordes redondeados */
         }
 
         #miVideo {
+            display: block; /* Elimina espacio extra debajo del video */
             width: 100%;
             height: auto;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
         
         #soundButton {
             position: absolute;
             top: 20px;
             left: 20px;
-            width: 50px;
-            height: 50px;
+            width: 45px;
+            height: 45px;
             cursor: pointer;
             z-index: 10;
-            transition: opacity 0.3s;
+            transition: opacity 0.3s, transform 0.3s;
         }
         
         #soundButton:hover {
-            opacity: 0.7;
-        }
-        
-        /* Canvas oculto para procesar el color */
-        #colorCanvas {
-            display: none;
+            opacity: 0.8;
+            transform: scale(1.1);
         }
     </style>
 </head>
 <body>
 
-    <!-- Canvas para el procesamiento de color -->
-    <canvas id="colorCanvas"></canvas>
+    <!-- VIDEO DE FONDO -->
+    <video id="background-video" autoplay muted loop disableRemotePlayback>
+        <source src="Laufey.mp4" type="video/mp4">
+    </video>
 
-    <div class="video-container">
-        <img src="SonidoFoto.png" id="soundButton" alt="Activar sonido">
-        <video id="miVideo" autoplay muted loop disableRemotePlayback>
-          <source src="Laufey.mp4" type="video/mp4">
-          Tu navegador no soporta la etiqueta de video.
-        </video>
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="content-wrapper">
+        <div class="video-container">
+            <img src="SonidoFoto.png" id="soundButton" alt="Activar sonido">
+            
+            <!-- VIDEO PRINCIPAL -->
+            <video id="miVideo" autoplay muted loop disableRemotePlayback>
+              <source src="Laufey.mp4" type="video/mp4">
+              Tu navegador no soporta la etiqueta de video.
+            </video>
+        </div>
     </div>
 
+    <!-- Script (solo para el botón de sonido, más simple ahora) -->
     <script>
       const video = document.getElementById('miVideo');
       const soundButton = document.getElementById('soundButton');
-      const canvas = document.getElementById('colorCanvas');
-      const ctx = canvas.getContext('2d');
 
       soundButton.addEventListener('click', function() {
         video.muted = false;
         soundButton.style.display = 'none';
       });
-
-      video.addEventListener('play', () => {
-          canvas.width = 1;
-          canvas.height = 1;
-          updateBackgroundColor();
-      });
-
-      function updateBackgroundColor() {
-          ctx.drawImage(video, 0, 0, 1, 1);
-          const pixelData = ctx.getImageData(0, 0, 1, 1).data;
-          const color = `rgb(${pixelData[0]}, ${pixelData[1]}, ${pixelData[2]})`;
-          document.body.style.backgroundColor = color;
-          requestAnimationFrame(updateBackgroundColor);
-      }
     </script>
 
 </body>
