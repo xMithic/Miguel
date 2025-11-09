@@ -3,44 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Centrado</title>
+    <title>Video con Botón de Sonido</title>
     <style>
-        /* Reseteo básico y estilo del fondo */
+        /* Estilo general y fondo blanco */
         body, html {
             margin: 0;
             padding: 0;
             height: 100%;
-            background-color: black; /* Fondo negro para que el video resalte */
+            background-color: white; /* Fondo cambiado a blanco */
         }
 
-        /* Contenedor para centrar el video */
+        /* Contenedor para centrar y posicionar elementos */
         body {
             display: flex;
-            justify-content: center; /* Centra horizontalmente */
-            align-items: center;     /* Centra verticalmente */
+            justify-content: center;
+            align-items: center;
         }
 
-        /* Estilo para el video */
+        /* Contenedor relativo para el video y el botón */
+        .video-container {
+            position: relative;
+            width: 640px; /* Ancho base del contenedor */
+            max-width: 100%; /* Asegura que se adapte a móviles */
+        }
+
+        /* Estilo para el video, para que ocupe el 100% de su contenedor */
         #miVideo {
-            max-width: 100%; /* Se asegura de que el video no sea más ancho que la pantalla */
-            height: auto;    /* Mantiene la proporción del video al ajustar el ancho */
+            width: 100%;
+            height: auto;
+        }
+        
+        /* Estilo para el botón de sonido */
+        #soundButton {
+            position: absolute; /* Posición sobre el video */
+            top: 20px;
+            left: 20px;
+            width: 50px;  /* Ancho del ícono */
+            height: 50px; /* Alto del ícono */
+            cursor: pointer; /* Muestra una mano al pasar el cursor */
+            z-index: 10; /* Asegura que esté por encima del video */
         }
     </style>
 </head>
 <body>
 
-    <!-- Etiqueta de video actualizada -->
-    <video id="miVideo" autoplay muted loop width="1024" height="1024">
-      <source src="BadHabit.mp4" type="video/mp4">
-      Tu navegador no soporta la etiqueta de video.
-    </video>
+    <!-- Contenedor para el video y el botón -->
+    <div class="video-container">
+        
+        <!-- Botón de sonido (ícono) -->
+        <img src="icono_sonido.png" id="soundButton" alt="Activar sonido">
 
-    <!-- Script para activar/desactivar el sonido con un clic -->
+        <!-- Etiqueta de video -->
+        <video id="miVideo" autoplay muted loop>
+          <source src="BadHabit.mp4" type="video/mp4">
+          Tu navegador no soporta la etiqueta de video.
+        </video>
+
+    </div>
+
+    <!-- Script para el botón -->
     <script>
       const video = document.getElementById('miVideo');
-      video.addEventListener('click', function() {
-        // Alterna el estado de 'muted' (silenciado)
-        video.muted = !video.muted;
+      const soundButton = document.getElementById('soundButton');
+
+      // Añade un listener al botón
+      soundButton.addEventListener('click', function() {
+        // 1. Activa el sonido del video
+        video.muted = false;
+        
+        // 2. Oculta el botón
+        soundButton.style.display = 'none';
       });
     </script>
 
