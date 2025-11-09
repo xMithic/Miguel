@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sinfonía Visual (Aurora)</title>
+    <title>Sinfonía Visual (Final)</title>
     <style>
         :root { --cursor-size: 10px; --cursor-bg: white; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -203,7 +203,7 @@
                 animateParticles();
             });
 
-            // --- MOTOR DE PARTÍCULAS "AURORA RÍTMICA" ---
+            // --- MOTOR DE PARTÍCULAS "AURORA RÍTMICA" (CALIBRADO) ---
             let particlesArray = [];
             const resizeParticleCanvas = () => { particleCanvas.width = window.innerWidth; particleCanvas.height = window.innerHeight; };
             resizeParticleCanvas(); window.addEventListener('resize', resizeParticleCanvas);
@@ -260,10 +260,11 @@
                 const bass = dataArray.slice(0, Math.floor(bufferLength * 0.2)).reduce((a, b) => a + b, 0) / (bufferLength * 0.2);
                 const treble = dataArray.slice(Math.floor(bufferLength * 0.4)).reduce((a, b) => a + b, 0) / (bufferLength * 0.6);
 
-                const bassThreshold = 90; // Umbral para crear una nebulosa
+                // AJUSTE DE SENSIBILIDAD
+                const bassThreshold = 75; // Umbral más bajo
                 const bassJump = bass - lastBass;
 
-                if (bassJump > 20 && bass > bassThreshold) {
+                if (bassJump > 15 && bass > bassThreshold) { // Salto de bajo más sensible
                     createNebula(Math.random() * particleCanvas.width, Math.random() * particleCanvas.height, bass);
                 }
                 lastBass = bass;
