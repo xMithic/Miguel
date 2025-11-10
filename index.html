@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Miguel</title>
+    <title>Pana</title>
     <style>
         :root {
             --cursor-size: 12px;
@@ -57,10 +57,10 @@
             pointer-events: none;
         }
         #drawing-canvas {
-            z-index: 50; /* elevado para que esté por encima */
+            z-index: 50;
             mix-blend-mode: difference;
-            pointer-events: none; /* inicialmente sin eventos */
-            touch-action: none; /* mejora soporte táctil */
+            pointer-events: none;
+            touch-action: none;
         }
         .perspective-wrapper {
             display: flex;
@@ -213,221 +213,34 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-    const mainVideo = document.getElementById('miVideo');
-    const bgVideo = document.getElementById('background-video');
-    const videoContainer = document.querySelector('.video-container');
-    const cursor = document.getElementById('custom-cursor');
-    const drawingCanvas = document.getElementById('drawing-canvas');
-    const particleCanvas = document.getElementById('particle-canvas');
-    const dCtx = drawingCanvas.getContext('2d');
-    const pCtx = particleCanvas.getContext('2d');
-    const audioToggleBtn = document.getElementById('audio-toggle-btn');
+            const mainVideo = document.getElementById('miVideo');
+            const bgVideo = document.getElementById('background-video');
+            const videoContainer = document.querySelector('.video-container');
+            const cursor = document.getElementById('custom-cursor');
+            const drawingCanvas = document.getElementById('drawing-canvas');
+            const particleCanvas = document.getElementById('particle-canvas');
+            const dCtx = drawingCanvas.getContext('2d');
+            const pCtx = particleCanvas.getContext('2d');
+            const audioToggleBtn = document.getElementById('audio-toggle-btn');
 
-    let cursorIdleTimer;
-    function updateCursorPosition(clientX, clientY) {
-        cursor.classList.remove('hidden');
-        clearTimeout(cursorIdleTimer);
-        cursorIdleTimer = setTimeout(() => cursor.classList.add('hidden'), 2000);
-        const { innerWidth, innerHeight } = window;
-        videoContainer.style.transform = `rotateX(${(clientY / innerHeight - 0.5) * -20}deg) rotateY(${(clientX / innerWidth - 0.5) * 20}deg)`;
-        cursor.style.left = `${clientX}px`;
-        cursor.style.top = `${clientY}px`;
-    }
-    document.addEventListener('mousemove', (e) => {
-        updateCursorPosition(e.clientX, e.clientY);
-    });
-    document.addEventListener('touchmove', (e) => {
-        if (e.touches.length > 0) updateCursorPosition(e.touches[0].clientX, e.touches[0].clientY);
-    }, { passive: true });
-
-    const videoReady = (vid) => new Promise(resolve => vid.addEventListener('canplaythrough', resolve, { once: true }));
-    Promise.all([videoReady(mainVideo), videoReady(bgVideo)]).then(() => {
-        mainVideo.play();
-        bgVideo.play();
-        const syncLoop = () => {
-            if (Math.abs(mainVideo.currentTime - bgVideo.currentTime) > 0.1) {
-                bgVideo.currentTime = mainVideo.currentTime;
+            // Mostrar cursor y moverlo con mouse y táctil
+            let cursorIdleTimer;
+            function updateCursorPosition(clientX, clientY) {
+                cursor.classList.remove('hidden');
+                clearTimeout(cursorIdleTimer);
+                cursorIdleTimer = setTimeout(() => cursor.classList.add('hidden'), 2000);
+                const { innerWidth, innerHeight } = window;
+                videoContainer.style.transform = `rotateX(${(clientY / innerHeight - 0.5) * -20}deg) rotateY(${(clientX / innerWidth - 0.5) * 20}deg)`;
+                cursor.style.left = `${clientX}px`;
+                cursor.style.top = `${clientY}px`;
             }
-            requestAnimationFrame(syncLoop);
-        };
-        syncLoop();
-    });
+            document.addEventListener('mousemove', (e) => {
+                updateCursorPosition(e.clientX, e.clientY);
+            });
+            document.addEventListener('touchmove', (e) => {
+                if (e.touches.length > 0) updateCursorPosition(e.touches[0].clientX, e.touches[0].clientY);
+            }, { passive: true });
 
-    let isDrawing = false,
-        lastX = 0,
-        lastY = 0;
-    let drawingReady = false;
-
-    const resizeDrawingCanvas = () => {
-        drawingCanvas.width = window.innerWidth;
-        drawingCanvas.height = window.innerHeight;
-    };
-    resizeDrawingCanvas();
-    window.addEventListener('resize', resizeDrawingCanvas);
-
-    dCtx.strokeStyle = '#FFFFFF';
-    dCtx.lineWidth = 3;
-    dCtx.lineCap = 'round';
-    dCtx.lineJoin = 'round';
-
-    const getCoords = (e) => e.touches ? [e.touches[0].clientX, e.touches[0].clientY] : [e.clientX, e.clientY];
-
-    const handleStart = (e) => {
-        if (!drawingReady) return;
-        e.preventDefault();
-        isDrawing = true;
-        [lastX, lastY] = getCoords(e);
-    };
-    const handleEnd = (e) => {
-        if (!drawingReady) return;
-        e.preventDefault();
-        isDrawing = false;
-    };
-    const draw = (e) => {
-        if (!drawingReady) return;
-        if (e.touches) e.preventDefault();
-        if (!isDrawing) return;
-
-        const [currentX, currentY] = getCoords(e);
-        dCtx.beginPath();
-        dCtx.moveTo(lastX, lastY);
-        dCtx.lineTo(currentX, currentY);
-        dCtx.stroke();
-        [lastX, lastY] = [currentX, currentY];
-    };
-
-    const fadeDrawingTrail = () => {
-        if (!drawingReady) return;
-        dCtx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-        dCtx.fillRect(0, 0, drawingCanvas.width, drawingCanvas.height);
-        requestAnimationFrame(fadeDrawingTrail);
-    };
-
-    // Los listeners se agregan siempre para no perder gestos
-    drawingCanvas.addEventListener('mousedown', handleStart);
-    drawingCanvas.addEventListener('mousemove', draw);
-    drawingCanvas.addEventListener('mouseup', handleEnd);
-    drawingCanvas.addEventListener('mouseleave', handleEnd);
-    drawingCanvas.addEventListener('touchstart', handleStart, { passive: false });
-    drawingCanvas.addEventListener('touchmove', draw, { passive: false });
-    drawingCanvas.addEventListener('touchend', handleEnd);
-
-    audioToggleBtn.addEventListener('click', async () => {
-        // Crear y reanudar audioContext aquí, en interacción del usuario
-        if (!window.audioContext) {
-            window.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (window.audioContext.state === 'suspended') {
-            await window.audioContext.resume();
-        }
-
-        mainVideo.muted = false;
-        audioToggleBtn.style.display = 'none';
-
-        if (!window.analyser) {
-            const source = window.audioContext.createMediaElementSource(mainVideo);
-            window.analyser = window.audioContext.createAnalyser();
-            source.connect(window.analyser);
-            window.analyser.connect(window.audioContext.destination);
-        }
-
-        drawingReady = true;
-        drawingCanvas.style.pointerEvents = 'auto'; // activar pointer events aquí
-
-        fadeDrawingTrail();
-        animateParticles();
-    });
-
-    let particlesArray = [];
-    const resizeParticleCanvas = () => {
-        particleCanvas.width = window.innerWidth;
-        particleCanvas.height = window.innerHeight;
-    };
-    resizeParticleCanvas();
-    window.addEventListener('resize', resizeParticleCanvas);
-
-    class Particle {
-        constructor(x, y, color) {
-            this.x = x;
-            this.y = y;
-            this.angle = Math.random() * Math.PI * 2;
-            this.speed = Math.random() * 4 + 1;
-            this.friction = 0.96;
-            this.gravity = 0.1;
-            this.radius = Math.random() * 2 + 1;
-            this.life = 100;
-            this.maxLife = this.life;
-            this.color = color;
-        }
-        update(treble) {
-            this.speed *= this.friction;
-            this.x += Math.cos(this.angle) * this.speed;
-            this.y += Math.sin(this.angle) * this.speed + this.gravity;
-            this.life -= 1;
-            this.radius = Math.max(0, this.radius - 0.02);
-        }
-        draw(treble) {
-            pCtx.globalAlpha = (this.life / this.maxLife) * (treble / 100 + 0.5);
-            pCtx.fillStyle = this.color;
-            pCtx.beginPath();
-            pCtx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-            pCtx.fill();
-            pCtx.globalAlpha = 1.0;
-        }
-    }
-
-    function createNebula(x, y, bass) {
-        const particleCount = 60;
-        const hue = Math.random() * 360;
-        for (let i = 0; i < particleCount; i++) {
-            const color = `hsl(${hue + Math.random() * 60}, 100%, 75%)`;
-            particlesArray.push(new Particle(x, y, color));
-        }
-    }
-
-    let lastBass = 0;
-    let peakCooldown = 0;
-
-    function animateParticles() {
-        if (!window.analyser) return;
-        const analyser = window.analyser;
-
-        const bufferLength = analyser.frequencyBinCount;
-        const dataArray = new Uint8Array(bufferLength);
-        analyser.getByteFrequencyData(dataArray);
-
-        const bassRange = dataArray.slice(0, Math.floor(bufferLength * 0.13));
-        const bass = bassRange.reduce((a, b) => a + b, 0) / bassRange.length;
-        const trebleRange = dataArray.slice(Math.floor(bufferLength * 0.5));
-        const treble = trebleRange.reduce((a, b) => a + b, 0) / trebleRange.length;
-
-        const bassJump = bass - lastBass;
-        const bassThreshold = 56;
-
-        if (peakCooldown <= 0 && bassJump > 10 && bass >= bassThreshold) {
-            createNebula(
-                Math.random() * particleCanvas.width,
-                Math.random() * particleCanvas.height,
-                bass
-            );
-            peakCooldown = 11;
-        }
-        peakCooldown = Math.max(0, peakCooldown - 1);
-        lastBass = bass;
-
-        pCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
-        for (let i = particlesArray.length - 1; i >= 0; i--) {
-            const p = particlesArray[i];
-            if (p.life <= 0) {
-                particlesArray.splice(i, 1);
-            } else {
-                p.update(treble);
-                p.draw(treble);
-            }
-        }
-        requestAnimationFrame(animateParticles);
-    }
-});
             // Sincronizar videos
             const videoReady = (vid) => new Promise(resolve => vid.addEventListener('canplaythrough', resolve, { once: true }));
             Promise.all([videoReady(mainVideo), videoReady(bgVideo)]).then(() => {
@@ -468,24 +281,20 @@
                 isDrawing = true;
                 [lastX, lastY] = getCoords(e);
             };
-
             const handleEnd = (e) => {
                 if (!drawingReady) return;
                 e.preventDefault();
                 isDrawing = false;
             };
-
             const draw = (e) => {
                 if (!drawingReady) return;
                 if (e.touches) e.preventDefault();
                 if (!isDrawing) return;
-
                 const [currentX, currentY] = getCoords(e);
                 dCtx.beginPath();
                 dCtx.moveTo(lastX, lastY);
                 dCtx.lineTo(currentX, currentY);
                 dCtx.stroke();
-
                 [lastX, lastY] = [currentX, currentY];
             };
 
@@ -496,7 +305,7 @@
                 requestAnimationFrame(fadeDrawingTrail);
             };
 
-            // Agregar listeners de dibujo siempre, con control en handleStart y demás
+            // Agregar listeners desde inicio para no perder eventos táctiles/ratón
             drawingCanvas.addEventListener('mousedown', handleStart);
             drawingCanvas.addEventListener('mousemove', draw);
             drawingCanvas.addEventListener('mouseup', handleEnd);
@@ -505,7 +314,7 @@
             drawingCanvas.addEventListener('touchmove', draw, { passive: false });
             drawingCanvas.addEventListener('touchend', handleEnd);
 
-            // Activar audio y dibujo con botón
+            // Activar audio y dibujo con botón: crea y reanuda audioContext acá para móviles
             audioToggleBtn.addEventListener('click', async () => {
                 if (!window.audioContext) {
                     window.audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -596,7 +405,7 @@
                 const treble = trebleRange.reduce((a, b) => a + b, 0) / trebleRange.length;
 
                 const bassJump = bass - lastBass;
-                const bassThreshold = 100;
+                const bassThreshold = 56;
 
                 if (peakCooldown <= 0 && bassJump > 10 && bass >= bassThreshold) {
                     createNebula(
@@ -625,6 +434,3 @@
     </script>
 </body>
 </html>
-
-
-
