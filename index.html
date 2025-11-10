@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sinfonía Visual (Final)</title>
+    <title>Sinfonía Visual (Mente Musical)</title>
     <style>
         :root { --cursor-size: 10px; --cursor-bg: white; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -121,6 +121,7 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // --- CONFIGURACIÓN INICIAL ---
             const mainVideo = document.getElementById('miVideo');
             const bgVideo = document.getElementById('background-video');
             const muteBtn = document.getElementById('mute-btn');
@@ -131,16 +132,18 @@
             const dCtx = drawingCanvas.getContext('2d');
             const pCtx = particleCanvas.getContext('2d');
 
+            // --- SINCRONIZACIÓN DE VIDEO ---
             const videoReady = (vid) => new Promise(resolve => vid.addEventListener('canplaythrough', resolve, { once: true }));
             Promise.all([videoReady(mainVideo), videoReady(bgVideo)]).then(() => {
                 mainVideo.play(); bgVideo.play();
                 const syncLoop = () => {
-                    if (Math.abs(mainVideo.currentTime - bgVideo.currentTime) > 0.1) bgVideo.currentTime = mainVideo.currentTime;
+                    if (!mainVideo.paused) bgVideo.currentTime = mainVideo.currentTime;
                     requestAnimationFrame(syncLoop);
                 };
                 syncLoop();
             });
 
+            // --- CURSOR INTELIGENTE Y 3D ---
             let cursorIdleTimer;
             document.addEventListener('mousemove', (e) => {
                 cursor.classList.remove('hidden');
@@ -151,6 +154,7 @@
                 cursor.style.left = `${e.clientX}px`; cursor.style.top = `${e.clientY}px`;
             });
 
+            // --- DIBUJO ---
             let isDrawing = false, lastX = 0, lastY = 0;
             const resizeDrawingCanvas = () => { drawingCanvas.width = window.innerWidth; drawingCanvas.height = window.innerHeight; };
             resizeDrawingCanvas(); window.addEventListener('resize', resizeDrawingCanvas);
@@ -171,9 +175,137 @@
                 dCtx.fillRect(0, 0, drawingCanvas.width, drawingCanvas.height);
                 requestAnimationFrame(fadeDrawingTrail);
             };
-
+            
+            // --- "MENTE MUSICAL" (CONDUCTOR Y ORQUESTA) ---
             let audioContext, analyser, source;
             let setupDone = false;
+
+            const orchestra = {
+                particles: [],
+                scene: 'idle', // idle, heartbeat, stardust, supernova
+                
+                init() {
+                    const resize = () => { particleCanvas.width = window.innerWidth; particleCanvas.height = window.innerHeight; };
+                    resize(); window.addEventListener('resize', resize);
+                },
+
+                update(analysis) {
+                    // Elige la escena basada en el análisis del Conductor
+                    if (analysis.energy > 140) this.scene = 'supernova';
+                    else if (analysis.energy > 80) this.scene = 'stardust';
+                    else this.scene = 'heartbeat';
+
+                    // Limpia el lienzo
+                    pCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+
+                    // Actualiza y dibuja la escena actual
+                    switch(this.scene) {
+                        case 'heartbeat': this.drawHeartbeat(analysis); break;
+                        case 'stardust': this.manageStardust(analysis); break;
+                        case 'supernova': this.manageSupernova(analysis); break;
+                    }
+                },
+
+                drawHeartbeat(analysis) {
+                    const size = 10 + (analysis.beat ? analysis.bass * 0.5 : 0);
+                    pCtx.fillStyle = `rgba(255, 255, 255, ${0.5 + analysis.treble / 255})`;
+                    pCtx.beginPath();
+                    pCtx.arc(particleCanvas.width / 2, particleCanvas.height / 2, size, 0, Math.PI * 2);
+                    pCtx.fill();
+                },
+
+                manageStardust(analysis) {
+                    if (analysis.beat && this.particles.length < 150) {
+                        for(let i=0; i<5; i++) this.particles.push(new Particle('stardust'));
+                    }
+                    this.updateAndDrawParticles(analysis);
+                },
+
+                manageSupernova(analysis) {
+                    if (analysis.beat && this.particles.length < 300) {
+                         for(let i=0; i<20; i++) this.particles.push(new Particle('supernova', analysis.bass));
+                    }
+                    this.updateAndDrawParticles(analysis);
+                },
+
+                updateAndDrawParticles(analysis) {
+                    for (let i = this.particles.length - 1; i >= 0; i--) {
+                        const p = this.particles[i];
+                        p.update(analysis);
+                        if (p.isDead()) {
+                            this.particles.splice(i, 1);
+                        } else {
+                            p.draw(pCtx);
+                        }
+                    }
+                }
+            };
+            
+            const conductor = {
+                beatCutOff: 0.85,
+                lastBeat: 0,
+                beatDetected: false,
+                analyze(analyser) {
+                    const bufferLength = analyser.frequencyBinCount;
+                    const dataArray = new Uint8Array(bufferLength);
+                    analyser.getByteFrequencyData(dataArray);
+
+                    const bass = dataArray.slice(0, 5).reduce((a,b) => a+b) / 5;
+                    const treble = dataArray.slice(100, 200).reduce((a,b) => a+b) / 100;
+                    const energy = dataArray.reduce((a,b) => a+b) / bufferLength;
+
+                    const beatThreshold = -0.005 * bufferLength + 1;
+                    const normalized = Array.from(dataArray).map(v => v / 256);
+                    const beat = normalized.reduce((sum, v) => sum + v, 0) / bufferLength > beatThreshold;
+                    
+                    this.beatDetected = false;
+                    if(Date.now() - this.lastBeat > 100 && beat) {
+                        this.beatDetected = true;
+                        this.lastBeat = Date.now();
+                    }
+
+                    return { bass, treble, energy, beat: this.beatDetected };
+                }
+            };
+
+            class Particle {
+                constructor(type, bass = 0) {
+                    this.type = type;
+                    this.x = particleCanvas.width / 2;
+                    this.y = particleCanvas.height / 2;
+                    this.angle = Math.random() * Math.PI * 2;
+                    this.radius = 1 + Math.random() * 2;
+                    this.life = 1;
+
+                    if (type === 'stardust') {
+                        this.speed = 1 + Math.random() * 2;
+                    } else if (type === 'supernova') {
+                        this.speed = bass * 0.1 + Math.random() * 5;
+                    }
+                }
+
+                update(analysis) {
+                    this.life -= 0.01;
+                    this.x += Math.cos(this.angle) * this.speed;
+                    this.y += Math.sin(this.angle) * this.speed;
+                    this.speed *= 0.98; // Friction
+                }
+
+                draw(ctx) {
+                    ctx.globalAlpha = this.life;
+                    ctx.fillStyle = 'white';
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+                }
+
+                isDead() {
+                    return this.life <= 0;
+                }
+            }
+
+            // --- BOTÓN PRINCIPAL Y ARRANQUE ---
             muteBtn.addEventListener('click', (e) => {
                 if (setupDone) return;
                 setupDone = true;
@@ -200,87 +332,14 @@
                     analyser.connect(audioContext.destination);
                 }
                 audioContext.resume();
-                animateParticles();
+                orchestra.init();
+                animate();
             });
 
-            // --- MOTOR DE PARTÍCULAS "AURORA RÍTMICA" (CALIBRADO) ---
-            let particlesArray = [];
-            const resizeParticleCanvas = () => { particleCanvas.width = window.innerWidth; particleCanvas.height = window.innerHeight; };
-            resizeParticleCanvas(); window.addEventListener('resize', resizeParticleCanvas);
-            
-            class Particle {
-                constructor(x, y, color) {
-                    this.x = x;
-                    this.y = y;
-                    this.angle = Math.random() * Math.PI * 2;
-                    this.speed = Math.random() * 4 + 1;
-                    this.friction = 0.96;
-                    this.gravity = 0.1;
-                    this.radius = Math.random() * 2 + 1;
-                    this.life = 100;
-                    this.maxLife = this.life;
-                    this.color = color;
-                }
-
-                update(treble) {
-                    this.speed *= this.friction;
-                    this.x += Math.cos(this.angle) * this.speed;
-                    this.y += Math.sin(this.angle) * this.speed + this.gravity;
-                    this.life -= 1;
-                    this.radius = Math.max(0, this.radius - 0.02);
-                }
-
-                draw(treble) {
-                    pCtx.globalAlpha = (this.life / this.maxLife) * (treble / 100 + 0.5);
-                    pCtx.fillStyle = this.color;
-                    pCtx.beginPath();
-                    pCtx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                    pCtx.fill();
-                    pCtx.globalAlpha = 1.0;
-                }
-            }
-
-            function createNebula(x, y, bass) {
-                const particleCount = 60;
-                const hue = Math.random() * 360;
-                for (let i = 0; i < particleCount; i++) {
-                    const color = `hsl(${hue + Math.random() * 60}, 100%, 75%)`;
-                    particlesArray.push(new Particle(x, y, color));
-                }
-            }
-            
-            let lastBass = 0;
-            function animateParticles() {
-                if (!analyser) return;
-                
-                const bufferLength = analyser.frequencyBinCount;
-                const dataArray = new Uint8Array(bufferLength);
-                analyser.getByteFrequencyData(dataArray);
-                
-                const bass = dataArray.slice(0, Math.floor(bufferLength * 0.2)).reduce((a, b) => a + b, 0) / (bufferLength * 0.2);
-                const treble = dataArray.slice(Math.floor(bufferLength * 0.4)).reduce((a, b) => a + b, 0) / (bufferLength * 0.6);
-
-                // AJUSTE FINAL DE SENSIBILIDAD
-                const bassThreshold = 60; // Umbral más bajo
-                const bassJump = bass - lastBass;
-
-                if (bassJump > 10 && bass > bassThreshold) { // Salto de bajo más sensible
-                    createNebula(Math.random() * particleCanvas.width, Math.random() * particleCanvas.height, bass);
-                }
-                lastBass = bass;
-
-                pCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
-                for (let i = particlesArray.length - 1; i >= 0; i--) {
-                    const p = particlesArray[i];
-                    if (p.life <= 0) {
-                        particlesArray.splice(i, 1);
-                    } else {
-                        p.update(treble);
-                        p.draw(treble);
-                    }
-                }
-                
-                requestAnimationFrame(animateParticles);
+            function animate() {
+                const analysis = conductor.analyze(analyser);
+                orchestra.update(analysis);
+                requestAnimationFrame(animate);
             }
         });
     </script>
