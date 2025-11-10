@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Visualizador Creativo</title>
+<title>Bro</title>
 <style>
 :root {
     --cursor-size: 12px;
@@ -206,7 +206,7 @@ body, html {
                     <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9zM12 4L9.91 6.09 12 8.18V4z"/>
                 </svg>
             </button>
-            <div id="video-title">Pagina Hecho Para Pruebas :)</div>
+            <div id="video-title">Pagina Hecho Para Pruebas</div>
         </div>
     </div>
 
@@ -222,7 +222,7 @@ body, html {
         const pCtx = particleCanvas.getContext('2d');
         const audioToggleBtn = document.getElementById('audio-toggle-btn');
 
-        // Cursor movil y desktop sincronizado con mouse y touchmove
+        // Cursor móvil y desktop sincronizado con mouse y touchmove
         let cursorIdleTimer;
         function updateCursorPosition(x, y) {
             cursor.classList.remove('hidden');
@@ -238,7 +238,7 @@ body, html {
             if (e.touches.length > 0) updateCursorPosition(e.touches[0].clientX, e.touches[0].clientY);
         }, { passive: true });
 
-        // Sincronizar videos
+        // Sincronizar tiempo de los videos
         const videoReady = vid => new Promise(resolve => vid.addEventListener('canplaythrough', resolve, { once: true }));
         Promise.all([videoReady(mainVideo), videoReady(bgVideo)]).then(() => {
             mainVideo.play();
@@ -271,6 +271,7 @@ body, html {
 
         const getCoords = e => e.touches ? [e.touches[0].clientX, e.touches[0].clientY] : [e.clientX, e.clientY];
 
+        // Siempre registramos eventos de dibujo pero solo dibujamos si drawingReady == true
         drawingCanvas.addEventListener('mousedown', e => {
             if (!drawingReady) return;
             e.preventDefault();
@@ -326,17 +327,13 @@ body, html {
             requestAnimationFrame(fadeDrawingTrail);
         };
 
+        // Activar el audio, OCULTAR BOTÓN, y activar dibujo
         audioToggleBtn.addEventListener('click', async () => {
             if (!window.audioContext) {
                 window.audioContext = new (window.AudioContext || window.webkitAudioContext)();
             }
             if (window.audioContext.state === 'suspended') {
                 await window.audioContext.resume();
-            }
-            try {
-                await mainVideo.play();
-            } catch (err) {
-                // Play error (autoplay policy), ignorar
             }
             mainVideo.muted = false;
             audioToggleBtn.style.display = 'none';
