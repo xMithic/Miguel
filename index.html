@@ -57,9 +57,10 @@
             pointer-events: none;
         }
         #drawing-canvas {
-            z-index: 4;
+            z-index: 50; /* elevado para que esté por encima */
             mix-blend-mode: difference;
-            pointer-events: none; /* Esto se activa luego */
+            pointer-events: none; /* inicialmente sin eventos */
+            touch-action: none; /* mejora soporte táctil */
         }
         .perspective-wrapper {
             display: flex;
@@ -313,6 +314,15 @@
                 requestAnimationFrame(fadeDrawingTrail);
             };
 
+            // Agregar listeners de dibujo siempre, con control en handleStart y demás
+            drawingCanvas.addEventListener('mousedown', handleStart);
+            drawingCanvas.addEventListener('mousemove', draw);
+            drawingCanvas.addEventListener('mouseup', handleEnd);
+            drawingCanvas.addEventListener('mouseleave', handleEnd);
+            drawingCanvas.addEventListener('touchstart', handleStart, { passive: false });
+            drawingCanvas.addEventListener('touchmove', draw, { passive: false });
+            drawingCanvas.addEventListener('touchend', handleEnd);
+
             // Activar audio y dibujo con botón
             audioToggleBtn.addEventListener('click', async () => {
                 if (!window.audioContext) {
@@ -334,13 +344,6 @@
 
                 drawingReady = true;
                 drawingCanvas.style.pointerEvents = 'auto';
-                drawingCanvas.addEventListener('mousedown', handleStart);
-                drawingCanvas.addEventListener('mousemove', draw);
-                drawingCanvas.addEventListener('mouseup', handleEnd);
-                drawingCanvas.addEventListener('mouseleave', handleEnd);
-                drawingCanvas.addEventListener('touchstart', handleStart, { passive: false });
-                drawingCanvas.addEventListener('touchmove', draw, { passive: false });
-                drawingCanvas.addEventListener('touchend', handleEnd);
 
                 fadeDrawingTrail();
                 animateParticles();
