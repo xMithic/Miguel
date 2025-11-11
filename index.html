@@ -1,441 +1,401 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Panita</title>
-    <style>
-        :root {
-            --cursor-size: 12px;
-            --cursor-bg: white;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        @keyframes reveal {
-            from {
-                opacity: 0;
-                transform: translateY(30px) scale(0.98);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-        body, html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            overflow: hidden;
-            cursor: none;
-            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            user-select: none;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-        }
-        #background-video,
-        #particle-canvas,
-        #drawing-canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
-        #background-video {
-            z-index: 1;
-            filter: blur(45px) brightness(0.55);
-            object-fit: cover;
-            animation: fadeIn 1.8s ease-out;
-            pointer-events: none;
-        }
-        #particle-canvas {
-            z-index: 2;
-            pointer-events: none;
-        }
-        #drawing-canvas {
-            z-index: 50;
-            mix-blend-mode: difference;
-            pointer-events: none;
-            touch-action: none;
-        }
-        .perspective-wrapper {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100%;
-            perspective: 1500px;
-            position: relative;
-            z-index: 3;
-            pointer-events: none;
-        }
-        .video-container {
-            width: 680px;
-            max-width: 95%;
-            transform-style: preserve-3d;
-            animation: reveal 1s ease-out 0.5s backwards;
-            pointer-events: none;
-            user-select: none;
-            position: relative;
-        }
-        #video-card {
-            background: linear-gradient(145deg, #171e26, #1d2733);
-            border-radius: 22px;
-            box-shadow: 0 30px 90px rgba(0,0,0,0.55);
-            overflow: hidden;
-            transform: translateZ(0);
-            transition: box-shadow 0.5s ease;
-            pointer-events: none;
-            user-select: none;
-            border: 2px solid #3a4a5a;
-        }
-        #video-card::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: radial-gradient(circle at center, rgba(255,255,255,0.15) 0%, transparent 70%);
-            opacity: 0;
-            border-radius: 22px;
-            transition: opacity 0.5s ease;
-            pointer-events: none;
-        }
-        .video-container:hover #video-card {
-            box-shadow: 0 50px 130px rgba(0,0,0,0.65);
-        }
-        .video-container:hover #video-card::after {
-            opacity: 1;
-        }
-        #miVideo {
-            display: block;
-            width: 100%;
-            height: auto;
-            pointer-events: none;
-            user-select: none;
-            filter: contrast(1.05) saturate(1.1);
-        }
-        #video-title {
-            color: #f3f7fa;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            font-weight: 900;
-            font-size: 1.8rem;
-            text-align: center;
-            margin-top: 32px;
-            opacity: 0.92;
-            letter-spacing: 2px;
-            text-shadow: 0 3px 8px rgba(0, 0, 0, 0.85);
-            pointer-events: none;
-            user-select: none;
-            transition: transform 0.4s ease, opacity 0.4s ease;
-        }
-        .video-container:hover #video-title {
-            transform: translateY(-20px);
-            opacity: 1;
-        }
-        #custom-cursor {
-            position: fixed;
-            width: var(--cursor-size);
-            height: var(--cursor-size);
-            background-color: var(--cursor-bg);
-            border-radius: 50%;
-            top: 0;
-            left: 0;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-            mix-blend-mode: difference;
-            z-index: 9999;
-            filter: drop-shadow(0 0 10px white);
-            transition: transform 0.2s ease-out, opacity 0.5s ease-out;
-        }
-        #custom-cursor.hidden {
-            opacity: 0;
-        }
-        #audio-toggle-btn {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            z-index: 10;
-            background-color: rgba(255,255,255,0.15);
-            border: none;
-            border-radius: 12px;
-            width: 42px;
-            height: 42px;
-            cursor: pointer;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            transition: background-color 0.3s ease;
-            pointer-events: auto;
-        }
-        #audio-toggle-btn:hover {
-            background-color: rgba(255,255,255,0.4);
-        }
-        #audio-toggle-btn svg {
-            width: 24px;
-            height: 24px;
-            fill: white;
-            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.7));
-            transition: transform 0.2s ease;
-        }
-        #audio-toggle-btn.muted svg {
-            transform: scale(0.85);
-            opacity: 0.6;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PanitaV</title>
+  <style>
+    :root {
+      --cursor-size: 12px;
+      --cursor-bg: white;
+    }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes reveal {
+      from { opacity: 0; transform: translateY(30px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      cursor: none;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      /* Evita gestos del navegador que interrumpen el dibujo */
+      touch-action: none;
+      overscroll-behavior: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #background-video,
+    #particle-canvas,
+    #drawing-canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+    }
+
+    #background-video {
+      z-index: 1;
+      filter: blur(45px) brightness(0.55);
+      object-fit: cover;
+      animation: fadeIn 1.8s ease-out;
+      pointer-events: none;
+    }
+
+    #particle-canvas {
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    #drawing-canvas {
+      z-index: 50;
+      mix-blend-mode: difference;
+      pointer-events: auto; /* debe recibir toques para dibujar */
+      touch-action: none;   /* desactiva gestos por defecto en el canvas */
+    }
+
+    .perspective-wrapper {
+      display: flex; justify-content: center; align-items: center;
+      height: 100%;
+      perspective: 1500px;
+      position: relative;
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    .video-container {
+      width: 680px; max-width: 95%;
+      transform-style: preserve-3d;
+      animation: reveal 1s ease-out 0.5s backwards;
+      /* No bloqueará el botón porque lo movemos fuera */
+      pointer-events: none;
+      user-select: none;
+      position: relative;
+    }
+
+    #video-card {
+      background: linear-gradient(145deg, #171e26, #1d2733);
+      border-radius: 22px;
+      box-shadow: 0 30px 90px rgba(0,0,0,0.55);
+      overflow: hidden;
+      transform: translateZ(0);
+      transition: box-shadow 0.5s ease;
+      pointer-events: none;
+      user-select: none;
+      border: 2px solid #3a4a5a;
+    }
+    #video-card::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(circle at center, rgba(255,255,255,0.15) 0%, transparent 70%);
+      opacity: 0; border-radius: 22px;
+      transition: opacity 0.5s ease;
+      pointer-events: none;
+    }
+    .video-container:hover #video-card { box-shadow: 0 50px 130px rgba(0,0,0,0.65); }
+    .video-container:hover #video-card::after { opacity: 1; }
+
+    #miVideo {
+      display: block; width: 100%; height: auto;
+      pointer-events: none; user-select: none;
+      filter: contrast(1.05) saturate(1.1);
+    }
+
+    #video-title {
+      color: #f3f7fa;
+      font-weight: 900; font-size: 1.8rem; text-align: center;
+      margin-top: 32px; opacity: 0.92; letter-spacing: 2px;
+      text-shadow: 0 3px 8px rgba(0, 0, 0, 0.85);
+      pointer-events: none; user-select: none;
+      transition: transform 0.4s ease, opacity 0.4s ease;
+    }
+    .video-container:hover #video-title { transform: translateY(-20px); opacity: 1; }
+
+    #custom-cursor {
+      position: fixed;
+      width: var(--cursor-size); height: var(--cursor-size);
+      background-color: var(--cursor-bg); border-radius: 50%;
+      top: 0; left: 0; transform: translate(-50%, -50%);
+      pointer-events: none; mix-blend-mode: difference;
+      z-index: 9999;
+      filter: drop-shadow(0 0 10px white);
+      transition: transform 0.2s ease-out, opacity 0.5s ease-out;
+    }
+    #custom-cursor.hidden { opacity: 0; }
+
+    /* Botón de volumen: fijo y por encima del canvas */
+    #audio-toggle-btn {
+      position: fixed; /* antes era absolute dentro del contenedor */
+      top: 16px; right: 16px;
+      z-index: 10010; /* mayor que el canvas (50) */
+      background-color: rgba(255,255,255,0.15);
+      border: none; border-radius: 12px;
+      width: 42px; height: 42px;
+      display: flex; justify-content: center; align-items: center;
+      transition: background-color 0.3s ease;
+      pointer-events: auto;
+      touch-action: manipulation; /* sin delay ni gestos extra */
+    }
+    #audio-toggle-btn:hover { background-color: rgba(255,255,255,0.4); }
+    #audio-toggle-btn svg {
+      width: 24px; height: 24px; fill: white;
+      filter: drop-shadow(0 1px 2px rgba(0,0,0,0.7));
+      transition: transform 0.2s ease;
+    }
+    #audio-toggle-btn.muted svg { transform: scale(0.85); opacity: 0.6; }
+  </style>
 </head>
 <body>
-    <div id="custom-cursor"></div>
-    <canvas id="particle-canvas"></canvas>
-    <canvas id="drawing-canvas"></canvas>
+  <div id="custom-cursor"></div>
+  <canvas id="particle-canvas"></canvas>
+  <canvas id="drawing-canvas"></canvas>
 
-    <video id="background-video" loop muted playsinline autoplay disableRemotePlayback>
-        <source src="Laufey.mp4" type="video/mp4" />
-        Tu navegador no soporta el video.
-    </video>
+  <video id="background-video" loop muted playsinline autoplay disableRemotePlayback>
+    <source src="Laufey.mp4" type="video/mp4" />
+    Tu navegador no soporta el video.
+  </video>
 
-    <div class="perspective-wrapper" id="perspective-wrapper">
-        <div class="video-container" aria-label="Video visualizer">
-            <div id="video-card" aria-hidden="true" tabindex="-1">
-                <video id="miVideo" loop muted playsinline autoplay disableRemotePlayback>
-                    <source src="Laufey.mp4" type="video/mp4" />
-                </video>
-            </div>
-            <button id="audio-toggle-btn" aria-label="Activar o silenciar audio" title="Activar audio" class="muted">
-                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9zM12 4L9.91 6.09 12 8.18V4z"/>
-                </svg>
-            </button>
-            <div id="video-title">🎵</div>
-        </div>
+  <div class="perspective-wrapper" id="perspective-wrapper">
+    <div class="video-container" aria-label="Video visualizer">
+      <div id="video-card" aria-hidden="true" tabindex="-1">
+        <video id="miVideo" loop muted playsinline autoplay disableRemotePlayback>
+          <source src="Laufey.mp4" type="video/mp4" />
+        </video>
+      </div>
+      <div id="video-title">🎵</div>
     </div>
+  </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const mainVideo = document.getElementById('miVideo');
-            const bgVideo = document.getElementById('background-video');
-            const videoContainer = document.querySelector('.video-container');
-            const cursor = document.getElementById('custom-cursor');
-            const drawingCanvas = document.getElementById('drawing-canvas');
-            const particleCanvas = document.getElementById('particle-canvas');
-            const dCtx = drawingCanvas.getContext('2d');
-            const pCtx = particleCanvas.getContext('2d');
-            const audioToggleBtn = document.getElementById('audio-toggle-btn');
+  <!-- Mover el botón fuera del contenedor del video -->
+  <button id="audio-toggle-btn" aria-label="Activar o silenciar audio" title="Activar audio" class="muted">
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9zM12 4L9.91 6.09 12 8.18V4z"/>
+    </svg>
+  </button>
 
-            // Mostrar cursor y moverlo con mouse y táctil
-            let cursorIdleTimer;
-            function updateCursorPosition(clientX, clientY) {
-                cursor.classList.remove('hidden');
-                clearTimeout(cursorIdleTimer);
-                cursorIdleTimer = setTimeout(() => cursor.classList.add('hidden'), 2000);
-                const { innerWidth, innerHeight } = window;
-                videoContainer.style.transform = `rotateX(${(clientY / innerHeight - 0.5) * -20}deg) rotateY(${(clientX / innerWidth - 0.5) * 20}deg)`;
-                cursor.style.left = `${clientX}px`;
-                cursor.style.top = `${clientY}px`;
-            }
-            document.addEventListener('mousemove', (e) => {
-                updateCursorPosition(e.clientX, e.clientY);
-            });
-            document.addEventListener('touchmove', (e) => {
-                if (e.touches.length > 0) updateCursorPosition(e.touches[0].clientX, e.touches[0].clientY);
-            }, { passive: true });
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const mainVideo = document.getElementById('miVideo');
+      const bgVideo = document.getElementById('background-video');
+      const videoContainer = document.querySelector('.video-container');
+      const cursor = document.getElementById('custom-cursor');
+      const drawingCanvas = document.getElementById('drawing-canvas');
+      const particleCanvas = document.getElementById('particle-canvas');
+      const dCtx = drawingCanvas.getContext('2d');
+      const pCtx = particleCanvas.getContext('2d');
+      const audioToggleBtn = document.getElementById('audio-toggle-btn');
 
-            // Sincronizar videos
-            const videoReady = (vid) => new Promise(resolve => vid.addEventListener('canplaythrough', resolve, { once: true }));
-            Promise.all([videoReady(mainVideo), videoReady(bgVideo)]).then(() => {
-                mainVideo.play();
-                bgVideo.play();
-                const syncLoop = () => {
-                    if (Math.abs(mainVideo.currentTime - bgVideo.currentTime) > 0.1) {
-                        bgVideo.currentTime = mainVideo.currentTime;
-                    }
-                    requestAnimationFrame(syncLoop);
-                };
-                syncLoop();
-            });
+      // Cursor y tilt
+      let cursorIdleTimer;
+      function updateCursorPosition(clientX, clientY) {
+        cursor.classList.remove('hidden');
+        clearTimeout(cursorIdleTimer);
+        cursorIdleTimer = setTimeout(() => cursor.classList.add('hidden'), 2000);
+        const { innerWidth, innerHeight } = window;
+        videoContainer.style.transform =
+          `rotateX(${(clientY / innerHeight - 0.5) * -20}deg) rotateY(${(clientX / innerWidth - 0.5) * 20}deg)`;
+        cursor.style.left = `${clientX}px`;
+        cursor.style.top = `${clientY}px`;
+      }
+      document.addEventListener('mousemove', (e) => updateCursorPosition(e.clientX, e.clientY), { passive: true });
+      document.addEventListener('touchmove', (e) => {
+        if (e.touches.length > 0) updateCursorPosition(e.touches[0].clientX, e.touches[0].clientY);
+      }, { passive: true });
 
-            // Variables para dibujo
-            let isDrawing = false,
-                lastX = 0,
-                lastY = 0;
-            let drawingReady = false;
+      // Sincronizar videos
+      const videoReady = (vid) => new Promise(resolve => vid.addEventListener('canplaythrough', resolve, { once: true }));
+      Promise.all([videoReady(mainVideo), videoReady(bgVideo)]).then(() => {
+        mainVideo.play();
+        bgVideo.play();
+        const syncLoop = () => {
+          if (Math.abs(mainVideo.currentTime - bgVideo.currentTime) > 0.1) {
+            bgVideo.currentTime = mainVideo.currentTime;
+          }
+          requestAnimationFrame(syncLoop);
+        };
+        syncLoop();
+      });
 
-            const resizeDrawingCanvas = () => {
-                drawingCanvas.width = window.innerWidth;
-                drawingCanvas.height = window.innerHeight;
-            };
-            resizeDrawingCanvas();
-            window.addEventListener('resize', resizeDrawingCanvas);
+      // Canvas tamaños
+      const resizeDrawingCanvas = () => {
+        drawingCanvas.width = window.innerWidth;
+        drawingCanvas.height = window.innerHeight;
+      };
+      const resizeParticleCanvas = () => {
+        particleCanvas.width = window.innerWidth;
+        particleCanvas.height = window.innerHeight;
+      };
+      resizeDrawingCanvas();
+      resizeParticleCanvas();
+      window.addEventListener('resize', () => { resizeDrawingCanvas(); resizeParticleCanvas(); });
 
-            dCtx.strokeStyle = '#FFFFFF';
-            dCtx.lineWidth = 3;
-            dCtx.lineCap = 'round';
-            dCtx.lineJoin = 'round';
+      // Estilo de trazo
+      dCtx.strokeStyle = '#FFFFFF';
+      dCtx.lineWidth = 3;
+      dCtx.lineCap = 'round';
+      dCtx.lineJoin = 'round';
 
-            const getCoords = (e) => e.touches ? [e.touches[0].clientX, e.touches[0].clientY] : [e.clientX, e.clientY];
+      // Dibujo con Pointer Events
+      let drawingReady = false;
+      let isDrawing = false, lastX = 0, lastY = 0;
 
-            const handleStart = (e) => {
-                if (!drawingReady) return;
-                e.preventDefault();
-                isDrawing = true;
-                [lastX, lastY] = getCoords(e);
-            };
-            const handleEnd = (e) => {
-                if (!drawingReady) return;
-                e.preventDefault();
-                isDrawing = false;
-            };
-            const draw = (e) => {
-                if (!drawingReady) return;
-                if (e.touches) e.preventDefault();
-                if (!isDrawing) return;
-                const [currentX, currentY] = getCoords(e);
-                dCtx.beginPath();
-                dCtx.moveTo(lastX, lastY);
-                dCtx.lineTo(currentX, currentY);
-                dCtx.stroke();
-                [lastX, lastY] = [currentX, currentY];
-            };
+      function handleStart(e) {
+        if (!drawingReady) return;
+        // si por alguna razón toca el botón, ignorar
+        const btn = audioToggleBtn.getBoundingClientRect();
+        if (e.clientX >= btn.left && e.clientX <= btn.right && e.clientY >= btn.top && e.clientY <= btn.bottom) return;
 
-            const fadeDrawingTrail = () => {
-                if (!drawingReady) return;
-                dCtx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-                dCtx.fillRect(0, 0, drawingCanvas.width, drawingCanvas.height);
-                requestAnimationFrame(fadeDrawingTrail);
-            };
+        e.preventDefault();
+        drawingCanvas.setPointerCapture(e.pointerId);
+        isDrawing = true;
+        lastX = e.clientX; lastY = e.clientY;
+      }
 
-            // Agregar listeners desde inicio para no perder eventos táctiles/ratón
-            drawingCanvas.addEventListener('mousedown', handleStart);
-            drawingCanvas.addEventListener('mousemove', draw);
-            drawingCanvas.addEventListener('mouseup', handleEnd);
-            drawingCanvas.addEventListener('mouseleave', handleEnd);
-            drawingCanvas.addEventListener('touchstart', handleStart, { passive: false });
-            drawingCanvas.addEventListener('touchmove', draw, { passive: false });
-            drawingCanvas.addEventListener('touchend', handleEnd);
+      function handleMove(e) {
+        if (!drawingReady || !isDrawing) return;
+        e.preventDefault();
+        dCtx.beginPath();
+        dCtx.moveTo(lastX, lastY);
+        dCtx.lineTo(e.clientX, e.clientY);
+        dCtx.stroke();
+        lastX = e.clientX; lastY = e.clientY;
+      }
 
-            // Activar audio y dibujo con botón: crea y reanuda audioContext acá para móviles
-            audioToggleBtn.addEventListener('click', async () => {
-                if (!window.audioContext) {
-                    window.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                }
-                if (window.audioContext.state === 'suspended') {
-                    await window.audioContext.resume();
-                }
+      function handleEnd(e) {
+        if (!drawingReady) return;
+        isDrawing = false;
+        try { drawingCanvas.releasePointerCapture(e.pointerId); } catch {}
+      }
 
-                mainVideo.muted = false;
-                audioToggleBtn.style.display = 'none';
+      drawingCanvas.addEventListener('pointerdown', handleStart);
+      drawingCanvas.addEventListener('pointermove', handleMove);
+      drawingCanvas.addEventListener('pointerup', handleEnd);
+      drawingCanvas.addEventListener('pointercancel', handleEnd);
+      drawingCanvas.addEventListener('pointerleave', handleEnd);
 
-                if (!window.analyser) {
-                    const source = window.audioContext.createMediaElementSource(mainVideo);
-                    window.analyser = window.audioContext.createAnalyser();
-                    source.connect(window.analyser);
-                    window.analyser.connect(window.audioContext.destination);
-                }
+      // Estela de desvanecimiento
+      function fadeDrawingTrail() {
+        if (!drawingReady) return;
+        dCtx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+        dCtx.fillRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+        requestAnimationFrame(fadeDrawingTrail);
+      }
 
-                drawingReady = true;
-                drawingCanvas.style.pointerEvents = 'auto';
+      // Botón de audio (queda visible para volver a mutear si quieres)
+      audioToggleBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
+      audioToggleBtn.addEventListener('click', async () => {
+        if (!window.audioContext) {
+          window.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (window.audioContext.state === 'suspended') {
+          await window.audioContext.resume();
+        }
 
-                fadeDrawingTrail();
-                animateParticles();
-            });
+        if (!window.analyser) {
+          const source = window.audioContext.createMediaElementSource(mainVideo);
+          window.analyser = window.audioContext.createAnalyser();
+          source.connect(window.analyser);
+          window.analyser.connect(window.audioContext.destination);
+        }
 
-            // Motor de partículas visuales
-            let particlesArray = [];
-            const resizeParticleCanvas = () => {
-                particleCanvas.width = window.innerWidth;
-                particleCanvas.height = window.innerHeight;
-            };
-            resizeParticleCanvas();
-            window.addEventListener('resize', resizeParticleCanvas);
+        // Toggle mute y habilitar dibujo desde el primer toque
+        mainVideo.muted = !mainVideo.muted;
+        audioToggleBtn.classList.toggle('muted', mainVideo.muted);
 
-            class Particle {
-                constructor(x, y, color) {
-                    this.x = x;
-                    this.y = y;
-                    this.angle = Math.random() * Math.PI * 2;
-                    this.speed = Math.random() * 4 + 1;
-                    this.friction = 0.96;
-                    this.gravity = 0.1;
-                    this.radius = Math.random() * 2 + 1;
-                    this.life = 100;
-                    this.maxLife = this.life;
-                    this.color = color;
-                }
-                update(treble) {
-                    this.speed *= this.friction;
-                    this.x += Math.cos(this.angle) * this.speed;
-                    this.y += Math.sin(this.angle) * this.speed + this.gravity;
-                    this.life -= 1;
-                    this.radius = Math.max(0, this.radius - 0.02);
-                }
-                draw(treble) {
-                    pCtx.globalAlpha = (this.life / this.maxLife) * (treble / 100 + 0.5);
-                    pCtx.fillStyle = this.color;
-                    pCtx.beginPath();
-                    pCtx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                    pCtx.fill();
-                    pCtx.globalAlpha = 1.0;
-                }
-            }
+        if (!drawingReady) {
+          drawingReady = true;
+          fadeDrawingTrail();
+          animateParticles();
+        }
+      });
 
-            function createNebula(x, y, bass) {
-                const particleCount = 60;
-                const hue = Math.random() * 360;
-                for (let i = 0; i < particleCount; i++) {
-                    const color = `hsl(${hue + Math.random() * 60}, 100%, 75%)`;
-                    particlesArray.push(new Particle(x, y, color));
-                }
-            }
+      // Motor de partículas
+      let particlesArray = [];
+      class Particle {
+        constructor(x, y, color) {
+          this.x = x; this.y = y;
+          this.angle = Math.random() * Math.PI * 2;
+          this.speed = Math.random() * 4 + 1;
+          this.friction = 0.96;
+          this.gravity = 0.1;
+          this.radius = Math.random() * 2 + 1;
+          this.life = 100; this.maxLife = this.life;
+          this.color = color;
+        }
+        update() {
+          this.speed *= this.friction;
+          this.x += Math.cos(this.angle) * this.speed;
+          this.y += Math.sin(this.angle) * this.speed + this.gravity;
+          this.life -= 1;
+          this.radius = Math.max(0, this.radius - 0.02);
+        }
+        draw(alphaBoost=1) {
+          pCtx.globalAlpha = (this.life / this.maxLife) * (alphaBoost / 100 + 0.5);
+          pCtx.fillStyle = this.color;
+          pCtx.beginPath();
+          pCtx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+          pCtx.fill();
+          pCtx.globalAlpha = 1.0;
+        }
+      }
 
-            let lastBass = 0;
-            let peakCooldown = 0;
+      function createNebula(x, y) {
+        const particleCount = 60;
+        const hue = Math.random() * 360;
+        for (let i = 0; i < particleCount; i++) {
+          const color = `hsl(${hue + Math.random() * 60}, 100%, 75%)`;
+          particlesArray.push(new Particle(x, y, color));
+        }
+      }
 
-            function animateParticles() {
-                if (!window.analyser) return;
-                const analyser = window.analyser;
+      let lastBass = 0;
+      let peakCooldown = 0;
 
-                const bufferLength = analyser.frequencyBinCount;
-                const dataArray = new Uint8Array(bufferLength);
-                analyser.getByteFrequencyData(dataArray);
+      function animateParticles() {
+        if (!window.analyser) return;
+        const analyser = window.analyser;
 
-                const bassRange = dataArray.slice(0, Math.floor(bufferLength * 0.13));
-                const bass = bassRange.reduce((a, b) => a + b, 0) / bassRange.length;
-                const trebleRange = dataArray.slice(Math.floor(bufferLength * 0.5));
-                const treble = trebleRange.reduce((a, b) => a + b, 0) / trebleRange.length;
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        analyser.getByteFrequencyData(dataArray);
 
-                const bassJump = bass - lastBass;
-                const bassThreshold = 80;
+        const bassRange = dataArray.slice(0, Math.floor(bufferLength * 0.13));
+        const bass = bassRange.reduce((a, b) => a + b, 0) / bassRange.length;
+        const trebleRange = dataArray.slice(Math.floor(bufferLength * 0.5));
+        const treble = trebleRange.reduce((a, b) => a + b, 0) / trebleRange.length;
 
-                if (peakCooldown <= 0 && bassJump > 10 && bass >= bassThreshold) {
-                    createNebula(
-                        Math.random() * particleCanvas.width,
-                        Math.random() * particleCanvas.height,
-                        bass
-                    );
-                    peakCooldown = 11;
-                }
-                peakCooldown = Math.max(0, peakCooldown - 1);
-                lastBass = bass;
+        const bassJump = bass - lastBass;
+        const bassThreshold = 80;
 
-                pCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
-                for (let i = particlesArray.length - 1; i >= 0; i--) {
-                    const p = particlesArray[i];
-                    if (p.life <= 0) {
-                        particlesArray.splice(i, 1);
-                    } else {
-                        p.update(treble);
-                        p.draw(treble);
-                    }
-                }
-                requestAnimationFrame(animateParticles);
-            }
-        });
-    </script>
+        if (peakCooldown <= 0 && bassJump > 10 && bass >= bassThreshold) {
+          createNebula(Math.random() * particleCanvas.width, Math.random() * particleCanvas.height);
+          peakCooldown = 11;
+        }
+        peakCooldown = Math.max(0, peakCooldown - 1);
+        lastBass = bass;
+
+        pCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+        for (let i = particlesArray.length - 1; i >= 0; i--) {
+          const p = particlesArray[i];
+          if (p.life <= 0) {
+            particlesArray.splice(i, 1);
+          } else {
+            p.update(treble);
+            p.draw(treble);
+          }
+        }
+        requestAnimationFrame(animateParticles);
+      }
+    });
+  </script>
 </body>
 </html>
-
-
-
-
-
