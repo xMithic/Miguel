@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>PanitaMithic</title>
+  <title>PanitaMithico</title>
   <style>
     :root {
       --cursor-size: 12px;
@@ -16,152 +16,60 @@
       --btn-bg: rgba(255,255,255,0.15);
       --btn-bg-hover: rgba(255,255,255,0.4);
     }
-
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes reveal {
-      from { opacity: 0; transform: translateY(30px) scale(0.98); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
-    }
-
+    @keyframes reveal { from { opacity: 0; transform: translateY(30px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
     html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      overflow: hidden;
-      cursor: none;
+      margin: 0; padding: 0; height: 100%; overflow: hidden; cursor: none;
       background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      user-select: none;
-      -webkit-user-select: none;
-      -moz-user-select: none;
-      -ms-user-select: none;
-      -webkit-touch-callout: none;
-      -webkit-tap-highlight-color: transparent;
+      user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;
+      -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
     }
-
-    #background-video,
-    #particle-canvas,
-    #drawing-canvas {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-    }
-
+    #background-video, #particle-canvas, #drawing-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; }
     #background-video {
-      z-index: 1;
-      filter: blur(var(--ui-blur)) brightness(var(--ui-bright));
-      object-fit: cover;
-      animation: fadeIn 1.8s ease-out;
-      pointer-events: none;
+      z-index: 1; filter: blur(var(--ui-blur)) brightness(var(--ui-bright)); object-fit: cover;
+      animation: fadeIn 1.8s ease-out; pointer-events: none;
     }
-
-    #particle-canvas {
-      z-index: 2;
-      pointer-events: none;
-    }
-
-    /* Canvas de dibujo por encima, sin gestos del navegador mientras se dibuja */
-    #drawing-canvas {
-      z-index: 50;
-      mix-blend-mode: difference;
-      pointer-events: auto;
-      touch-action: none; /* Desactiva gestos UA durante el dibujo */
-    }
-
-    .perspective-wrapper {
-      display: flex; justify-content: center; align-items: center;
-      height: 100%;
-      perspective: 1500px;
-      position: relative;
-      z-index: 3;
-      pointer-events: none;
-    }
-
+    #particle-canvas { z-index: 2; pointer-events: none; }
+    #drawing-canvas { z-index: 50; mix-blend-mode: difference; pointer-events: auto; touch-action: none; }
+    .perspective-wrapper { display: flex; justify-content: center; align-items: center; height: 100%; perspective: 1500px; position: relative; z-index: 3; pointer-events: none; }
     .video-container {
-      width: 680px; max-width: 95%;
-      transform-style: preserve-3d;
-      animation: reveal 1s ease-out 0.5s backwards;
-      pointer-events: none;
-      user-select: none;
-      position: relative;
+      width: 680px; max-width: 95%; transform-style: preserve-3d; animation: reveal 1s ease-out 0.5s backwards;
+      pointer-events: none; user-select: none; position: relative;
     }
-
     #video-card {
-      background: linear-gradient(145deg, #171e26, #1d2733);
-      border-radius: 22px;
-      box-shadow: 0 30px 90px rgba(0,0,0,0.55);
-      overflow: hidden;
-      transform: translateZ(0);
-      transition: box-shadow 0.5s ease;
-      pointer-events: none;
-      user-select: none;
-      border: 2px solid #3a4a5a;
-      position: relative;
+      background: linear-gradient(145deg, #171e26, #1d2733); border-radius: 22px; box-shadow: 0 30px 90px rgba(0,0,0,0.55);
+      overflow: hidden; transform: translateZ(0); transition: box-shadow 0.5s ease; pointer-events: none; user-select: none; border: 2px solid #3a4a5a; position: relative;
     }
     #video-card::after {
-      content: '';
-      position: absolute; inset: 0;
-      background: radial-gradient(circle at center, rgba(255,255,255,0.15) 0%, transparent 70%);
-      opacity: 0; border-radius: 22px;
-      transition: opacity 0.5s ease;
-      pointer-events: none;
+      content: ''; position: absolute; inset: 0; background: radial-gradient(circle at center, rgba(255,255,255,0.15) 0%, transparent 70%);
+      opacity: 0; border-radius: 22px; transition: opacity 0.5s ease; pointer-events: none;
     }
     .video-container:hover #video-card { box-shadow: 0 50px 130px rgba(0,0,0,0.65); }
     .video-container:hover #video-card::after { opacity: 1; }
-
-    #miVideo {
-      display: block; width: 100%; height: auto;
-      pointer-events: none; user-select: none;
-      filter: contrast(1.05) saturate(1.1);
-    }
-
+    #miVideo { display: block; width: 100%; height: auto; pointer-events: none; user-select: none; filter: contrast(1.05) saturate(1.1); }
     #video-title {
-      color: #f3f7fa;
-      font-weight: 900; font-size: 1.8rem; text-align: center;
-      margin-top: 32px; opacity: 0.92; letter-spacing: 2px;
-      text-shadow: 0 3px 8px rgba(0, 0, 0, 0.85);
-      pointer-events: none; user-select: none;
-      transition: transform 0.4s ease, opacity 0.4s ease;
+      color: #f3f7fa; font-weight: 900; font-size: 1.8rem; text-align: center; margin-top: 32px; opacity: 0.92; letter-spacing: 2px;
+      text-shadow: 0 3px 8px rgba(0, 0, 0, 0.85); pointer-events: none; user-select: none; transition: transform 0.4s ease, opacity 0.4s ease;
     }
     .video-container:hover #video-title { transform: translateY(-20px); opacity: 1; }
-
     #custom-cursor {
-      position: fixed;
-      width: var(--cursor-size); height: var(--cursor-size);
-      background-color: var(--cursor-bg); border-radius: 50%;
-      top: 0; left: 0; transform: translate(-50%, -50%);
-      pointer-events: none; mix-blend-mode: difference;
-      z-index: 9999;
-      filter: drop-shadow(0 0 10px white);
-      transition: transform 0.2s ease-out, opacity 0.5s ease-out;
+      position: fixed; width: var(--cursor-size); height: var(--cursor-size); background-color: var(--cursor-bg); border-radius: 50%;
+      top: 0; left: 0; transform: translate(-50%, -50%); pointer-events: none; mix-blend-mode: difference; z-index: 9999;
+      filter: drop-shadow(0 0 10px white); transition: transform 0.2s ease-out, opacity 0.5s ease-out;
     }
     #custom-cursor.hidden { opacity: 0; }
-
-    /* Botón de volumen: fijo, sobre el canvas, con desvanecimiento */
     #audio-toggle-btn {
-      position: fixed;
-      top: var(--btn-pad); right: var(--btn-pad);
-      z-index: 10010;
-      background-color: var(--btn-bg);
-      border: none; border-radius: var(--btn-radius);
-      width: var(--btn-size); height: var(--btn-size);
+      position: fixed; top: var(--btn-pad); right: var(--btn-pad); z-index: 10010; background-color: var(--btn-bg);
+      border: none; border-radius: var(--btn-radius); width: var(--btn-size); height: var(--btn-size);
       display: flex; justify-content: center; align-items: center;
       transition: background-color 0.3s ease, opacity 0.3s ease, transform 0.3s ease;
-      pointer-events: auto;
-      touch-action: manipulation;
-      will-change: opacity, transform;
+      pointer-events: auto; touch-action: manipulation; will-change: opacity, transform;
     }
     #audio-toggle-btn:hover { background-color: var(--btn-bg-hover); }
-    #audio-toggle-btn svg {
-      width: 24px; height: 24px; fill: white;
-      filter: drop-shadow(0 1px 2px rgba(0,0,0,0.7));
-      transition: transform 0.2s ease;
-    }
+    #audio-toggle-btn svg { width: 24px; height: 24px; fill: white; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.7)); transition: transform 0.2s ease; }
     #audio-toggle-btn.muted svg { transform: scale(0.87); opacity: 0.65; }
-    #audio-toggle-btn.vanish {
-      opacity: 0; transform: scale(0.9);
-      pointer-events: none;
-    }
+    #audio-toggle-btn.vanish { opacity: 0; transform: scale(0.9); pointer-events: none; }
   </style>
 </head>
 <body>
@@ -185,7 +93,6 @@
     </div>
   </div>
 
-  <!-- Botón de audio -->
   <button id="audio-toggle-btn" aria-label="Activar o silenciar audio" title="Activar audio" class="muted">
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9zM12 4L9.91 6.09 12 8.18V4z"/>
@@ -204,7 +111,6 @@
       const pCtx = particleCanvas.getContext('2d');
       const audioToggleBtn = document.getElementById('audio-toggle-btn');
 
-      // Utilidad: ajustar canvas a DPR para nitidez
       function fitCanvasToScreen(canvas, ctx) {
         const dpr = Math.max(1, window.devicePixelRatio || 1);
         const w = Math.floor(window.innerWidth);
@@ -213,16 +119,16 @@
         canvas.style.height = h + 'px';
         canvas.width = Math.floor(w * dpr);
         canvas.height = Math.floor(h * dpr);
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // coordenadas en CSS px
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       }
       const resize = () => {
         fitCanvasToScreen(drawingCanvas, dCtx);
         fitCanvasToScreen(particleCanvas, pCtx);
+        flow.rebuild();
       };
       resize();
       window.addEventListener('resize', resize, { passive: true });
 
-      // Cursor y tilt con Pointer Events; mostrar también en tap
       let cursorIdleTimer;
       function updateCursorPosition(clientX, clientY) {
         cursor.classList.remove('hidden');
@@ -237,7 +143,6 @@
       document.addEventListener('pointermove', (e) => updateCursorPosition(e.clientX, e.clientY), { passive: true });
       document.addEventListener('pointerdown', (e) => updateCursorPosition(e.clientX, e.clientY), { passive: true });
 
-      // Sincronizar videos: usar captureStream si está disponible; fallback si no
       function attachMirrorBackground() {
         try {
           if (typeof mainVideo.captureStream === 'function') {
@@ -250,28 +155,20 @@
         } catch {}
         return false;
       }
-
-      // Fallback de sincronización por deriva
       function startDriftSync() {
-        let prev;
-        function loop(ts) {
-          if (!prev) prev = ts;
-          const a = mainVideo;
-          const b = bgVideo;
+        function loop() {
+          const a = mainVideo, b = bgVideo;
           const drift = a.currentTime - b.currentTime;
-          // Correcciones: fuerte si |drift|>0.25s, suave si menor
           if (Math.abs(drift) > 0.25) {
             b.currentTime = a.currentTime;
           } else {
-            const k = 0.08; // ganancia suave
+            const k = 0.08;
             b.playbackRate = 1 + Math.max(-0.2, Math.min(0.2, k * drift));
           }
           requestAnimationFrame(loop);
         }
         requestAnimationFrame(loop);
       }
-
-      // Preparar y jugar
       Promise.allSettled([
         new Promise(r => mainVideo.addEventListener('canplaythrough', r, { once: true })),
         new Promise(r => bgVideo.addEventListener('canplaythrough', r, { once: true }))
@@ -284,115 +181,60 @@
         }
       });
 
-      // Estilo base de trazo
       dCtx.lineCap = 'round';
       dCtx.lineJoin = 'round';
-
-      // Parámetros del pincel neón
-      // Parámetros del pincel neón (ajustados: trazo más fino y glow más sutil)
-      const brush = {
-        hue: 200,
-        hueShift: 0.6,    // cambio de tono por px
-        baseWidth: 1.8,   // menor grosor base
-        maxWidth: 6,      // tope menos ancho
-        minWidth: 0.6,    // mínimo más fino
-        glow: 12,         // menos blur en el glow
-        lighten: true     // composición aditiva
-      };
-
-      // Dibujo con Pointer Events, ignorando el botón
+      const brush = { hue: 200, hueShift: 0.6, baseWidth: 1.8, maxWidth: 6, minWidth: 0.6, glow: 12, lighten: true };
       let drawingReady = true;
       let isDrawing = false, lastX = 0, lastY = 0, lastT = 0;
-
       function insideButton(x, y) {
         const r = audioToggleBtn.getBoundingClientRect();
-        const pad = 10; // zona de seguridad
+        const pad = 10;
         return x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad;
       }
-
       function beginStroke(e) {
         if (!drawingReady) return;
         if (insideButton(e.clientX, e.clientY)) return;
         e.preventDefault();
         try { drawingCanvas.setPointerCapture(e.pointerId); } catch {}
-
         isDrawing = true;
-        lastX = e.clientX;
-        lastY = e.clientY;
-        lastT = performance.now();
-
-        // Punto inicial visible
+        lastX = e.clientX; lastY = e.clientY; lastT = performance.now();
         const col = `hsl(${brush.hue}, 95%, 75%)`;
         dCtx.save();
         dCtx.globalCompositeOperation = brush.lighten ? 'lighter' : 'source-over';
-        dCtx.shadowBlur = brush.glow;
-        dCtx.shadowColor = col;
-        dCtx.fillStyle = col;
-        dCtx.beginPath();
-        dCtx.arc(lastX, lastY, Math.max(1, brush.baseWidth * 0.5), 0, Math.PI * 2);
-        dCtx.fill();
+        dCtx.shadowBlur = brush.glow; dCtx.shadowColor = col; dCtx.fillStyle = col;
+        dCtx.beginPath(); dCtx.arc(lastX, lastY, Math.max(1, brush.baseWidth * 0.5), 0, Math.PI * 2); dCtx.fill();
         dCtx.restore();
       }
-
       function drawStroke(e) {
         if (!drawingReady || !isDrawing) return;
         e.preventDefault();
-
         const now = performance.now();
         const dt = Math.max(1, now - lastT);
         const dx = e.clientX - lastX;
         const dy = e.clientY - lastY;
         const dist = Math.hypot(dx, dy);
-
-        // Sensibilidad a presión y velocidad
         const pressure = (typeof e.pressure === 'number' && e.pressure > 0) ? e.pressure : 0.5;
-        const speed = dist / dt; // px/ms
-        const width = Math.max(
-          brush.minWidth,
-          Math.min(brush.maxWidth, brush.baseWidth * (0.6 + pressure * 0.8 + speed * 0.9))
-        );
-
-        // Color dinámico
+        const speed = dist / dt;
+        const width = Math.max(brush.minWidth, Math.min(brush.maxWidth, brush.baseWidth * (0.6 + pressure * 0.8 + speed * 0.9)));
         brush.hue = (brush.hue + brush.hueShift * dist) % 360;
         const col = `hsl(${brush.hue}, 100%, 75%)`;
-
-        // Trazo principal
         dCtx.save();
         dCtx.globalCompositeOperation = brush.lighten ? 'lighter' : 'source-over';
-        dCtx.strokeStyle = col;
-        dCtx.lineWidth = width;
-        dCtx.shadowBlur = brush.glow;
-        dCtx.shadowColor = col;
-        dCtx.beginPath();
-        dCtx.moveTo(lastX, lastY);
-        dCtx.lineTo(e.clientX, e.clientY);
-        dCtx.stroke();
+        dCtx.strokeStyle = col; dCtx.lineWidth = width; dCtx.shadowBlur = brush.glow; dCtx.shadowColor = col;
+        dCtx.beginPath(); dCtx.moveTo(lastX, lastY); dCtx.lineTo(e.clientX, e.clientY); dCtx.stroke();
         dCtx.restore();
-
-        // Actualizar estado
         lastX = e.clientX; lastY = e.clientY; lastT = now;
       }
-
-      function endStroke(e) {
-        if (!drawingReady) return;
-        isDrawing = false;
-        try { drawingCanvas.releasePointerCapture(e.pointerId); } catch {}
-      }
-
+      function endStroke(e) { if (!drawingReady) return; isDrawing = false; try { drawingCanvas.releasePointerCapture(e.pointerId); } catch {} }
       drawingCanvas.addEventListener('pointerdown', beginStroke, { passive: false });
       drawingCanvas.addEventListener('pointermove', drawStroke, { passive: false });
       drawingCanvas.addEventListener('pointerup', endStroke);
       drawingCanvas.addEventListener('pointercancel', endStroke);
       drawingCanvas.addEventListener('pointerleave', endStroke);
-
-      // Estela de desvanecimiento progresivo (reduce alfa de píxeles existentes)
-      // Desvanecimiento lento: usamos destination-out con alpha muy baja
-      // para que las líneas se vayan desvaneciendo pero dejando una ligera huella.
       function fadeDrawingTrail() {
         if (!drawingReady) return;
         dCtx.save();
         dCtx.globalCompositeOperation = 'destination-out';
-        // Reducir la alpha hace que el borrado sea más suave y deje rastro.
         dCtx.fillStyle = 'rgba(0,0,0,0.02)';
         dCtx.fillRect(0, 0, drawingCanvas.width, drawingCanvas.height);
         dCtx.restore();
@@ -400,10 +242,7 @@
       }
       fadeDrawingTrail();
 
-      // Botón de audio: no interfiere con el canvas y puede desvanecerse al activar audio
-      audioToggleBtn.addEventListener('pointerdown', (e) => {
-        e.stopPropagation();
-      });
+      audioToggleBtn.addEventListener('pointerdown', (e) => { e.stopPropagation(); });
       audioToggleBtn.addEventListener('click', async () => {
         if (!window.audioContext) {
           window.audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -411,106 +250,286 @@
         if (window.audioContext.state === 'suspended') {
           await window.audioContext.resume();
         }
-
         if (!window.analyser) {
           const source = window.audioContext.createMediaElementSource(mainVideo);
           window.analyser = window.audioContext.createAnalyser();
+          window.analyser.fftSize = 2048;
+          window.analyser.smoothingTimeConstant = 0.8;
           source.connect(window.analyser);
           window.analyser.connect(window.audioContext.destination);
         }
-
         mainVideo.muted = !mainVideo.muted;
         audioToggleBtn.classList.toggle('muted', mainVideo.muted);
-
-        // Desaparecer cuando hay audio activo; reaparecer al silenciar
-        if (!mainVideo.muted) {
-          audioToggleBtn.classList.add('vanish');
-        } else {
-          audioToggleBtn.classList.remove('vanish');
-        }
+        if (!mainVideo.muted) { audioToggleBtn.classList.add('vanish'); } else { audioToggleBtn.classList.remove('vanish'); }
       });
 
-      // Motor de partículas (ajuste leve al tono por agudos)
-      let particlesArray = [];
+      // ===================== NUEVO MOTOR DE PARTÍCULAS =====================
+
+      const flow = (() => {
+        const f = { cols: 0, rows: 0, cell: 40, t: 0, field: [] };
+        f.rebuild = () => {
+          const w = window.innerWidth, h = window.innerHeight;
+          f.cols = Math.max(1, Math.ceil(w / f.cell));
+          f.rows = Math.max(1, Math.ceil(h / f.cell));
+          f.field = new Float32Array(f.cols * f.rows * 2);
+        };
+        f.sample = (x, y) => {
+          const i = (x | 0), j = (y | 0);
+          const idx = (j * f.cols + i) * 2;
+          return [f.field[idx], f.field[idx + 1]];
+        };
+        f.update = (dt) => {
+          f.t += dt;
+          const cols = f.cols, rows = f.rows, cell = f.cell, time = f.t * 0.6;
+          let k = 0;
+          for (let j = 0; j < rows; j++) {
+            const jy = j * 0.12;
+            for (let i = 0; i < cols; i++) {
+              const ix = i * 0.12;
+              const a = Math.sin(ix + time * 0.9) + Math.cos(jy * 1.3 - time * 0.7);
+              const b = Math.cos(ix * 0.7 + time * 1.1) - Math.sin(jy + time * 0.5);
+              const angle = a * 0.9 + b * 0.6;
+              f.field[k++] = Math.cos(angle);
+              f.field[k++] = Math.sin(angle);
+            }
+          }
+        };
+        f.rebuild();
+        return f;
+      })();
+
+      const MAX_PARTICLES = 5000;
+      const pool = new Array(MAX_PARTICLES);
+      const active = [];
+      let poolTop = MAX_PARTICLES - 1;
+
       class Particle {
-        constructor(x, y, color) {
-          this.x = x; this.y = y;
-          this.angle = Math.random() * Math.PI * 2;
-          this.speed = Math.random() * 4 + 1;
-          this.friction = 0.96;
-          this.gravity = 0.1;
-          this.radius = Math.random() * 2 + 1;
-          this.life = 100; this.maxLife = this.life;
-          this.color = color;
+        constructor() {
+          this.active = false;
+          this.x = 0; this.y = 0;
+          this.vx = 0; this.vy = 0;
+          this.life = 0; this.maxLife = 0;
+          this.size = 0;
+          this.h = 0; this.s = 0; this.l = 0;
+          this.type = 0;
+          this.prevX = 0; this.prevY = 0;
+          this.spin = 0;
+          this.glow = 0;
         }
-        update() {
-          this.speed *= this.friction;
-          this.x += Math.cos(this.angle) * this.speed;
-          this.y += Math.sin(this.angle) * this.speed + this.gravity;
+        reset(x, y, type, energy, hueBase) {
+          this.active = true;
+          this.x = x; this.y = y; this.prevX = x; this.prevY = y;
+          this.type = type;
+          const e = Math.max(0.2, Math.min(3, energy));
+          if (type === 0) { // spark
+            this.vx = (Math.random() * 2 - 1) * 180 * e;
+            this.vy = (Math.random() * 2 - 1) * 180 * e;
+            this.size = 0.9 + Math.random() * 1.4 * e;
+            this.life = this.maxLife = 28 + (Math.random() * 18) * e;
+            this.spin = (Math.random() * 2 - 1) * 0.03;
+            this.glow = 18 + 10 * e;
+          } else if (type === 1) { // glider (flow follower)
+            this.vx = 0; this.vy = 0;
+            this.size = 1.2 + Math.random() * 1.8 * e;
+            this.life = this.maxLife = 120 + (Math.random() * 80) * e;
+            this.spin = (Math.random() * 2 - 1) * 0.015;
+            this.glow = 10 + 8 * e;
+          } else { // ember
+            this.vx = (Math.random() * 2 - 1) * 40 * e;
+            this.vy = (Math.random() * 2 - 1) * 40 * e;
+            this.size = 1.0 + Math.random() * 1.0 * e;
+            this.life = this.maxLife = 180 + (Math.random() * 120) * e;
+            this.spin = (Math.random() * 2 - 1) * 0.01;
+            this.glow = 14 + 10 * e;
+          }
+          const hueJitter = (Math.random() * 30 - 15);
+          this.h = (hueBase + hueJitter + 360) % 360;
+          this.s = 100;
+          this.l = 68 + Math.random() * 10;
+        }
+        step(dt, bands) {
+          this.prevX = this.x; this.prevY = this.y;
+          const w = window.innerWidth, h = window.innerHeight;
+          if (this.type === 1) {
+            const i = Math.max(0, Math.min(flow.cols - 1, (this.x / flow.cell) | 0));
+            const j = Math.max(0, Math.min(flow.rows - 1, (this.y / flow.cell) | 0));
+            const v = flow.sample(i, j);
+            const follow = 60 + bands.mid * 0.9;
+            this.vx += v[0] * follow * dt;
+            this.vy += v[1] * follow * dt;
+            const drag = 0.9 - Math.min(0.4, bands.treble * 0.002);
+            this.vx *= drag; this.vy *= drag;
+          } else {
+            this.vx *= 0.985; this.vy *= 0.985;
+            this.vy += 5 * dt;
+          }
+          this.vx += Math.sin(this.y * 0.01 + this.life * 0.02) * this.spin * 60;
+          this.vy += Math.cos(this.x * 0.01 - this.life * 0.02) * this.spin * 60;
+          this.x += this.vx * dt;
+          this.y += this.vy * dt;
           this.life -= 1;
-          this.radius = Math.max(0, this.radius - 0.02);
+          if (this.x < -50 || this.x > w + 50 || this.y < -50 || this.y > h + 50) this.life = 0;
+          return this.life > 0;
         }
-        draw(alphaBoost=1) {
-          pCtx.globalAlpha = (this.life / this.maxLife) * (alphaBoost / 100 + 0.5);
-          pCtx.fillStyle = this.color;
-          pCtx.beginPath();
-          pCtx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-          pCtx.fill();
-          pCtx.globalAlpha = 1.0;
+        draw(ctx) {
+          const a = Math.max(0, this.life / this.maxLife);
+          ctx.shadowBlur = this.glow;
+          ctx.shadowColor = `hsl(${this.h} ${this.s}% ${this.l}%)`;
+          ctx.fillStyle = `hsl(${this.h} ${this.s}% ${this.l}%)`;
+          const x = this.x, y = this.y;
+          if (this.type === 0) {
+            ctx.globalAlpha = 0.35 + 0.65 * a;
+            ctx.beginPath();
+            ctx.moveTo(this.prevX, this.prevY);
+            ctx.lineTo(x, y);
+            ctx.lineWidth = Math.max(0.6, this.size * 0.9);
+            ctx.strokeStyle = `hsl(${this.h} ${this.s}% ${this.l}%)`;
+            ctx.stroke();
+            ctx.globalAlpha = 1.0;
+            ctx.beginPath();
+            ctx.arc(x, y, this.size, 0, Math.PI * 2);
+            ctx.fill();
+          } else if (this.type === 1) {
+            ctx.globalAlpha = 0.25 + 0.55 * a;
+            ctx.beginPath();
+            ctx.arc(x, y, this.size * (0.9 + (1 - a) * 0.6), 0, Math.PI * 2);
+            ctx.fill();
+          } else {
+            ctx.globalAlpha = 0.2 + 0.5 * a;
+            ctx.beginPath();
+            ctx.moveTo(this.prevX, this.prevY);
+            ctx.lineTo(x, y);
+            ctx.lineWidth = Math.max(0.5, this.size * 0.7);
+            ctx.strokeStyle = `hsl(${this.h} ${this.s}% ${this.l}%)`;
+            ctx.stroke();
+            ctx.globalAlpha = 0.35 + 0.45 * a;
+            ctx.beginPath();
+            ctx.arc(x, y, this.size * 0.8, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.globalAlpha = 1.0;
         }
       }
-
-      function createNebula(x, y) {
-        const particleCount = 60;
-        const hue = Math.random() * 360;
-        for (let i = 0; i < particleCount; i++) {
-          const color = `hsl(${hue + Math.random() * 60}, 100%, 75%)`;
-          particlesArray.push(new Particle(x, y, color));
-        }
+      for (let i = 0; i < MAX_PARTICLES; i++) pool[i] = new Particle();
+      function spawn(x, y, type, energy, hueBase) {
+        if (poolTop < 0) return;
+        const p = pool[poolTop--];
+        p.reset(x, y, type, energy, hueBase);
+        active.push(p);
+      }
+      function recycle(idx) {
+        const p = active[idx];
+        p.active = false;
+        active[idx] = active[active.length - 1];
+        active.pop();
+        pool[++poolTop] = p;
       }
 
+      function getBands(analyser, prev) {
+        if (!analyser) return { bass: 50, mid: 50, treble: 50 };
+        const len = analyser.frequencyBinCount;
+        const data = new Uint8Array(len);
+        analyser.getByteFrequencyData(data);
+        const lo = Math.floor(len * 0.10);
+        const midLo = Math.floor(len * 0.10), midHi = Math.floor(len * 0.45);
+        const hi = Math.floor(len * 0.80);
+        let sumB = 0; for (let i = 0; i < lo; i++) sumB += data[i];
+        let sumM = 0; for (let i = midLo; i < midHi; i++) sumM += data[i];
+        let sumT = 0; for (let i = hi; i < len; i++) sumT += data[i];
+        const bass = sumB / Math.max(1, lo);
+        const mid = sumM / Math.max(1, (midHi - midLo));
+        const treble = sumT / Math.max(1, (len - hi));
+        const alpha = 0.7;
+        if (!prev) return { bass, mid, treble };
+        return {
+          bass: prev.bass * alpha + bass * (1 - alpha),
+          mid: prev.mid * alpha + mid * (1 - alpha),
+          treble: prev.treble * alpha + treble * (1 - alpha),
+        };
+      }
+
+      let lastBands = null;
       let lastBass = 0;
       let peakCooldown = 0;
+      let lastTime = performance.now();
 
-      function animateParticles() {
-        const analyser = window.analyser;
+      function hueFromBands(b) {
+        const base = (200 + b.bass * 0.5 + b.mid * 0.25 - b.treble * 0.35) % 360;
+        return (base + 360) % 360;
+      }
 
-        let treble = 50; // por defecto si no hay audio
-        if (analyser) {
-          const bufferLength = analyser.frequencyBinCount;
-          const dataArray = new Uint8Array(bufferLength);
-          analyser.getByteFrequencyData(dataArray);
+      function animateParticles(ts) {
+        const now = ts || performance.now();
+        let dt = (now - lastTime) / 1000;
+        if (!isFinite(dt) || dt > 0.05) dt = 0.016;
+        lastTime = now;
 
-          const bassRange = dataArray.slice(0, Math.floor(bufferLength * 0.13));
-          const bass = bassRange.reduce((a, b) => a + b, 0) / bassRange.length;
-          const trebleRange = dataArray.slice(Math.floor(bufferLength * 0.5));
-          treble = trebleRange.reduce((a, b) => a + b, 0) / trebleRange.length;
+        flow.update(dt);
 
-          const bassJump = bass - lastBass;
-          const bassThreshold = 20;
+        const analyser = window.analyser || null;
+        const bands = lastBands = getBands(analyser, lastBands);
 
-          if (peakCooldown <= 0 && bassJump > 10 && bass >= bassThreshold) {
-            createNebula(Math.random() * particleCanvas.width, Math.random() * particleCanvas.height);
-            peakCooldown = 11;
-          }
-          peakCooldown = Math.max(0, peakCooldown - 1);
-          lastBass = bass;
-        }
+        const fade = 0.12 - Math.min(0.06, bands.treble * 0.0005);
+        pCtx.globalCompositeOperation = 'source-over';
+        pCtx.fillStyle = `rgba(0,0,0,${fade})`;
+        pCtx.fillRect(0, 0, particleCanvas.width, particleCanvas.height);
 
-        pCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
-        for (let i = particlesArray.length - 1; i >= 0; i--) {
-          const p = particlesArray[i];
-          if (p.life <= 0) {
-            particlesArray.splice(i, 1);
+        pCtx.globalCompositeOperation = 'lighter';
+        pCtx.lineCap = 'round';
+
+        for (let i = active.length - 1; i >= 0; i--) {
+          const p = active[i];
+          if (!p.step(dt, bands)) {
+            recycle(i);
           } else {
-            p.update(treble);
-            p.draw(treble);
+            p.draw(pCtx);
           }
         }
+
+        const midBoost = Math.min(6, 1 + bands.mid / 40);
+        const ambientGliders = Math.min(30, Math.floor(2 + midBoost * 2));
+        const hueBase = hueFromBands(bands);
+
+        for (let i = 0; i < ambientGliders; i++) {
+          const x = Math.random() * window.innerWidth;
+          const y = Math.random() * window.innerHeight;
+          spawn(x, y, 1, 0.6 + Math.random() * 0.8, hueBase);
+        }
+
+        const embers = Math.min(20, Math.floor(1 + bands.treble / 60));
+        for (let i = 0; i < embers; i++) {
+          const edge = Math.random();
+          let x, y;
+          if (edge < 0.25) { x = 0; y = Math.random() * window.innerHeight; }
+          else if (edge < 0.5) { x = window.innerWidth; y = Math.random() * window.innerHeight; }
+          else if (edge < 0.75) { x = Math.random() * window.innerWidth; y = 0; }
+          else { x = Math.random() * window.innerWidth; y = window.innerHeight; }
+          spawn(x, y, 2, 0.7 + Math.random() * 1.2, hueBase);
+        }
+
+        const bassJump = bands.bass - lastBass;
+        lastBass = bands.bass;
+        if (peakCooldown <= 0 && bassJump > 8 && bands.bass > 22) {
+          const bursts = Math.min(8, 3 + Math.floor(bands.bass / 22));
+          for (let b = 0; b < bursts; b++) {
+            const cx = Math.random() * window.innerWidth;
+            const cy = Math.random() * window.innerHeight;
+            const count = Math.min(220, 70 + Math.floor(bands.bass * 4));
+            const energy = 0.8 + Math.min(2.0, bands.bass / 40);
+            for (let i = 0; i < count; i++) {
+              spawn(cx, cy, 0, energy, hueBase);
+              if (poolTop < 0) break;
+            }
+          }
+          peakCooldown = 10;
+        } else {
+          peakCooldown = Math.max(0, peakCooldown - 1);
+        }
+
         requestAnimationFrame(animateParticles);
       }
-      animateParticles();
+      requestAnimationFrame(animateParticles);
     });
-  </script>
+  </scriptpt>
 </body>
 </html>
