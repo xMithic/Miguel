@@ -36,7 +36,7 @@ class Star3D {
     const x2d = this.x * scale + centerX;
     const y2d = this.y * scale + centerY;
     
-    // Culling
+    // Culling - no dibujar fuera de pantalla
     if (x2d < -50 || x2d > width + 50 || y2d < -50 || y2d > height + 50) {
       return;
     }
@@ -47,7 +47,7 @@ class Star3D {
     alpha = Math.max(0, Math.min(1, alpha));
     alpha *= (0.6 + musicState.level * 0.4);
 
-    // Estelas con impactos ✅ CORREGIDO
+    // Estelas con impactos (opcional - quita si no quieres)
     if (musicState.impact > 0.3) {
       const trailLength = 15 * musicState.impact * scale;
       const gradient = ctx.createLinearGradient(
@@ -71,28 +71,26 @@ class Star3D {
       ctx.stroke();
     }
 
-    // Partícula central ✅ CORREGIDO
+    // Partícula central - NÍTIDA
     ctx.fillStyle = ColorSampler.rgba(this.color, alpha);
     ctx.beginPath();
     ctx.arc(x2d, y2d, size, 0, Math.PI * 2);
     ctx.fill();
 
-    // Brillo en partículas cercanas ✅ CORREGIDO
+    // Brillo en partículas cercanas
     if (this.z < 300 && musicState.treble > 0.5) {
-      ctx.fillStyle = ColorSampler.rgba({ r: 255, g: 255, b: 255 }, alpha * 0.5);
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = 'white';
+      ctx.fillStyle = ColorSampler.rgba({ r: 255, g: 255, b: 255 }, alpha * 0.6);
       ctx.beginPath();
       ctx.arc(x2d, y2d, size * 0.4, 0, Math.PI * 2);
       ctx.fill();
+      ctx.shadowBlur = 0;
     }
   }
 }
 
-// ✅ FUNCIÓN HELPER LOCAL (alternativa más limpia)
-function rgba(color, alpha) {
-  return `rgba(${color.r},${color.g},${color.b},${alpha})`;
-}
-
-// Sistema de partículas
+// Sistema de partículas COMPLETO - SIN RASTROS
 export class ParticleSystem {
   constructor(canvas, colorSampler, audioAnalyzer) {
     this.canvas = canvas;
@@ -103,16 +101,16 @@ export class ParticleSystem {
     this.particles = [];
     this.MAX_PARTICLES = 200;
     
-    // Pool de colores
+    // Pool de colores precalculado
     this.colorPalette = [];
     for (let i = 0; i < 10; i++) {
       this.colorPalette.push(colorSampler.sampleColor());
     }
     
-    // Actualizar paleta periódicamente
+    // Actualizar paleta cada 500ms
     setInterval(() => {
       const idx = Math.floor(Math.random() * this.colorPalette.length);
-      this.colorPalette[idx] = this.colorSampler.sampleColor();
+      this.colorPalette[idx] = colorSampler.sampleColor();
     }, 500);
     
     // Inicializar partículas
@@ -127,7 +125,7 @@ export class ParticleSystem {
   animate(currentTime) {
     const musicState = this.audioAnalyzer.getState();
     
-    // Limitar FPS
+    // Limitar a 60 FPS para optimización
     const deltaTime = currentTime - this.lastTime;
     if (deltaTime < 16) {
       requestAnimationFrame(this.animate);
@@ -135,19 +133,20 @@ export class ParticleSystem {
     }
     this.lastTime = currentTime;
 
-    // Limpiar canvas
-    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    // 🔥 LIMPIEZA COMPLETA - SIN RASTROS
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // Actualizar y dibujar
+    // Configuración de renderizado
     this.ctx.save();
+    this.ctx.globalCompositeOperation = 'lighter'; // Brillo mejorado
     
     const centerX = this.canvas.width / 2;
     const centerY = this.canvas.height / 2;
     
-    this.particles.forEach(p => {
-      p.update(musicState);
-      p.draw(this.ctx, centerX, centerY, this.canvas.width, this.canvas.height, musicState);
+    // Actualizar y dibujar todas las partículas
+    this.particles.forEach(particle => {
+      particle.update(musicState);
+      particle.draw(this.ctx, centerX, centerY, this.canvas.width, this.canvas.height, musicState);
     });
 
     this.ctx.restore();
@@ -156,5 +155,14 @@ export class ParticleSystem {
 
   start() {
     this.animate(performance.now());
+  }
+
+  // Método para cambiar número de partículas dinámicamente
+  setParticleCount(count) {
+    this.MAX_PARTICLES = count;
+    this.particles = [];
+    for (let i = 0; i < count; i++) {
+      this.particles.push(new Star3D(this.colorPalette));
+    }
   }
 }
