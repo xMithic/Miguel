@@ -348,41 +348,63 @@ document.addEventListener('DOMContentLoaded', () => {
     return `rgba(${r},${g},${b},${0.75 + high * 0.2})`;
   }
 
-  // --- Sistema de partículas ORBITAL estable ---
+  // --- Sistema de partículas nuevo (flotantes, sin bugs de órbita) ---
   const particles = [];
-  const MAX_PARTICLES = 260;
+  const MAX_PARTICLES = 220;
 
   class Particle {
     constructor() {
-      this.init();
+      this.reset(true);
     }
 
-    init() {
+    reset(initial = false) {
+      // Posición aleatoria, pero cerca del centro para que se vea “aura”
+      const spread = Math.min(width, height) * 0.45;
       const angle = Math.random() * Math.PI * 2;
-      const radiusBase = Math.min(width, height) * 0.32;
-      const radiusJitter = Math.random() * Math.min(width, height) * 0.08;
-      this.radius = radiusBase + (Math.random() - 0.5) * radiusJitter;
-      this.angle = angle;
-      this.baseSpeed = (0.001 + Math.random() * 0.0025) * (Math.random() < 0.5 ? 1 : -1);
-      this.sizeBase = 0.7 + Math.random() * 1.5;
+      const radius = (initial ? Math.random() * spread * 0.6 : Math.random() * spread);
+      this.x = centerX + Math.cos(angle) * radius;
+      this.y = centerY + Math.sin(angle) * radius;
+
+      this.baseX = this.x;
+      this.baseY = this.y;
+
+      this.sizeBase = 0.8 + Math.random() * 1.7;
+      this.size = this.sizeBase;
+
+      this.noiseSeedX = Math.random() * 1000;
+      this.noiseSeedY = Math.random() * 1000;
+
       this.color = getVideoColor();
-      this.orbitOffset = Math.random() * 1000;
     }
 
-    update(dt) {
-      // velocidad base + ligera reacción al audio
-      const speedBoost = 1 + bass * 1.6 + high * 0.6;
-      this.angle += this.baseSpeed * speedBoost * dt;
+    update(time) {
+      // Movimiento suave senoidal (no fuerzas raras)
+      const speed = 0.00035;
+      const nx = this.noiseSeedX + time * speed;
+      const ny = this.noiseSeedY + time * speed;
 
-      const wobble = Math.sin((performance.now() + this.orbitOffset) * 0.001 + this.radius * 0.002) * 6 * (0.3 + mid);
-      const r = this.radius + wobble;
+      const offsetX = Math.sin(nx) * 25 * (0.4 + mid);
+      const offsetY = Math.cos(ny) * 25 * (0.4 + mid);
 
-      this.x = centerX + Math.cos(this.angle) * r;
-      this.y = centerY + Math.sin(this.angle) * r;
+      this.x = this.baseX + offsetX;
+      this.y = this.baseY + offsetY;
 
-      this.size = this.sizeBase * (1 + bass * 2.2 + mid * 0.4);
+      // Reacción simple al audio: tamaño con bass + leve “respiración”
+      this.size = this.sizeBase * (1 + bass * 2.2) * (0.85 + Math.sin(time * 0.002) * 0.15);
 
-      if (Math.random() < 0.01) this.color = getVideoColor();
+      // Limitar si se va muy lejos
+      const dx = this.x - centerX;
+      const dy = this.y - centerY;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      const maxDist = Math.min(width, height) * 0.7;
+      if (dist > maxDist) {
+        this.reset(false);
+      }
+
+      // Refrescar color cada cierto tiempo
+      if (Math.random() < 0.01) {
+        this.color = getVideoColor();
+      }
     }
 
     draw(ctx) {
@@ -397,11 +419,8 @@ document.addEventListener('DOMContentLoaded', () => {
     particles.push(new Particle());
   }
 
-  let lastTime = performance.now();
   function animateParticles() {
-    const now = performance.now();
-    const dt = (now - lastTime) || 16;
-    lastTime = now;
+    const time = performance.now();
 
     updateAudio();
 
@@ -409,7 +428,7 @@ document.addEventListener('DOMContentLoaded', () => {
     pCtx.globalCompositeOperation = 'lighter';
 
     particles.forEach(p => {
-      p.update(dt);
+      p.update(time);
       p.draw(pCtx);
     });
 
@@ -417,40 +436,27 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   animateParticles();
 
-    /* Botón de Audio Minimalista */
-    #audio-btn {
-      position: fixed;
-      bottom: 40px; /* Movido abajo para más minimalismo visual */
-      left: 50%; transform: translateX(-50%);
-      width: var(--btn-size); height: var(--btn-size);
-      border-radius: 50%;
-      background: rgba(255,255,255,0.1);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,0.2);
-      cursor: none; /* Usamos el cursor custom */
-      z-index: 100;
-      display: flex; justify-content: center; align-items: center;
-      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-      pointer-events: auto;
-    }
-    #audio-btn svg { width: 20px; fill: white; opacity: 0.8; transition: transform 0.3s; }
-    #audio-btn:hover { background: rgba(255,255,255,0.25); transform: translateX(-50%) scale(1.1); }
-    #audio-btn.muted svg { opacity: 0.5; transform: scale(0.9); }
-    
-    /* Indicador de audio visual (pequeñas barras) */
-    .eq-bars {
-      position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
-      display: flex; gap: 4px; z-index: 90; opacity: 0; transition: opacity 0.5s;
-    }
-    .eq-bar { width: 3px; height: 10px; background: white; border-radius: 2px; animation: eqBounce 1s infinite ease-in-out; }
-    .playing .eq-bars { opacity: 0.7; }
-    @keyframes eqBounce { 0%, 100% { height: 6px; } 50% { height: 18px; } }
-    .eq-bar:nth-child(1) { animation-delay: 0s; }
-    .eq-bar:nth-child(2) { animation-delay: 0.1s; }
-    .eq-bar:nth-child(3) { animation-delay: 0.2s; }
+  // --- Botón de audio ---
+  audioBtn.addEventListener('click', () => {
+    initAudio().then(() => {
+      if (audioContext.state === 'suspended') audioContext.resume();
+    });
 
-  </style>
-</head>
-<body>
+    mainVideo.muted = !mainVideo.muted;
+    audioBtn.classList.toggle('muted', mainVideo.muted);
+
+    const path = audioBtn.querySelector('path');
+    if (mainVideo.muted) {
+      path.setAttribute('d',
+        'M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9zM12 4L9.91 6.09 12 8.18V4z'
+      );
+    } else {
+      path.setAttribute('d',
+        'M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z'
+      );
+    }
+  });
+});
+</script>
+</body>
 </html>
-
