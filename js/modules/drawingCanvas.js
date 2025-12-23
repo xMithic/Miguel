@@ -51,7 +51,7 @@ export class DrawingCanvas {
     const dx = mousePos.x - lastPoint.x;
     const dy = mousePos.y - lastPoint.y;
     const velocity = Math.sqrt(dx * dx + dy * dy);
-    const baseWidth = Math.max(2, 8 - velocity * 0.3); // Más delgado al ir rápido
+    const baseWidth = Math.max(1, 3 - velocity * 0.2); // Más delgado
     
     // Dibujar trazo principal con resplandor
     this.ctx.lineCap = 'round';
@@ -59,31 +59,31 @@ export class DrawingCanvas {
     this.ctx.globalCompositeOperation = 'screen';
     
     // Capa de resplandor exterior
-    this.ctx.strokeStyle = `hsla(${hue}, 100%, 60%, 0.4)`;
-    this.ctx.lineWidth = baseWidth * 3;
-    this.ctx.shadowBlur = 20;
-    this.ctx.shadowColor = `hsla(${hue}, 100%, 50%, 0.6)`;
+    this.ctx.strokeStyle = `hsla(${hue}, 100%, 60%, 0.3)`;
+    this.ctx.lineWidth = baseWidth * 2.5;
+    this.ctx.shadowBlur = 15;
+    this.ctx.shadowColor = `hsla(${hue}, 100%, 50%, 0.5)`;
     this.drawCurve(mousePos);
     
     // Capa intermedia
-    this.ctx.strokeStyle = `hsla(${hue}, 100%, 70%, 0.7)`;
-    this.ctx.lineWidth = baseWidth * 1.8;
-    this.ctx.shadowBlur = 12;
-    this.ctx.shadowColor = `hsla(${hue}, 100%, 60%, 0.8)`;
+    this.ctx.strokeStyle = `hsla(${hue}, 100%, 70%, 0.6)`;
+    this.ctx.lineWidth = baseWidth * 1.5;
+    this.ctx.shadowBlur = 10;
+    this.ctx.shadowColor = `hsla(${hue}, 100%, 60%, 0.7)`;
     this.drawCurve(mousePos);
     
     // Núcleo brillante
     this.ctx.globalCompositeOperation = 'lighter';
     this.ctx.strokeStyle = `hsla(${hue}, 100%, 85%, 0.9)`;
     this.ctx.lineWidth = baseWidth;
-    this.ctx.shadowBlur = 8;
+    this.ctx.shadowBlur = 6;
     this.ctx.shadowColor = `hsla(${hue}, 100%, 70%, 1)`;
     this.drawCurve(mousePos);
     
     // Línea central ultra brillante
     this.ctx.strokeStyle = `hsla(${hue + 30}, 100%, 95%, 0.8)`;
-    this.ctx.lineWidth = baseWidth * 0.4;
-    this.ctx.shadowBlur = 15;
+    this.ctx.lineWidth = baseWidth * 0.3;
+    this.ctx.shadowBlur = 12;
     this.ctx.shadowColor = 'white';
     this.drawCurve(mousePos);
     
