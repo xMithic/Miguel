@@ -7,7 +7,7 @@ class NeuralParticle {
     this.history = []; 
     this.MAX_HISTORY = 10;
     
-    // Color inicial blanco
+    // Color inicial
     this.color = { r: 255, g: 255, b: 255 }; 
     
     this.reset(true);
@@ -33,26 +33,31 @@ class NeuralParticle {
     this.history = [];
   }
 
-  // FUNCIÓN DE SUAVIZADO (La clave para quitar el parpadeo)
   lerp(start, end, amt) {
     return (1 - amt) * start + amt * end;
   }
 
-  update(musicState, targetColor) {
-    // 1. CAMBIO DE COLOR SUAVE (FIX DEL PARPADEO)
-    // En lugar de copiar a lo bruto, nos acercamos un 10% (0.1) al color objetivo en cada frame.
-    if (targetColor && targetColor.r !== undefined) {
-        this.color.r = this.lerp(this.color.r, targetColor.r, 0.1);
-        this.color.g = this.lerp(this.color.g, targetColor.g, 0.1);
-        this.color.b = this.lerp(this.color.b, targetColor.b, 0.1);
+  update(musicState, bgColor) {
+    // --- LÓGICA DE NEGATIVO ---
+    if (bgColor && bgColor.r !== undefined) {
+        // Calculamos el color INVERSO (Negativo)
+        const negativeR = 255 - bgColor.r;
+        const negativeG = 255 - bgColor.g;
+        const negativeB = 255 - bgColor.b;
+
+        // Interpolamos suavemente hacia ese negativo para evitar parpadeos
+        this.color.r = this.lerp(this.color.r, negativeR, 0.1);
+        this.color.g = this.lerp(this.color.g, negativeG, 0.1);
+        this.color.b = this.lerp(this.color.b, negativeB, 0.1);
     }
 
-    // Guardar historial
+    // Historial
     if (this.x2d && this.y2d) {
         this.history.push({ x: this.x2d, y: this.y2d });
         if (this.history.length > this.MAX_HISTORY) this.history.shift();
     }
 
+    // Física
     const bass = musicState?.bass || 0;
     const mid = musicState?.mid || 0;
 
@@ -77,8 +82,12 @@ class NeuralParticle {
 
     if (this.z < 10 || Math.abs(this.x) > limitX * 1.2 || Math.abs(this.y) > limitY * 1.2) {
       this.reset();
-      // Al reiniciar, sí copiamos el color directo para que no nazca blanca
-      if(targetColor) this.color = { ...targetColor };
+      // Al reiniciar, asignamos el negativo instantáneo
+      if(bgColor) {
+          this.color.r = 255 - bgColor.r;
+          this.color.g = 255 - bgColor.g;
+          this.color.b = 255 - bgColor.b;
+      }
     }
   }
 
@@ -95,12 +104,11 @@ class NeuralParticle {
     
     if (alpha < 0.01) return false;
 
-    // Aseguramos que los valores sean enteros para mejor rendimiento de renderizado
     const r = Math.floor(this.color.r);
     const g = Math.floor(this.color.g);
     const b = Math.floor(this.color.b);
 
-    // Estela (Trail)
+    // Estela
     if (this.history.length > 2) {
         ctx.beginPath();
         ctx.moveTo(this.history[0].x, this.history[0].y);
@@ -108,13 +116,13 @@ class NeuralParticle {
         ctx.lineTo(this.x2d, this.y2d);
         ctx.lineCap = 'round';
         ctx.lineWidth = this.baseSize * scale * 0.8;
-        ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha * 0.4})`;
+        ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha * 0.5})`;
         ctx.stroke();
     }
 
     const size = Math.max(0.5, this.baseSize * scale * (1 + (musicState?.bass || 0)));
     
-    // Glow
+    // Glow (Resplandor)
     if ((musicState?.level || 0) > 0.2) {
       const glowSize = size * 4;
       const gradient = ctx.createRadialGradient(this.x2d, this.y2d, 0, this.x2d, this.y2d, glowSize);
@@ -126,8 +134,8 @@ class NeuralParticle {
       ctx.fill();
     }
 
-    // Núcleo (Añadimos un poco de blanco al color base para que brille pero mantenga el tono)
-    ctx.fillStyle = `rgba(${Math.min(255, r + 50)}, ${Math.min(255, g + 50)}, ${Math.min(255, b + 50)}, ${alpha})`;
+    // Núcleo Sólido
+    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
     ctx.beginPath();
     ctx.arc(this.x2d, this.y2d, size, 0, Math.PI * 2);
     ctx.fill();
@@ -148,7 +156,7 @@ export class ParticleSystem {
     this.CONNECTION_DISTANCE = 130;
     this.MAX_CONNECTIONS_PER_PARTICLE = 4;
     
-    this.currentColor = { r: 255, g: 255, b: 255 };
+    this.currentColor = { r: 0, g: 0, b: 0 }; // Asumimos fondo negro al inicio
 
     for (let i = 0; i < this.MAX_PARTICLES; i++) {
       this.particles.push(new NeuralParticle(this.canvas.width, this.canvas.height));
@@ -186,20 +194,20 @@ export class ParticleSystem {
         if (dist < dynamicReach) {
           connectionsMade++;
           const proximity = 1 - (dist / dynamicReach);
-          let alpha = proximity * level * 0.6;
-          if ((musicState?.impact || 0) > 0.5) alpha += 0.3;
+          let alpha = proximity * level * 0.8; // Un poco más visibles
+          if ((musicState?.impact || 0) > 0.5) alpha += 0.2;
           
           const width = (0.2 + bassInfluence * 1.5) * proximity;
 
           if (alpha > 0.05) {
             this.ctx.lineWidth = width;
             
+            // Promedio de color negativo entre las dos partículas
             const r = Math.floor((p1.color.r + p2.color.r) / 2);
             const g = Math.floor((p1.color.g + p2.color.g) / 2);
             const b = Math.floor((p1.color.b + p2.color.b) / 2);
             
             this.ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
-            
             this.ctx.beginPath();
             this.ctx.moveTo(p1.x2d, p1.y2d);
             this.ctx.lineTo(p2.x2d, p2.y2d);
@@ -216,23 +224,20 @@ export class ParticleSystem {
         if (this.audioAnalyzer) musicState = this.audioAnalyzer.getState();
     } catch(e) {}
     
-    // Obtener color (intentar que sea el dominante o un promedio si es posible en el sampler)
     try {
         if (this.colorSampler) {
             const sampled = this.colorSampler.sampleColor(); 
             if (sampled && sampled.r !== undefined) {
-                // Pequeña corrección: si el sampler devuelve negros puros por error, ignorar
-                if (sampled.r + sampled.g + sampled.b > 10) {
-                    this.currentColor = sampled;
-                }
+                this.currentColor = sampled;
             }
         }
     } catch(e) {}
 
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    this.ctx.globalCompositeOperation = 'lighter'; 
+    
+    // IMPORTANTE: source-over normal. El cálculo del negativo lo hicimos a mano en update()
+    this.ctx.globalCompositeOperation = 'source-over'; 
 
-    // Aquí es donde sucede la magia del suavizado
     this.particles.forEach(p => p.update(musicState, this.currentColor));
     
     this.drawConnections(musicState);
@@ -246,7 +251,6 @@ export class ParticleSystem {
         p.draw(this.ctx, centerX, centerY, musicState);
     });
 
-    this.ctx.globalCompositeOperation = 'source-over';
     requestAnimationFrame(this.animate);
   }
 
