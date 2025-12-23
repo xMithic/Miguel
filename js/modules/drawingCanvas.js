@@ -51,7 +51,7 @@ export class DrawingCanvas {
     const dx = mousePos.x - lastPoint.x;
     const dy = mousePos.y - lastPoint.y;
     const velocity = Math.sqrt(dx * dx + dy * dy);
-    const baseWidth = Math.max(1, 3 - velocity * 0.2); // Más delgado
+    const baseWidth = Math.max(1, 3 - velocity * 0.1); // Más delgado
     
     // Dibujar trazo principal con resplandor
     this.ctx.lineCap = 'round';
