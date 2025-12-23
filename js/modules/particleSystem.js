@@ -7,11 +7,8 @@ class NeuralParticle {
     this.history = []; 
     this.MAX_HISTORY = 10;
     
-    // Color inicial (se actualizará inmediatamente)
+    // Color inicial
     this.color = { r: 255, g: 255, b: 255 }; 
-    
-    // Velocidad de transición de color (0.1 = cambio rápido, 0.01 = cambio lento)
-    this.colorTransitionSpeed = 0.05; 
     
     this.reset(true);
   }
@@ -20,7 +17,6 @@ class NeuralParticle {
     const fov = 400;
     this.z = isInitial ? Math.random() * 1200 : 800 + Math.random() * 400;
     
-    // Cálculo de dispersión en toda la pantalla
     const scale = fov / (fov + this.z);
     const visibleWidth = this.width / scale;
     const visibleHeight = this.height / scale;
@@ -28,7 +24,6 @@ class NeuralParticle {
     this.x = (Math.random() - 0.5) * visibleWidth;
     this.y = (Math.random() - 0.5) * visibleHeight;
     
-    // Movimiento
     this.speed = 0.5 + Math.random() * 1.5; 
     this.angle = Math.random() * Math.PI * 2;
     this.vx = Math.cos(this.angle) * 0.5;
@@ -38,18 +33,13 @@ class NeuralParticle {
     this.history = [];
   }
 
-  // Función auxiliar para mezclar colores suavemente
-  lerp(start, end, amt) {
-    return (1 - amt) * start + amt * end;
-  }
-
   update(musicState, targetColor) {
-    // 1. TRANSICIÓN DE COLOR EN VIVO (LA SOLUCIÓN)
-    // Si recibimos un color del video, nos movemos hacia él suavemente
-    if (targetColor) {
-        this.color.r = this.lerp(this.color.r, targetColor.r, this.colorTransitionSpeed);
-        this.color.g = this.lerp(this.color.g, targetColor.g, this.colorTransitionSpeed);
-        this.color.b = this.lerp(this.color.b, targetColor.b, this.colorTransitionSpeed);
+    // 1. CAMBIO DE COLOR INSTANTÁNEO
+    // Sin matemáticas, sin transición. Copia exacta del color del video en este frame.
+    if (targetColor && targetColor.r !== undefined) {
+        this.color.r = targetColor.r;
+        this.color.g = targetColor.g;
+        this.color.b = targetColor.b;
     }
 
     // Guardar historial
@@ -58,7 +48,6 @@ class NeuralParticle {
         if (this.history.length > this.MAX_HISTORY) this.history.shift();
     }
 
-    // Movimiento y Música
     const bass = musicState?.bass || 0;
     const mid = musicState?.mid || 0;
 
@@ -84,7 +73,7 @@ class NeuralParticle {
 
     if (this.z < 10 || Math.abs(this.x) > limitX * 1.2 || Math.abs(this.y) > limitY * 1.2) {
       this.reset();
-      // Al reiniciar, forzamos el color inmediatamente para evitar parpadeos blancos
+      // Aseguramos que al renacer tenga el color actual
       if(targetColor) this.color = { ...targetColor };
     }
   }
@@ -102,10 +91,9 @@ class NeuralParticle {
     
     if (alpha < 0.01) return false;
 
-    // Usamos el color actual (ya interpolado)
     const { r, g, b } = this.color;
 
-    // Dibujar Estela
+    // Estela (Trail)
     if (this.history.length > 2) {
         ctx.beginPath();
         ctx.moveTo(this.history[0].x, this.history[0].y);
@@ -113,11 +101,11 @@ class NeuralParticle {
         ctx.lineTo(this.x2d, this.y2d);
         ctx.lineCap = 'round';
         ctx.lineWidth = this.baseSize * scale * 0.8;
-        ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha * 0.4})`; // Color de la estela = color del video
+        // La estela también usa el color instantáneo
+        ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha * 0.4})`;
         ctx.stroke();
     }
 
-    // Dibujar Núcleo
     const size = Math.max(0.5, this.baseSize * scale * (1 + (musicState?.bass || 0)));
     
     // Glow
@@ -132,7 +120,7 @@ class NeuralParticle {
       ctx.fill();
     }
 
-    // Centro (ligeramente más blanco para destacar, pero teñido del color del video)
+    // Núcleo
     ctx.fillStyle = `rgba(${Math.min(255, r + 50)}, ${Math.min(255, g + 50)}, ${Math.min(255, b + 50)}, ${alpha})`;
     ctx.beginPath();
     ctx.arc(this.x2d, this.y2d, size, 0, Math.PI * 2);
@@ -161,7 +149,7 @@ export class ParticleSystem {
     this.CONNECTION_DISTANCE = 130;
     this.MAX_CONNECTIONS_PER_PARTICLE = 4;
     
-    this.currentColor = { r: 100, g: 200, b: 255 }; // Color por defecto
+    this.currentColor = { r: 255, g: 255, b: 255 };
 
     for (let i = 0; i < this.MAX_PARTICLES; i++) {
       this.particles.push(new NeuralParticle(this.canvas.width, this.canvas.height));
@@ -207,8 +195,7 @@ export class ParticleSystem {
           if (alpha > 0.05) {
             this.ctx.lineWidth = width;
             
-            // --- ARREGLO DE COLOR DE LÍNEAS ---
-            // Mezclamos el color de la partícula 1 y la partícula 2
+            // Color promedio instantáneo de las dos partículas
             const r = Math.floor((p1.color.r + p2.color.r) / 2);
             const g = Math.floor((p1.color.g + p2.color.g) / 2);
             const b = Math.floor((p1.color.b + p2.color.b) / 2);
@@ -231,10 +218,9 @@ export class ParticleSystem {
         if (this.audioAnalyzer) musicState = this.audioAnalyzer.getState();
     } catch(e) {}
     
-    // 1. OBTENER COLOR DEL VIDEO (CADA FRAME)
+    // OBTENER COLOR CADA FRAME
     try {
         if (this.colorSampler) {
-            // Intentar sacar el color dominante del centro o aleatorio
             const sampled = this.colorSampler.sampleColor(); 
             if (sampled && sampled.r !== undefined) {
                 this.currentColor = sampled;
@@ -245,7 +231,7 @@ export class ParticleSystem {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.ctx.globalCompositeOperation = 'lighter'; 
 
-    // 2. PASAR EL COLOR A CADA PARTÍCULA EN EL UPDATE
+    // ACTUALIZAR CON EL COLOR AL INSTANTE
     this.particles.forEach(p => p.update(musicState, this.currentColor));
     
     this.drawConnections(musicState);
