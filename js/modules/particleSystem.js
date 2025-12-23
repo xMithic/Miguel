@@ -1,53 +1,30 @@
 import { ColorSampler } from '../utils/colorSampler.js';
 
+// Partícula con debug
 class NeuralParticle {
-  constructor(colorPalette, width, height, initialSpread = false) {
+  constructor(colorPalette, width, height) {
     this.colorPalette = colorPalette;
     this.width = width;
     this.height = height;
     this.connections = [];
-    
-    if (initialSpread) {
-      this.initialSpread();
-    } else {
-      this.reset();
-    }
-  }
-
-  // Spawn inicial distribuido por toda la pantalla
-  initialSpread() {
-    // Distribución uniforme en todo el espacio visible
-    this.x = (Math.random() - 0.5) * 600;
-    this.y = (Math.random() - 0.5) * 400;
-    this.z = 100 + Math.random() * 600; // Diferentes profundidades
-    
-    this.speed = 1 + Math.random() * 1.5;
-    this.vx = (Math.random() - 0.5) * 0.4;
-    this.vy = (Math.random() - 0.5) * 0.4;
-    
-    // Partículas MÁS GRANDES
-    this.baseSize = 2.5 + Math.random() * 3; // Aumentado de 1.5-3.5 a 2.5-5.5
-    this.color = this.colorPalette[Math.floor(Math.random() * this.colorPalette.length)];
-    
-    this.pulse = 0;
-    this.pulsePhase = Math.random() * Math.PI * 2;
-    this.pulseSpeed = 0.8 + Math.random() * 0.4;
+    this.reset();
   }
 
   reset() {
-    // Spawn desde el centro cuando se reciclan
+    // Spawn más cerca del centro para asegurar visibilidad
     const angle = Math.random() * Math.PI * 2;
-    const radius = Math.random() * 150;
+    const radius = Math.random() * 150; // Reducido
     
     this.x = Math.cos(angle) * radius;
     this.y = Math.sin(angle) * radius;
-    this.z = 600 + Math.random() * 400;
+    this.z = 400 + Math.random() * 400; // Más cerca
     
     this.speed = 1 + Math.random() * 1.5;
-    this.vx = (Math.random() - 0.5) * 0.4;
-    this.vy = (Math.random() - 0.5) * 0.4;
+    this.vx = (Math.random() - 0.5) * 0.3;
+    this.vy = (Math.random() - 0.5) * 0.3;
     
-    this.baseSize = 2.5 + Math.random() * 3; // MÁS GRANDES
+    // Partículas más visibles para debug
+    this.baseSize = 1.5 + Math.random() * 2; // MÁS GRANDES
     this.color = this.colorPalette[Math.floor(Math.random() * this.colorPalette.length)];
     
     this.pulse = 0;
@@ -56,18 +33,15 @@ class NeuralParticle {
   }
 
   update(musicState) {
-    const speedMult = 1 + (musicState?.bass || 0) * 2.5 + (musicState?.impact || 0) * 5;
+    const speedMult = 1 + (musicState?.bass || 0) * 2 + (musicState?.impact || 0) * 4;
     this.z -= this.speed * speedMult;
     
     this.x += this.vx * (1 + (musicState?.mid || 0) * 2);
     this.y += this.vy * (1 + (musicState?.mid || 0) * 2);
     
-    // PULSO MÁS INTENSO CON LA MÚSICA
-    this.pulsePhase += 0.08 * this.pulseSpeed;
-    const naturalPulse = Math.sin(this.pulsePhase) * 0.3; // Aumentado de 0.2
-    const musicPulse = (musicState?.bass || 0) * 1.2 + // Aumentado de 0.6
-                       (musicState?.mid || 0) * 0.6 + // Aumentado de 0.3
-                       (musicState?.impact || 0) * 2.5; // Aumentado de 1.2
+    this.pulsePhase += 0.05 * this.pulseSpeed;
+    const naturalPulse = Math.sin(this.pulsePhase) * 0.2;
+    const musicPulse = (musicState?.bass || 0) * 0.6 + (musicState?.mid || 0) * 0.3 + (musicState?.impact || 0) * 1.2;
     this.pulse = naturalPulse + musicPulse;
     
     if (this.z < 10 || Math.abs(this.x) > 800 || Math.abs(this.y) > 800) {
@@ -82,29 +56,27 @@ class NeuralParticle {
     this.x2d = Math.floor(this.x * scale + centerX);
     this.y2d = Math.floor(this.y * scale + centerY);
     
-    // Tamaño con PULSO MÁS PRONUNCIADO
-    const pulseMultiplier = 1 + this.pulse * 0.8; // Aumentado de 0.5
-    const size = Math.max(2, this.baseSize * scale * pulseMultiplier);
+    const size = Math.max(2, this.baseSize * scale * (1 + this.pulse * 0.5));
     
     const depthAlpha = Math.max(0, Math.min(1, 1 - this.z / 1200));
-    const musicLevel = musicState?.level || 0.5;
-    const alpha = depthAlpha * (0.7 + musicLevel * 0.3); // Alpha base aumentado
+    const musicLevel = musicState?.level || 0.5; // Default si no hay música
+    const alpha = depthAlpha * (0.6 + musicLevel * 0.4); // Alpha mínimo aumentado
     
     if (alpha < 0.05) return false;
     
-    // Glow MÁS VISIBLE
-    if (musicLevel > 0.15) { // Umbral reducido
-      const glowSize = size * (2.5 + (musicState?.impact || 0) * 3); // Aumentado
-      const glowAlpha = alpha * 0.5 * musicLevel; // Aumentado de 0.3
+    // Glow
+    if (musicLevel > 0.2) {
+      const glowSize = size * (2 + (musicState?.impact || 0) * 2);
+      const glowAlpha = alpha * 0.3 * musicLevel;
       
       const gradient = ctx.createRadialGradient(this.x2d, this.y2d, 0, this.x2d, this.y2d, glowSize);
       
+      // Usar color directamente si ColorSampler falla
       const colorStr = this.color.r !== undefined 
         ? `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, ${glowAlpha})`
         : `rgba(255, 255, 255, ${glowAlpha})`;
       
       gradient.addColorStop(0, colorStr);
-      gradient.addColorStop(0.4, `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, ${glowAlpha * 0.5})`);
       gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
       
       ctx.fillStyle = gradient;
@@ -113,11 +85,10 @@ class NeuralParticle {
       ctx.fill();
     }
     
-    // Núcleo más brillante
-    const coreAlpha = Math.min(1, alpha * 1.3); // Más opaco
+    // Núcleo - Fallback a blanco si no hay color
     const coreColor = this.color.r !== undefined
-      ? `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, ${coreAlpha})`
-      : `rgba(255, 255, 255, ${coreAlpha})`;
+      ? `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, ${alpha})`
+      : `rgba(255, 255, 255, ${alpha})`;
     
     ctx.fillStyle = coreColor;
     ctx.beginPath();
@@ -137,7 +108,8 @@ class NeuralParticle {
 
 export class ParticleSystem {
   constructor(canvas, colorSampler, audioAnalyzer) {
-    console.log('🎨 Inicializando ParticleSystem mejorado...');
+    console.log('🎨 Inicializando ParticleSystem...');
+    console.log('Canvas:', canvas.width, 'x', canvas.height);
     
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d', { 
@@ -156,17 +128,20 @@ export class ParticleSystem {
     
     this.particles = [];
     this.MAX_PARTICLES = 80;
-    this.CONNECTION_DISTANCE = 150; // Aumentado de 120
-    this.MAX_CONNECTIONS_PER_PARTICLE = 6; // Aumentado de 5
+    this.CONNECTION_DISTANCE = 120;
+    this.MAX_CONNECTIONS_PER_PARTICLE = 5;
     
-    // Generar colores
+    // Generar colores con fallback
     this.colorPalette = [];
     try {
       for (let i = 0; i < 10; i++) {
         const color = colorSampler?.sampleColor() || { r: 100 + i * 15, g: 150, b: 255 };
         this.colorPalette.push(color);
       }
+      console.log('✅ Paleta generada:', this.colorPalette.length, 'colores');
     } catch(e) {
+      console.warn('⚠️ Error generando paleta, usando colores por defecto');
+      // Colores por defecto
       this.colorPalette = [
         { r: 100, g: 150, b: 255 },
         { r: 255, g: 100, b: 150 },
@@ -175,23 +150,26 @@ export class ParticleSystem {
       ];
     }
     
+    // Actualizar paleta
     if (colorSampler) {
       setInterval(() => {
         try {
           const idx = Math.floor(Math.random() * this.colorPalette.length);
           this.colorPalette[idx] = colorSampler.sampleColor();
-        } catch(e) {}
+        } catch(e) {
+          console.warn('Error actualizando paleta:', e);
+        }
       }, 1000);
     }
     
-    // Crear partículas con distribución inicial
+    // Crear partículas
     for (let i = 0; i < this.MAX_PARTICLES; i++) {
       this.particles.push(
-        new NeuralParticle(this.colorPalette, this.canvas.width, this.canvas.height, true)
+        new NeuralParticle(this.colorPalette, this.canvas.width, this.canvas.height)
       );
     }
     
-    console.log('✅ Partículas distribuidas:', this.particles.length);
+    console.log('✅ Creadas', this.particles.length, 'partículas');
     
     this.lastTime = performance.now();
     this.frameCount = 0;
@@ -199,8 +177,10 @@ export class ParticleSystem {
   }
 
   drawConnections(musicState) {
-    const connectionIntensity = Math.max(0.4, musicState?.level || 0.5); // Base aumentado
+    const connectionIntensity = Math.max(0.3, musicState?.level || 0.5);
     const sortedParticles = [...this.particles].sort((a, b) => b.z - a.z);
+    
+    let totalConnections = 0;
     
     for (let i = 0; i < sortedParticles.length; i++) {
       const p1 = sortedParticles[i];
@@ -208,7 +188,7 @@ export class ParticleSystem {
       
       let connectionCount = 0;
       
-      for (let j = i + 1; j < Math.min(i + 25, sortedParticles.length); j++) {
+      for (let j = i + 1; j < Math.min(i + 20, sortedParticles.length); j++) {
         if (connectionCount >= this.MAX_CONNECTIONS_PER_PARTICLE) break;
         
         const p2 = sortedParticles[j];
@@ -218,21 +198,15 @@ export class ParticleSystem {
         
         if (dist < this.CONNECTION_DISTANCE) {
           connectionCount++;
+          totalConnections++;
           
           const distanceRatio = 1 - (dist / this.CONNECTION_DISTANCE);
-          
-          // LÍNEAS MÁS VISIBLES
-          const baseAlpha = distanceRatio * 0.5; // Aumentado de 0.3
-          const bassPulse = (musicState?.bass || 0) * 0.8; // Aumentado de 0.5
-          const impactPulse = (musicState?.impact || 0) * 1.5; // Aumentado de 0.8
-          const pulseAlpha = baseAlpha * (0.6 + bassPulse + impactPulse);
+          const baseAlpha = distanceRatio * 0.3;
+          const pulseAlpha = baseAlpha * (0.5 + (musicState?.bass || 0) * 0.5 + (musicState?.impact || 0) * 0.8);
           const alpha = pulseAlpha * connectionIntensity;
           
-          // GROSOR MÁS VISIBLE que pulsa con la música
-          const baseWidth = 1.2; // Aumentado de 0.5
-          const bassEffect = (musicState?.bass || 0) * 2.5; // Aumentado de 1.5
-          const impactEffect = (musicState?.impact || 0) * 3; // Aumentado de 2
-          const width = baseWidth * (1 + bassEffect + impactEffect);
+          const baseWidth = 0.5;
+          const width = baseWidth * (1 + (musicState?.bass || 0) * 1.5 + (musicState?.impact || 0) * 2);
           
           const mixedColor = this.mixColors(p1.color, p2.color);
           const lineColor = mixedColor.r !== undefined
@@ -248,6 +222,11 @@ export class ParticleSystem {
         }
       }
     }
+    
+    // Debug cada 60 frames
+    if (this.frameCount % 60 === 0 && totalConnections > 0) {
+      console.log('🔗 Conexiones dibujadas:', totalConnections);
+    }
   }
 
   mixColors(color1, color2) {
@@ -259,14 +238,14 @@ export class ParticleSystem {
   }
 
   drawFlash(musicState) {
-    if ((musicState?.impact || 0) > 0.5) { // Umbral reducido de 0.6
+    if ((musicState?.impact || 0) > 0.6) {
       const centerX = this.canvas.width / 2;
       const centerY = this.canvas.height / 2;
-      const flashAlpha = ((musicState?.impact || 0) - 0.5) * 0.18; // Aumentado
+      const flashAlpha = ((musicState?.impact || 0) - 0.6) * 0.12;
       
       const gradient = this.ctx.createRadialGradient(
         centerX, centerY, 0,
-        centerX, centerY, 400 + (musicState?.bass || 0) * 300 // Aumentado
+        centerX, centerY, 300 + (musicState?.bass || 0) * 200
       );
       
       const flashColor = this.colorPalette[0];
@@ -274,8 +253,8 @@ export class ParticleSystem {
         ? `rgba(${flashColor.r}, ${flashColor.g}, ${flashColor.b}, ${flashAlpha})`
         : `rgba(255, 255, 255, ${flashAlpha})`;
       const color2 = flashColor.r !== undefined
-        ? `rgba(${flashColor.r}, ${flashColor.g}, ${flashColor.b}, ${flashAlpha * 0.4})`
-        : `rgba(255, 255, 255, ${flashAlpha * 0.4})`;
+        ? `rgba(${flashColor.r}, ${flashColor.g}, ${flashColor.b}, ${flashAlpha * 0.3})`
+        : `rgba(255, 255, 255, ${flashAlpha * 0.3})`;
       
       gradient.addColorStop(0, color1);
       gradient.addColorStop(0.5, color2);
@@ -287,8 +266,8 @@ export class ParticleSystem {
   }
 
   drawEdgePulse(musicState) {
-    if (musicState?.beat || (musicState?.impact || 0) > 0.6) {
-      const pulseAlpha = (musicState?.impact || 0) * 0.2; // Aumentado
+    if ((musicState?.beat || (musicState?.impact || 0) > 0.7)) {
+      const pulseAlpha = (musicState?.impact || 0) * 0.15;
       const pulseColor = this.colorPalette[Math.floor(Math.random() * this.colorPalette.length)];
       
       const centerX = this.canvas.width / 2;
@@ -296,7 +275,7 @@ export class ParticleSystem {
       const maxRadius = Math.sqrt(centerX * centerX + centerY * centerY);
       
       const gradient = this.ctx.createRadialGradient(
-        centerX, centerY, maxRadius * 0.5,
+        centerX, centerY, maxRadius * 0.6,
         centerX, centerY, maxRadius
       );
       
@@ -312,6 +291,7 @@ export class ParticleSystem {
   }
 
   animate(currentTime) {
+    // Obtener estado de música con fallback
     let musicState;
     try {
       musicState = this.audioAnalyzer?.getState() || {
@@ -334,7 +314,13 @@ export class ParticleSystem {
     this.lastTime = currentTime;
     this.frameCount++;
 
-    // Limpiar
+    // Debug inicial
+    if (this.frameCount === 1) {
+      console.log('🎬 Primera frame renderizada');
+      console.log('MusicState:', musicState);
+    }
+
+    // Limpiar canvas
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
     const centerX = this.canvas.width / 2;
@@ -344,21 +330,35 @@ export class ParticleSystem {
     this.drawFlash(musicState);
     this.drawEdgePulse(musicState);
     
-    // Modo brillo para partículas
+    // Modo brillo
     this.ctx.globalCompositeOperation = 'lighter';
     
-    // Actualizar
+    // Actualizar partículas
+    let visibleParticles = 0;
     for (let i = 0; i < this.MAX_PARTICLES; i++) {
       this.particles[i].update(musicState);
+      if (this.particles[i].z < 800) visibleParticles++;
     }
     
-    // Dibujar conexiones (más gruesas y visibles)
+    // Debug cada 60 frames
+    if (this.frameCount % 60 === 0) {
+      console.log('👁️ Partículas visibles:', visibleParticles, '/', this.MAX_PARTICLES);
+    }
+    
+    // Dibujar conexiones
     this.ctx.lineCap = 'round';
     this.drawConnections(musicState);
     
-    // Dibujar partículas (más grandes)
+    // Dibujar partículas
+    let drawnCount = 0;
     for (let i = 0; i < this.MAX_PARTICLES; i++) {
-      this.particles[i].draw(this.ctx, centerX, centerY, musicState);
+      const drawn = this.particles[i].draw(this.ctx, centerX, centerY, musicState);
+      if (drawn) drawnCount++;
+    }
+    
+    // Debug inicial
+    if (this.frameCount === 1) {
+      console.log('✏️ Partículas dibujadas:', drawnCount);
     }
     
     this.ctx.globalCompositeOperation = 'source-over';
@@ -367,12 +367,12 @@ export class ParticleSystem {
   }
 
   start() {
-    console.log('▶️ Iniciando animación mejorada...');
+    console.log('▶️ Iniciando animación...');
     this.animate(performance.now());
   }
 
   setConnectionDistance(distance) {
-    this.CONNECTION_DISTANCE = Math.max(50, Math.min(250, distance));
+    this.CONNECTION_DISTANCE = Math.max(50, Math.min(200, distance));
     console.log('🔗 Distancia de conexión:', this.CONNECTION_DISTANCE);
   }
 
@@ -383,7 +383,7 @@ export class ParticleSystem {
     if (diff > 0) {
       for (let i = 0; i < diff; i++) {
         this.particles.push(
-          new NeuralParticle(this.colorPalette, this.canvas.width, this.canvas.height, true)
+          new NeuralParticle(this.colorPalette, this.canvas.width, this.canvas.height)
         );
       }
     } else if (diff < 0) {
@@ -393,7 +393,7 @@ export class ParticleSystem {
   }
 
   setConnectionComplexity(maxConnections) {
-    this.MAX_CONNECTIONS_PER_PARTICLE = Math.max(2, Math.min(10, maxConnections));
-    console.log('🕸️ Complejidad:', this.MAX_CONNECTIONS_PER_PARTICLE);
+    this.MAX_CONNECTIONS_PER_PARTICLE = Math.max(2, Math.min(8, maxConnections));
+    console.log('🕸️ Complejidad:', this.MAX_CONNECTIONS_PER_PARTICLE, 'conexiones/partícula');
   }
 }
