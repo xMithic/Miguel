@@ -3,157 +3,176 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>PanitaMithico | Neon Gravity</title>
+  <title>PanitaMithico | Neon Gravity v4</title>
   <style>
     :root {
-      --cursor-size: 10px; /* Cursor más pequeño y preciso */
+      --cursor-size: 10px;
       --btn-size: 48px;
     }
 
-    /* Reset y Base */
     html, body {
       margin: 0; padding: 0;
       width: 100%; height: 100%;
       overflow: hidden;
-      background-color: #080808; /* Negro profundo */
-      font-family: sans-serif;
+      background-color: #050608;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       cursor: none;
       user-select: none;
     }
 
-    /* 1. Capa de Fondo (Video borroso ambiental) */
+    /* Fondo con video, menos blur */
     #background-layer {
-      position: fixed; inset: -5%;
-      width: 110%; height: 110%;
+      position: fixed; inset: -3%;
+      width: 106%; height: 106%;
       z-index: 0;
-      opacity: 0.35;
-      filter: blur(50px) saturate(1.5);
+      opacity: 0.55;
+      filter: blur(22px) saturate(1.4) brightness(0.55);
       object-fit: cover;
       transition: opacity 1s ease;
+      pointer-events: none;
     }
 
-    /* 2. Capas de Canvas */
     #particle-canvas, #drawing-canvas {
       position: fixed; inset: 0;
       width: 100%; height: 100%;
     }
-    #particle-canvas { z-index: 1; pointer-events: none; mix-blend-mode: screen; }
-    /* El canvas de dibujo debe estar encima de todo para capturar el mouse */
-    #drawing-canvas { z-index: 50; pointer-events: auto; touch-action: none; mix-blend-mode: plus-lighter; }
+    #particle-canvas {
+      z-index: 1;
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+    #drawing-canvas {
+      z-index: 50;
+      pointer-events: auto;
+      touch-action: none;
+      mix-blend-mode: plus-lighter;
+    }
 
-    /* 3. Contenedor del Video Central (Tarjeta) */
     .center-stage {
       position: absolute; inset: 0;
       display: flex; justify-content: center; align-items: center;
       perspective: 1000px;
       z-index: 10;
-      pointer-events: none; /* Dejamos pasar clicks al canvas de abajo si no es el video */
+      pointer-events: none;
     }
 
     .video-card {
       width: 650px; max-width: 80%;
       position: relative;
       border-radius: 20px;
-      transform-style: preserve-3d;
-      background: rgba(0,0,0,0.4);
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
-      overflow: hidden;
-      will-change: transform;
+      background: rgba(0,0,0,0.35);
       border: 1px solid rgba(255,255,255,0.08);
+      box-shadow:
+        0 20px 40px rgba(0,0,0,0.85),
+        0 0 0 1px rgba(255,255,255,0.03) inset;
+      overflow: hidden;
+      transform-style: preserve-3d;
+      will-change: transform;
       transition: box-shadow 0.3s ease;
     }
 
     video.main-video {
-      display: block; width: 100%; height: auto;
+      display: block;
+      width: 100%; height: auto;
       border-radius: 20px;
     }
 
-    /* Cursor Personalizado */
     #custom-cursor {
       position: fixed;
       width: var(--cursor-size); height: var(--cursor-size);
-      background: white;
+      background: #ffffff;
       border-radius: 50%;
       top: 0; left: 0;
       transform: translate(-50%, -50%);
       pointer-events: none;
       z-index: 9999;
       mix-blend-mode: difference;
-      box-shadow: 0 0 8px rgba(255,255,255,0.8);
-      transition: transform 0.1s ease, opacity 0.2s;
+      box-shadow: 0 0 8px rgba(255,255,255,0.9);
+      transition: transform 0.08s ease, opacity 0.2s ease, background 0.1s ease, box-shadow 0.1s ease;
     }
-    #custom-cursor.drawing { transform: translate(-50%, -50%) scale(0.5); background: #00ffff; box-shadow: 0 0 15px #00ffff; }
+    #custom-cursor.drawing {
+      transform: translate(-50%, -50%) scale(0.6);
+      background: #6ff8ff;
+      box-shadow: 0 0 14px #6ff8ff;
+    }
     #custom-cursor.hidden { opacity: 0; }
 
-    /* Botón de Audio Minimalista */
     #audio-btn {
       position: fixed;
       bottom: 30px; left: 50%; transform: translateX(-50%);
       width: var(--btn-size); height: var(--btn-size);
       border-radius: 50%;
-      background: rgba(255,255,255,0.05);
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(255,255,255,0.1);
-      cursor: none; /* Usar cursor custom */
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.15);
+      backdrop-filter: blur(10px);
+      cursor: none;
       z-index: 100;
       display: flex; justify-content: center; align-items: center;
       transition: all 0.3s ease;
       pointer-events: auto;
     }
-    #audio-btn:hover { background: rgba(255,255,255,0.2); transform: translateX(-50%) scale(1.1); }
-    #audio-btn svg { width: 22px; fill: white; opacity: 0.9; }
-    #audio-btn.muted svg { opacity: 0.5; }
-    
+    #audio-btn:hover {
+      background: rgba(255,255,255,0.2);
+      transform: translateX(-50%) scale(1.08);
+    }
+    #audio-btn svg {
+      width: 22px;
+      fill: white;
+      opacity: 0.9;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+    #audio-btn.muted svg {
+      opacity: 0.55;
+      transform: scale(0.94);
+    }
   </style>
 </head>
 <body>
-
   <div id="custom-cursor"></div>
-  
-  <!-- Video de fondo (copia borrosa) -->
+
   <video id="background-layer" muted loop playsinline></video>
-  
+
   <canvas id="particle-canvas"></canvas>
   <canvas id="drawing-canvas"></canvas>
 
   <div class="center-stage">
     <div class="video-card" id="video-card">
       <video class="main-video" id="main-video" loop muted playsinline autoplay>
-        <!-- Pón aquí tu video -->
         <source src="Laufey.mp4" type="video/mp4" />
       </video>
     </div>
   </div>
 
-  <button id="audio-btn" class="muted">
-    <svg viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+  <button id="audio-btn" class="muted" aria-label="Activar/Desactivar audio">
+    <svg viewBox="0 0 24 24">
+      <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9zM12 4L9.91 6.09 12 8.18V4z"/>
+    </svg>
   </button>
 
 <script>
-/**
- * PanitaMithico Visualizer 3.0
- * Mejoras: Dibujo de precisión (trails largos) + Física Gravitacional
- */
 document.addEventListener('DOMContentLoaded', () => {
   const mainVideo = document.getElementById('main-video');
   const bgVideo = document.getElementById('background-layer');
   const card = document.getElementById('video-card');
   const cursor = document.getElementById('custom-cursor');
   const audioBtn = document.getElementById('audio-btn');
-  
+
   const pCanvas = document.getElementById('particle-canvas');
   const dCanvas = document.getElementById('drawing-canvas');
   const pCtx = pCanvas.getContext('2d', { alpha: true });
-  const dCtx = dCanvas.getContext('2d', { alpha: true }); // DIBUJO
+  const dCtx = dCanvas.getContext('2d', { alpha: true });
 
-  // Canvas pequeño para robar colores del video
+  // Canvas pequeño para muestreo de color del video
   const smCanvas = new OffscreenCanvas(32, 32);
   const smCtx = smCanvas.getContext('2d', { willReadFrequently: true });
 
   let width, height, centerX, centerY;
   let audioContext, analyser, dataArray, source;
 
-  // --- 1. Ajuste de Pantalla ---
+  // Audio bands
+  let bass = 0, mid = 0, high = 0;
+
+  // --- Resize / Layout ---
   const resize = () => {
     width = window.innerWidth;
     height = window.innerHeight;
@@ -164,7 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('resize', resize);
   resize();
 
-  // Sincronizar fondo
+  // Sincronizar fondo con video principal
   mainVideo.addEventListener('play', () => {
     try {
       if (mainVideo.captureStream) bgVideo.srcObject = mainVideo.captureStream();
@@ -173,52 +192,44 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch(e){}
   }, { once: true });
 
-  // --- 2. Input y Dibujo Mejorado ---
+  // --- Input + Dibujo fino ---
   let mouseX = centerX, mouseY = centerY;
   let isDrawing = false;
   let lastPoint = null;
   let cursorTimer;
 
-  // Función de dibujo precisa
   const drawLine = (x, y) => {
     if (!lastPoint) { lastPoint = {x, y}; return; }
-    
+
     dCtx.beginPath();
     dCtx.moveTo(lastPoint.x, lastPoint.y);
     dCtx.lineTo(x, y);
-    
-    // ESTILO DE DIBUJO: Fino y Brillante
-    // Color varía ligeramente con la posición para dar efecto tornasol
-    const hue = (performance.now() * 0.1) % 360; 
-    dCtx.strokeStyle = `hsla(${hue}, 100%, 70%, 0.8)`;
-    
-    // Grosor muy fino (entre 0.5 y 2px dependiendo de la velocidad podrías hacerlo, 
-    // pero fijo se ve más elegante)
-    dCtx.lineWidth = 1.5; 
+
+    const hue = (performance.now() * 0.12) % 360;
+    dCtx.strokeStyle = `hsla(${hue}, 100%, 72%, 0.85)`;
+    dCtx.lineWidth = 1.2;
     dCtx.lineCap = 'round';
     dCtx.lineJoin = 'round';
-    
-    // Glow sutil
-    dCtx.shadowBlur = 8;
-    dCtx.shadowColor = `hsla(${hue}, 100%, 50%, 0.5)`;
-    
+    dCtx.shadowBlur = 10;
+    dCtx.shadowColor = `hsla(${hue}, 100%, 60%, 0.7)`;
+
     dCtx.stroke();
     lastPoint = {x, y};
   };
 
-  const handlePointer = (e) => {
-    mouseX = e.clientX; mouseY = e.clientY;
-    
+  const handlePointerMove = (e) => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+
     cursor.style.left = mouseX + 'px';
     cursor.style.top = mouseY + 'px';
     cursor.classList.remove('hidden');
     clearTimeout(cursorTimer);
-    cursorTimer = setTimeout(() => cursor.classList.add('hidden'), 2000);
+    cursorTimer = setTimeout(() => cursor.classList.add('hidden'), 2200);
 
-    // Tilt de la tarjeta suave
     const rotX = (centerY - mouseY) / 30;
     const rotY = (mouseX - centerX) / 30;
-    card.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg) scale(${isDrawing ? 0.98 : 1})`;
+    card.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg) scale(${isDrawing ? 0.985 : 1})`;
 
     if (isDrawing) drawLine(mouseX, mouseY);
   };
@@ -228,7 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
     isDrawing = true;
     lastPoint = { x: e.clientX, y: e.clientY };
     cursor.classList.add('drawing');
-    handlePointer(e);
+    handlePointerMove(e);
   });
 
   window.addEventListener('pointerup', () => {
@@ -236,166 +247,197 @@ document.addEventListener('DOMContentLoaded', () => {
     lastPoint = null;
     cursor.classList.remove('drawing');
   });
-  
-  window.addEventListener('pointermove', handlePointer);
 
-  // Ciclo de desvanecimiento del dibujo (Trails largos)
+  window.addEventListener('pointermove', handlePointerMove);
+
   function drawingLoop() {
-    // Usamos un opacity MUY bajo (0.02) para que el trazo tarde en irse
     dCtx.globalCompositeOperation = 'destination-out';
-    dCtx.fillStyle = 'rgba(0, 0, 0, 0.03)'; 
+    dCtx.fillStyle = 'rgba(0, 0, 0, 0.025)'; // tarda bastante en desaparecer
     dCtx.fillRect(0, 0, width, height);
-    
-    // Restaurar modo para dibujar encima
     dCtx.globalCompositeOperation = 'source-over';
-    
     requestAnimationFrame(drawingLoop);
   }
   drawingLoop();
 
-  // --- 3. Audio & Análisis ---
-  let bass = 0, mid = 0, high = 0; // Valores normalizados 0-1
-  
+  // --- Audio setup ---
   async function initAudio() {
     if (audioContext) return;
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     audioContext = new AudioCtx();
     analyser = audioContext.createAnalyser();
-    analyser.fftSize = 256; // Menos resolución = más rendimiento y picos más claros
-    analyser.smoothingTimeConstant = 0.8; 
-    
+    analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = 0.82;
+
     source = audioContext.createMediaElementSource(mainVideo);
     source.connect(analyser);
     analyser.connect(audioContext.destination);
+
     dataArray = new Uint8Array(analyser.frequencyBinCount);
   }
 
   function updateAudio() {
     if (!analyser) return;
     analyser.getByteFrequencyData(dataArray);
-    
-    // Extraer bandas simples
-    const bArr = dataArray.slice(0, 8);   // Bajos profundos
-    const mArr = dataArray.slice(8, 60);  // Voces/Medios
-    const hArr = dataArray.slice(60, 120); // Platillos/Agudos
+
+    const bArr = dataArray.slice(0, 10);
+    const mArr = dataArray.slice(10, 60);
+    const hArr = dataArray.slice(60, 120);
 
     const avg = arr => arr.reduce((a,b)=>a+b,0) / (arr.length || 1);
-    
-    // Suavizado manual para que no parpadee feo
-    bass += ( (avg(bArr)/255) - bass ) * 0.2;
-    mid  += ( (avg(mArr)/255) - mid  ) * 0.1;
-    high += ( (avg(hArr)/255) - high ) * 0.1;
+
+    const b = avg(bArr) / 255;
+    const m = avg(mArr) / 255;
+    const h = avg(hArr) / 255;
+
+    bass += (b - bass) * 0.25;
+    mid  += (m - mid) * 0.16;
+    high += (h - high) * 0.14;
   }
 
-  // --- 4. Sistema de Partículas: "Gravity Breath" ---
+  // --- Muestreo de color del video ---
+  function updateSampleCanvas() {
+    if (mainVideo.readyState >= 2 && mainVideo.videoWidth && mainVideo.videoHeight) {
+      smCtx.drawImage(mainVideo, 0, 0, smCanvas.width, smCanvas.height);
+    }
+  }
+  setInterval(updateSampleCanvas, 160); // actualizar color ~6 veces/seg
+
+  function getVideoColor() {
+    const w = smCanvas.width, h = smCanvas.height;
+    if (!w || !h) return 'rgba(255,255,255,0.8)';
+    const x = Math.floor(Math.random() * w);
+    const y = Math.floor(Math.random() * h);
+    const data = smCtx.getImageData(x, y, 1, 1).data;
+    const boost = 1.15;
+    const r = Math.min(255, data[0] * boost);
+    const g = Math.min(255, data[1] * boost);
+    const b = Math.min(255, data[2] * boost);
+    return `rgba(${r},${g},${b},${0.75 + high * 0.2})`;
+  }
+
+  // --- Partículas mejoradas ---
   const particles = [];
-  const MAX_PARTICLES = 250; 
+  const MAX_PARTICLES = 260;
 
   class Particle {
     constructor() {
-      // Posición inicial aleatoria en toda la pantalla
-      this.x = Math.random() * width;
-      this.y = Math.random() * height;
-      
-      // Velocidad base
-      this.vx = (Math.random() - 0.5) * 2;
-      this.vy = (Math.random() - 0.5) * 2;
-      
-      this.size = Math.random() * 2 + 0.5;
-      this.color = 'white';
-      
-      // "Personalidad" de la partícula (qué tanto le afecta el bajo vs agudos)
-      this.bassReactivity = Math.random() * 0.8 + 0.2;
+      this.reset(true);
+    }
+
+    reset(initialRing = false) {
+      // Posición inicial en un anillo alrededor del centro para que no "salgan volando"
+      const angle = Math.random() * Math.PI * 2;
+      const baseRadius = initialRing ? (height * 0.25) : (height * 0.28 + Math.random() * height * 0.1);
+      const r = baseRadius + (Math.random() - 0.5) * 40;
+      this.x = centerX + Math.cos(angle) * r;
+      this.y = centerY + Math.sin(angle) * r;
+
+      // Velocidad inicial muy suave (estabilidad)
+      this.vx = (Math.random() - 0.5) * 0.3;
+      this.vy = (Math.random() - 0.5) * 0.3;
+
+      this.sizeBase = 0.8 + Math.random() * 1.8;
+      this.size = this.sizeBase;
+      this.bassReactivity = 0.4 + Math.random() * 0.6;
+      this.color = getVideoColor();
     }
 
     update() {
-      // 1. Vector hacia el centro (Gravedad)
+      // vector al centro
       const dx = centerX - this.x;
       const dy = centerY - this.y;
-      const dist = Math.sqrt(dx*dx + dy*dy);
-      
-      // Si está muy cerca del centro, respawnear lejos para evitar aglomeración fea
-      if (dist < 50) {
-        this.x = Math.random() * width;
-        this.y = Math.random() * height;
-      }
-
-      // Normalizar vector dirección
+      const dist = Math.sqrt(dx*dx + dy*dy) || 1;
       const ndx = dx / dist;
       const ndy = dy / dist;
 
-      // FUERZA 1: Gravedad (Atrae suavemente)
-      // Cuanto más lejos, más fuerte la atracción
-      const gravityStrength = 0.5; 
-      this.vx += ndx * gravityStrength;
-      this.vy += ndy * gravityStrength;
+      const preferredRadius = height * 0.3;
+      const offset = dist - preferredRadius;
 
-      // FUERZA 2: Repulsión Musical (Explosión de bajos)
-      // Si hay bajo, empuja fuerte en dirección contraria al centro
-      const repulsionStrength = bass * 15 * this.bassReactivity; // Fuerza explosiva
-      
-      // Solo aplicamos repulsión si el bajo supera un umbral (el "kick")
-      if (bass > 0.3) {
-        this.vx -= ndx * repulsionStrength;
-        this.vy -= ndy * repulsionStrength;
+      // fuerza suave para mantenerlas cerca del anillo (como un "resorte")
+      const springStrength = 0.012;
+      this.vx += -ndx * offset * springStrength;
+      this.vy += -ndy * offset * springStrength;
+
+      // repulsión musical desde el centro (bass)
+      if (bass > 0.22) {
+        const repulsion = bass * 2.4 * this.bassReactivity;
+        this.vx -= ndx * repulsion;
+        this.vy -= ndy * repulsion;
       }
 
-      // FUERZA 3: Fricción (para que no se aceleren infinitamente)
-      this.vx *= 0.94;
-      this.vy *= 0.94;
+      // ligera turbulencia con medios/altos
+      const t = performance.now() * 0.001;
+      const turbulence = 0.18 + high * 0.4 + mid * 0.3;
+      this.vx += Math.cos(t + this.x * 0.002) * turbulence * 0.02;
+      this.vy += Math.sin(t + this.y * 0.002) * turbulence * 0.02;
 
-      // Actualizar posición
+      // fricción
+      const drag = 0.94;
+      this.vx *= drag;
+      this.vy *= drag;
+
       this.x += this.vx;
       this.y += this.vy;
 
-      // Color dinámico según video + agudos
-      // Los agudos las hacen más blancas/brillantes
-      const brightness = 50 + (high * 50);
-      this.color = `hsl(${200 + (mid * 100)}, ${60 + (bass * 40)}%, ${brightness}%)`;
+      // tamaño reacciona con bass y mid
+      this.size = this.sizeBase * (1 + bass * 2.2 + mid * 0.5);
+
+      // respawn si se va MUY lejos
+      if (this.x < -width*0.5 || this.x > width*1.5 || this.y < -height*0.5 || this.y > height*1.5) {
+        this.reset(false);
+      }
+
+      // refrescar color de vez en cuando
+      if (Math.random() < 0.02) {
+        this.color = getVideoColor();
+      }
     }
 
-    draw() {
-      pCtx.fillStyle = this.color;
-      pCtx.beginPath();
-      // El tamaño cambia con el bajo
-      const s = this.size * (1 + bass * 3);
-      pCtx.arc(this.x, this.y, s, 0, Math.PI * 2);
-      pCtx.fill();
+    draw(ctx) {
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.fill();
     }
   }
 
-  for(let i=0; i<MAX_PARTICLES; i++) particles.push(new Particle());
+  for (let i = 0; i < MAX_PARTICLES; i++) {
+    particles.push(new Particle());
+  }
 
   function animateParticles() {
     updateAudio();
 
-    // Limpiar canvas de partículas
     pCtx.clearRect(0, 0, width, height);
-    pCtx.globalCompositeOperation = 'lighter'; // Mezcla de luz
+    pCtx.globalCompositeOperation = 'lighter';
 
     particles.forEach(p => {
       p.update();
-      p.draw();
+      p.draw(pCtx);
     });
 
     requestAnimationFrame(animateParticles);
   }
   animateParticles();
 
-  // --- 5. UI Control ---
+  // --- Audio toggle ---
   audioBtn.addEventListener('click', () => {
     initAudio().then(() => {
-      if(audioContext.state === 'suspended') audioContext.resume();
+      if (audioContext.state === 'suspended') audioContext.resume();
     });
+
     mainVideo.muted = !mainVideo.muted;
     audioBtn.classList.toggle('muted', mainVideo.muted);
-    
-    // Cambiar icono
+
     const path = audioBtn.querySelector('path');
-    if(mainVideo.muted) {
-       path.setAttribute('d', 'M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9zM12 4L9.91 6.09 12 8.18V4z');
+    if (mainVideo.muted) {
+      path.setAttribute('d',
+        'M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9zM12 4L9.91 6.09 12 8.18V4z'
+      );
     } else {
-       path.setAttribute('d', 'M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z');
+      path.setAttribute('d',
+        'M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z'
+      );
     }
   });
 });
