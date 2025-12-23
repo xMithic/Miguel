@@ -3,13 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>PanitaMithico | Zen Visualizer</title>
+  <title>PanitaMithico | Neon Gravity</title>
   <style>
     :root {
-      --cursor-size: 20px;
-      --ui-blur: 60px; /* Más suavidad en el fondo */
-      --btn-size: 50px;
-      --card-radius: 24px;
+      --cursor-size: 10px; /* Cursor más pequeño y preciso */
+      --btn-size: 48px;
     }
 
     /* Reset y Base */
@@ -17,195 +15,145 @@
       margin: 0; padding: 0;
       width: 100%; height: 100%;
       overflow: hidden;
-      background-color: #050505;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      cursor: none; /* Cursor personalizado */
+      background-color: #080808; /* Negro profundo */
+      font-family: sans-serif;
+      cursor: none;
       user-select: none;
-      -webkit-user-select: none;
     }
 
-    /* Capas (Layers) */
+    /* 1. Capa de Fondo (Video borroso ambiental) */
     #background-layer {
-      position: fixed; inset: -10%; /* Un poco más grande para evitar bordes al blur */
-      width: 120%; height: 120%;
-      z-index: 1;
-      pointer-events: none;
-      opacity: 0.6;
-      filter: blur(var(--ui-blur)) saturate(1.2) brightness(0.4);
+      position: fixed; inset: -5%;
+      width: 110%; height: 110%;
+      z-index: 0;
+      opacity: 0.35;
+      filter: blur(50px) saturate(1.5);
       object-fit: cover;
-      transition: opacity 2s ease;
+      transition: opacity 1s ease;
     }
 
+    /* 2. Capas de Canvas */
     #particle-canvas, #drawing-canvas {
       position: fixed; inset: 0;
       width: 100%; height: 100%;
     }
-    #particle-canvas { z-index: 2; pointer-events: none; mix-blend-mode: screen; }
-    #drawing-canvas { z-index: 50; pointer-events: auto; touch-action: none; mix-blend-mode: overlay; }
+    #particle-canvas { z-index: 1; pointer-events: none; mix-blend-mode: screen; }
+    /* El canvas de dibujo debe estar encima de todo para capturar el mouse */
+    #drawing-canvas { z-index: 50; pointer-events: auto; touch-action: none; mix-blend-mode: plus-lighter; }
 
-    /* Contenedor 3D Central */
-    .perspective-container {
+    /* 3. Contenedor del Video Central (Tarjeta) */
+    .center-stage {
       position: absolute; inset: 0;
       display: flex; justify-content: center; align-items: center;
-      perspective: 1200px;
+      perspective: 1000px;
       z-index: 10;
-      pointer-events: none;
+      pointer-events: none; /* Dejamos pasar clicks al canvas de abajo si no es el video */
     }
 
-    .card-wrapper {
-      width: 700px; max-width: 85%;
+    .video-card {
+      width: 650px; max-width: 80%;
       position: relative;
+      border-radius: 20px;
       transform-style: preserve-3d;
-      will-change: transform;
-    }
-
-    #video-card {
-      position: relative;
-      border-radius: var(--card-radius);
-      background: rgba(20, 20, 20, 0.6);
-      /* Efecto cristal (Glassmorphism) sutil */
-      box-shadow: 
-        0 20px 50px rgba(0,0,0,0.5),
-        0 0 0 1px rgba(255,255,255,0.1) inset;
-      backdrop-filter: blur(20px);
+      background: rgba(0,0,0,0.4);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
       overflow: hidden;
-      transform: translateZ(0);
+      will-change: transform;
+      border: 1px solid rgba(255,255,255,0.08);
       transition: box-shadow 0.3s ease;
     }
 
     video.main-video {
       display: block; width: 100%; height: auto;
-      border-radius: var(--card-radius);
-      mask-image: -webkit-radial-gradient(white, black); /* Fix para bordes redondeados en Safari */
+      border-radius: 20px;
     }
 
-    /* Brillo dinámico en la tarjeta */
-    .card-shine {
-      position: absolute; inset: 0;
-      background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(255,255,255,0.15), transparent 60%);
-      pointer-events: none;
-      mix-blend-mode: overlay;
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
-    .card-wrapper:hover .card-shine { opacity: 1; }
-
-    /* Cursor Custom */
+    /* Cursor Personalizado */
     #custom-cursor {
       position: fixed;
       width: var(--cursor-size); height: var(--cursor-size);
-      border: 1.5px solid rgba(255,255,255,0.8);
+      background: white;
       border-radius: 50%;
       top: 0; left: 0;
       transform: translate(-50%, -50%);
       pointer-events: none;
       z-index: 9999;
       mix-blend-mode: difference;
-      transition: transform 0.1s ease-out, opacity 0.3s ease;
-      will-change: transform, top, left;
+      box-shadow: 0 0 8px rgba(255,255,255,0.8);
+      transition: transform 0.1s ease, opacity 0.2s;
     }
-    #custom-cursor.active { transform: translate(-50%, -50%) scale(2.5); background: rgba(255,255,255,0.1); border-color: transparent; }
+    #custom-cursor.drawing { transform: translate(-50%, -50%) scale(0.5); background: #00ffff; box-shadow: 0 0 15px #00ffff; }
     #custom-cursor.hidden { opacity: 0; }
 
     /* Botón de Audio Minimalista */
     #audio-btn {
       position: fixed;
-      bottom: 40px; /* Movido abajo para más minimalismo visual */
-      left: 50%; transform: translateX(-50%);
+      bottom: 30px; left: 50%; transform: translateX(-50%);
       width: var(--btn-size); height: var(--btn-size);
       border-radius: 50%;
-      background: rgba(255,255,255,0.1);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,0.2);
-      cursor: none; /* Usamos el cursor custom */
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.1);
+      cursor: none; /* Usar cursor custom */
       z-index: 100;
       display: flex; justify-content: center; align-items: center;
-      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      transition: all 0.3s ease;
       pointer-events: auto;
     }
-    #audio-btn svg { width: 20px; fill: white; opacity: 0.8; transition: transform 0.3s; }
-    #audio-btn:hover { background: rgba(255,255,255,0.25); transform: translateX(-50%) scale(1.1); }
-    #audio-btn.muted svg { opacity: 0.5; transform: scale(0.9); }
+    #audio-btn:hover { background: rgba(255,255,255,0.2); transform: translateX(-50%) scale(1.1); }
+    #audio-btn svg { width: 22px; fill: white; opacity: 0.9; }
+    #audio-btn.muted svg { opacity: 0.5; }
     
-    /* Indicador de audio visual (pequeñas barras) */
-    .eq-bars {
-      position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
-      display: flex; gap: 4px; z-index: 90; opacity: 0; transition: opacity 0.5s;
-    }
-    .eq-bar { width: 3px; height: 10px; background: white; border-radius: 2px; animation: eqBounce 1s infinite ease-in-out; }
-    .playing .eq-bars { opacity: 0.7; }
-    @keyframes eqBounce { 0%, 100% { height: 6px; } 50% { height: 18px; } }
-    .eq-bar:nth-child(1) { animation-delay: 0s; }
-    .eq-bar:nth-child(2) { animation-delay: 0.1s; }
-    .eq-bar:nth-child(3) { animation-delay: 0.2s; }
-
   </style>
 </head>
 <body>
 
-  <!-- Elementos UI -->
   <div id="custom-cursor"></div>
+  
+  <!-- Video de fondo (copia borrosa) -->
   <video id="background-layer" muted loop playsinline></video>
   
   <canvas id="particle-canvas"></canvas>
   <canvas id="drawing-canvas"></canvas>
 
-  <div class="perspective-container">
-    <div class="card-wrapper" id="card-wrapper">
-      <div id="video-card">
-        <div class="card-shine"></div>
-        <video class="main-video" id="main-video" loop muted playsinline autoplay>
-          <!-- Reemplaza con tu video -->
-          <source src="Laufey.mp4" type="video/mp4" />
-        </video>
-      </div>
+  <div class="center-stage">
+    <div class="video-card" id="video-card">
+      <video class="main-video" id="main-video" loop muted playsinline autoplay>
+        <!-- Pón aquí tu video -->
+        <source src="Laufey.mp4" type="video/mp4" />
+      </video>
     </div>
   </div>
 
-  <div class="eq-bars" id="eq-visual">
-    <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
-  </div>
-
-  <button id="audio-btn" class="muted" aria-label="Toggle Sound">
+  <button id="audio-btn" class="muted">
     <svg viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9zM12 4L9.91 6.09 12 8.18V4z"/></svg>
   </button>
 
 <script>
 /**
- * PanitaMithico Audio Visualizer Engine 2.0
- * Física de partículas basada en campos vectoriales radiales
+ * PanitaMithico Visualizer 3.0
+ * Mejoras: Dibujo de precisión (trails largos) + Física Gravitacional
  */
-
 document.addEventListener('DOMContentLoaded', () => {
   const mainVideo = document.getElementById('main-video');
   const bgVideo = document.getElementById('background-layer');
-  const cardWrapper = document.getElementById('card-wrapper');
-  const shine = document.querySelector('.card-shine');
+  const card = document.getElementById('video-card');
   const cursor = document.getElementById('custom-cursor');
   const audioBtn = document.getElementById('audio-btn');
-  const eqVisual = document.getElementById('eq-visual');
   
-  // Canvas
   const pCanvas = document.getElementById('particle-canvas');
   const dCanvas = document.getElementById('drawing-canvas');
   const pCtx = pCanvas.getContext('2d', { alpha: true });
-  const dCtx = dCanvas.getContext('2d', { alpha: true });
+  const dCtx = dCanvas.getContext('2d', { alpha: true }); // DIBUJO
 
-  // Canvas oculto para muestreo de color (optimizadísimo)
-  const smCanvas = new OffscreenCanvas(64, 64);
+  // Canvas pequeño para robar colores del video
+  const smCanvas = new OffscreenCanvas(32, 32);
   const smCtx = smCanvas.getContext('2d', { willReadFrequently: true });
 
   let width, height, centerX, centerY;
   let audioContext, analyser, dataArray, source;
-  let isAudioActive = false;
-  
-  // Variables de Música
-  const musicState = {
-    bass: 0, mid: 0, treble: 0, level: 0,
-    history: [] // Para detectar beats con media móvil
-  };
 
-  // --- 1. Inicialización y Resize ---
+  // --- 1. Ajuste de Pantalla ---
   const resize = () => {
     width = window.innerWidth;
     height = window.innerHeight;
@@ -216,247 +164,233 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('resize', resize);
   resize();
 
-  // Sincronización de videos (Espejo de fondo)
-  const syncBgVideo = () => {
+  // Sincronizar fondo
+  mainVideo.addEventListener('play', () => {
     try {
-      if (mainVideo.captureStream) {
-        bgVideo.srcObject = mainVideo.captureStream();
-      } else {
-        bgVideo.src = mainVideo.currentSrc; // Fallback
-      }
-      bgVideo.play().catch(() => {});
-    } catch(e) {}
-  };
-  mainVideo.addEventListener('play', syncBgVideo, { once: true });
+      if (mainVideo.captureStream) bgVideo.srcObject = mainVideo.captureStream();
+      else bgVideo.src = mainVideo.currentSrc;
+      bgVideo.play().catch(()=>{});
+    } catch(e){}
+  }, { once: true });
 
-  // --- 2. Sistema de Interacción (Tilt 3D + Cursor) ---
+  // --- 2. Input y Dibujo Mejorado ---
   let mouseX = centerX, mouseY = centerY;
-  let cursorTimer;
-
-  const handleInput = (x, y, isClicking) => {
-    mouseX = x; mouseY = y;
-    
-    // Mover cursor
-    cursor.style.left = x + 'px';
-    cursor.style.top = y + 'px';
-    cursor.classList.remove('hidden');
-    clearTimeout(cursorTimer);
-    cursorTimer = setTimeout(() => cursor.classList.add('hidden'), 2500);
-
-    // Tilt de la tarjeta (Suavizado)
-    const rotateX = (centerY - y) / 25; // Rango reducido para elegancia
-    const rotateY = (x - centerX) / 25;
-    
-    cardWrapper.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(${isClicking ? 0.98 : 1})`;
-    
-    // Mover el brillo (Shine)
-    shine.style.setProperty('--x', `${(x / width) * 100}%`);
-    shine.style.setProperty('--y', `${(y / height) * 100}%`);
-  };
-
-  window.addEventListener('pointermove', e => handleInput(e.clientX, e.clientY, false));
-  window.addEventListener('pointerdown', e => {
-    handleInput(e.clientX, e.clientY, true);
-    cursor.classList.add('active');
-    startDrawing(e);
-  });
-  window.addEventListener('pointerup', () => {
-    cursor.classList.remove('active');
-    stopDrawing();
-  });
-
-  // --- 3. Sistema de Dibujo (Trazos de luz) ---
   let isDrawing = false;
   let lastPoint = null;
+  let cursorTimer;
 
-  function startDrawing(e) {
-    if(e.target === audioBtn) return; // No dibujar sobre el botón
+  // Función de dibujo precisa
+  const drawLine = (x, y) => {
+    if (!lastPoint) { lastPoint = {x, y}; return; }
+    
+    dCtx.beginPath();
+    dCtx.moveTo(lastPoint.x, lastPoint.y);
+    dCtx.lineTo(x, y);
+    
+    // ESTILO DE DIBUJO: Fino y Brillante
+    // Color varía ligeramente con la posición para dar efecto tornasol
+    const hue = (performance.now() * 0.1) % 360; 
+    dCtx.strokeStyle = `hsla(${hue}, 100%, 70%, 0.8)`;
+    
+    // Grosor muy fino (entre 0.5 y 2px dependiendo de la velocidad podrías hacerlo, 
+    // pero fijo se ve más elegante)
+    dCtx.lineWidth = 1.5; 
+    dCtx.lineCap = 'round';
+    dCtx.lineJoin = 'round';
+    
+    // Glow sutil
+    dCtx.shadowBlur = 8;
+    dCtx.shadowColor = `hsla(${hue}, 100%, 50%, 0.5)`;
+    
+    dCtx.stroke();
+    lastPoint = {x, y};
+  };
+
+  const handlePointer = (e) => {
+    mouseX = e.clientX; mouseY = e.clientY;
+    
+    cursor.style.left = mouseX + 'px';
+    cursor.style.top = mouseY + 'px';
+    cursor.classList.remove('hidden');
+    clearTimeout(cursorTimer);
+    cursorTimer = setTimeout(() => cursor.classList.add('hidden'), 2000);
+
+    // Tilt de la tarjeta suave
+    const rotX = (centerY - mouseY) / 30;
+    const rotY = (mouseX - centerX) / 30;
+    card.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg) scale(${isDrawing ? 0.98 : 1})`;
+
+    if (isDrawing) drawLine(mouseX, mouseY);
+  };
+
+  dCanvas.addEventListener('pointerdown', e => {
+    if (e.target.closest('#audio-btn')) return;
     isDrawing = true;
     lastPoint = { x: e.clientX, y: e.clientY };
-  }
+    cursor.classList.add('drawing');
+    handlePointer(e);
+  });
 
-  function stopDrawing() { isDrawing = false; lastPoint = null; }
+  window.addEventListener('pointerup', () => {
+    isDrawing = false;
+    lastPoint = null;
+    cursor.classList.remove('drawing');
+  });
+  
+  window.addEventListener('pointermove', handlePointer);
 
-  function drawLoop() {
-    // Desvanecimiento rápido para efecto estela limpia
+  // Ciclo de desvanecimiento del dibujo (Trails largos)
+  function drawingLoop() {
+    // Usamos un opacity MUY bajo (0.02) para que el trazo tarde en irse
     dCtx.globalCompositeOperation = 'destination-out';
-    dCtx.fillStyle = 'rgba(0, 0, 0, 0.1)'; 
+    dCtx.fillStyle = 'rgba(0, 0, 0, 0.03)'; 
     dCtx.fillRect(0, 0, width, height);
-
-    if (isDrawing && lastPoint) {
-      dCtx.globalCompositeOperation = 'source-over';
-      dCtx.strokeStyle = `hsl(${musicState.treble * 1.5 + 180}, 100%, 70%)`;
-      dCtx.lineWidth = 2 + (musicState.bass * 10); // Grosor reacciona al bass
-      dCtx.lineCap = 'round';
-      dCtx.lineJoin = 'round';
-      dCtx.shadowBlur = 15;
-      dCtx.shadowColor = dCtx.strokeStyle;
-
-      dCtx.beginPath();
-      dCtx.moveTo(lastPoint.x, lastPoint.y);
-      dCtx.lineTo(mouseX, mouseY);
-      dCtx.stroke();
-      lastPoint = { x: mouseX, y: mouseY };
-    }
-    requestAnimationFrame(drawLoop);
+    
+    // Restaurar modo para dibujar encima
+    dCtx.globalCompositeOperation = 'source-over';
+    
+    requestAnimationFrame(drawingLoop);
   }
-  drawLoop();
+  drawingLoop();
 
-  // --- 4. Sistema de Audio (Análisis FFT) ---
+  // --- 3. Audio & Análisis ---
+  let bass = 0, mid = 0, high = 0; // Valores normalizados 0-1
+  
   async function initAudio() {
     if (audioContext) return;
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     audioContext = new AudioCtx();
     analyser = audioContext.createAnalyser();
-    analyser.fftSize = 512;
-    analyser.smoothingTimeConstant = 0.85; // Muy suave
+    analyser.fftSize = 256; // Menos resolución = más rendimiento y picos más claros
+    analyser.smoothingTimeConstant = 0.8; 
     
     source = audioContext.createMediaElementSource(mainVideo);
     source.connect(analyser);
     analyser.connect(audioContext.destination);
-    
     dataArray = new Uint8Array(analyser.frequencyBinCount);
   }
 
-  function updateAudioAnalysis() {
+  function updateAudio() {
     if (!analyser) return;
     analyser.getByteFrequencyData(dataArray);
+    
+    // Extraer bandas simples
+    const bArr = dataArray.slice(0, 8);   // Bajos profundos
+    const mArr = dataArray.slice(8, 60);  // Voces/Medios
+    const hArr = dataArray.slice(60, 120); // Platillos/Agudos
 
-    // Dividir bandas
-    const bassRange = dataArray.slice(0, 10);
-    const midRange = dataArray.slice(10, 80);
-    const trebleRange = dataArray.slice(80, 200);
-
-    const avg = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
-
-    // Normalizar valores 0.0 - 1.0
-    const b = avg(bassRange) / 255;
-    const m = avg(midRange) / 255;
-    const t = avg(trebleRange) / 255;
-
-    // Suavizado manual (Linear Interpolation)
-    musicState.bass += (b - musicState.bass) * 0.2;
-    musicState.mid += (m - musicState.mid) * 0.1;
-    musicState.treble += (t - musicState.treble) * 0.1;
-    musicState.level = (musicState.bass + musicState.mid + musicState.treble) / 3;
+    const avg = arr => arr.reduce((a,b)=>a+b,0) / (arr.length || 1);
+    
+    // Suavizado manual para que no parpadee feo
+    bass += ( (avg(bArr)/255) - bass ) * 0.2;
+    mid  += ( (avg(mArr)/255) - mid  ) * 0.1;
+    high += ( (avg(hArr)/255) - high ) * 0.1;
   }
 
-  // --- 5. Sistema de Partículas (Flow Field Radial) ---
+  // --- 4. Sistema de Partículas: "Gravity Breath" ---
   const particles = [];
-  const MAX_PARTICLES = 350; // Cantidad controlada para minimalismo
+  const MAX_PARTICLES = 250; 
 
   class Particle {
-    constructor() { this.reset(); }
-
-    reset() {
-      // Nacer desde el centro (detrás de la tarjeta)
-      const angle = Math.random() * Math.PI * 2;
-      const radius = 100 + Math.random() * 150; // Radio inicial cerca de la tarjeta
-      this.x = centerX + Math.cos(angle) * radius;
-      this.y = centerY + Math.sin(angle) * radius;
+    constructor() {
+      // Posición inicial aleatoria en toda la pantalla
+      this.x = Math.random() * width;
+      this.y = Math.random() * height;
       
+      // Velocidad base
       this.vx = (Math.random() - 0.5) * 2;
       this.vy = (Math.random() - 0.5) * 2;
       
-      this.size = Math.random() * 3 + 1;
-      this.life = 1; // 1.0 = vida llena
-      this.decay = 0.005 + Math.random() * 0.01;
-      this.baseColor = sampleColorFromVideo(); // Color inteligente
+      this.size = Math.random() * 2 + 0.5;
+      this.color = 'white';
+      
+      // "Personalidad" de la partícula (qué tanto le afecta el bajo vs agudos)
+      this.bassReactivity = Math.random() * 0.8 + 0.2;
     }
 
     update() {
-      // Física Radial: El Bass empuja hacia afuera
-      const dx = this.x - centerX;
-      const dy = this.y - centerY;
+      // 1. Vector hacia el centro (Gravedad)
+      const dx = centerX - this.x;
+      const dy = centerY - this.y;
       const dist = Math.sqrt(dx*dx + dy*dy);
-      const angle = Math.atan2(dy, dx);
-
-      // Fuerza de empuje (Bass)
-      const push = 2 + (musicState.bass * 15);
       
-      // Fuerza de rotación (Treble/Mid) - Efecto vórtice
-      const rotationSpeed = 0.02 + (musicState.mid * 0.05);
-      
-      // Aplicar movimiento polar
-      const newDist = dist + push * 0.5; // Expansión
-      const newAngle = angle + rotationSpeed * (dist > 0 ? 1 : 0); // Rotación
-
-      // Convertir polar a cartesiano suavemente
-      const tx = centerX + Math.cos(newAngle) * newDist;
-      const ty = centerY + Math.sin(newAngle) * newDist;
-
-      // Interpolación para movimiento fluido
-      this.x += (tx - this.x) * 0.1;
-      this.y += (ty - this.y) * 0.1;
-
-      // Vida
-      this.life -= this.decay + (musicState.level * 0.01);
-      
-      if (this.life <= 0 || this.x < 0 || this.x > width || this.y < 0 || this.y > height) {
-        this.reset();
+      // Si está muy cerca del centro, respawnear lejos para evitar aglomeración fea
+      if (dist < 50) {
+        this.x = Math.random() * width;
+        this.y = Math.random() * height;
       }
+
+      // Normalizar vector dirección
+      const ndx = dx / dist;
+      const ndy = dy / dist;
+
+      // FUERZA 1: Gravedad (Atrae suavemente)
+      // Cuanto más lejos, más fuerte la atracción
+      const gravityStrength = 0.5; 
+      this.vx += ndx * gravityStrength;
+      this.vy += ndy * gravityStrength;
+
+      // FUERZA 2: Repulsión Musical (Explosión de bajos)
+      // Si hay bajo, empuja fuerte en dirección contraria al centro
+      const repulsionStrength = bass * 15 * this.bassReactivity; // Fuerza explosiva
+      
+      // Solo aplicamos repulsión si el bajo supera un umbral (el "kick")
+      if (bass > 0.3) {
+        this.vx -= ndx * repulsionStrength;
+        this.vy -= ndy * repulsionStrength;
+      }
+
+      // FUERZA 3: Fricción (para que no se aceleren infinitamente)
+      this.vx *= 0.94;
+      this.vy *= 0.94;
+
+      // Actualizar posición
+      this.x += this.vx;
+      this.y += this.vy;
+
+      // Color dinámico según video + agudos
+      // Los agudos las hacen más blancas/brillantes
+      const brightness = 50 + (high * 50);
+      this.color = `hsl(${200 + (mid * 100)}, ${60 + (bass * 40)}%, ${brightness}%)`;
     }
 
-    draw(ctx) {
-      ctx.globalAlpha = this.life * (0.3 + musicState.treble); // Parpadeo con agudos
-      ctx.fillStyle = this.baseColor;
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, this.size * (1 + musicState.bass), 0, Math.PI * 2);
-      ctx.fill();
+    draw() {
+      pCtx.fillStyle = this.color;
+      pCtx.beginPath();
+      // El tamaño cambia con el bajo
+      const s = this.size * (1 + bass * 3);
+      pCtx.arc(this.x, this.y, s, 0, Math.PI * 2);
+      pCtx.fill();
     }
   }
 
-  // Muestreo de color inteligente
-  function sampleColorFromVideo() {
-    if (!mainVideo.videoWidth) return 'white';
-    // Muestrear un pixel aleatorio del centro
-    const rx = Math.floor(Math.random() * 64);
-    const ry = Math.floor(Math.random() * 64);
-    const pixel = smCtx.getImageData(rx, ry, 1, 1).data;
-    // Boost de saturación (HSL)
-    return `rgba(${pixel[0]}, ${pixel[1]}, ${pixel[2]}, 0.8)`;
-  }
-
-  // Actualizar buffer de color (baja frecuencia)
-  setInterval(() => {
-    if (mainVideo.readyState >= 2) {
-      smCtx.drawImage(mainVideo, 0, 0, 64, 64);
-    }
-  }, 500);
-
-  // Inicializar partículas
   for(let i=0; i<MAX_PARTICLES; i++) particles.push(new Particle());
 
   function animateParticles() {
-    updateAudioAnalysis();
+    updateAudio();
 
-    // Fade suave (Trail corto para minimalismo)
-    pCtx.globalCompositeOperation = 'destination-out';
-    pCtx.fillStyle = 'rgba(0, 0, 0, 0.08)';
-    pCtx.fillRect(0, 0, width, height);
-    
-    pCtx.globalCompositeOperation = 'lighter'; // Mezcla aditiva para brillo
+    // Limpiar canvas de partículas
+    pCtx.clearRect(0, 0, width, height);
+    pCtx.globalCompositeOperation = 'lighter'; // Mezcla de luz
 
     particles.forEach(p => {
       p.update();
-      p.draw(pCtx);
+      p.draw();
     });
 
     requestAnimationFrame(animateParticles);
   }
   animateParticles();
 
-  // --- 6. Control de Audio/Video ---
+  // --- 5. UI Control ---
   audioBtn.addEventListener('click', () => {
     initAudio().then(() => {
       if(audioContext.state === 'suspended') audioContext.resume();
     });
-    
     mainVideo.muted = !mainVideo.muted;
     audioBtn.classList.toggle('muted', mainVideo.muted);
-    document.body.classList.toggle('playing', !mainVideo.muted);
     
-    // Icono SVG cambio
+    // Cambiar icono
     const path = audioBtn.querySelector('path');
     if(mainVideo.muted) {
        path.setAttribute('d', 'M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9zM12 4L9.91 6.09 12 8.18V4z');
@@ -464,7 +398,6 @@ document.addEventListener('DOMContentLoaded', () => {
        path.setAttribute('d', 'M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z');
     }
   });
-
 });
 </script>
 </body>
