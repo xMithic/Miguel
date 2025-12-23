@@ -1,15 +1,21 @@
 import { ColorSampler } from '../utils/colorSampler.js';
 
-class LensParticle {
+class NeuralParticle {
   constructor(width, height) {
     this.width = width;
     this.height = height;
+    this.history = []; 
+    this.MAX_HISTORY = 10;
+    
+    // Color inicial blanco
+    this.color = { r: 255, g: 255, b: 255 }; 
+    
     this.reset(true);
   }
 
   reset(isInitial = false) {
     const fov = 400;
-    this.z = isInitial ? Math.random() * 1000 : 800 + Math.random() * 300;
+    this.z = isInitial ? Math.random() * 1200 : 800 + Math.random() * 400;
     
     const scale = fov / (fov + this.z);
     const visibleWidth = this.width / scale;
@@ -18,33 +24,61 @@ class LensParticle {
     this.x = (Math.random() - 0.5) * visibleWidth;
     this.y = (Math.random() - 0.5) * visibleHeight;
     
-    // Movimiento más flotante y suave (menos nervioso)
-    this.speed = 0.8 + Math.random() * 0.8; 
+    this.speed = 0.5 + Math.random() * 1.5; 
     this.angle = Math.random() * Math.PI * 2;
-    this.vx = Math.cos(this.angle) * 0.4;
-    this.vy = Math.sin(this.angle) * 0.4;
+    this.vx = Math.cos(this.angle) * 0.5;
+    this.vy = Math.sin(this.angle) * 0.5;
     
-    // Tamaño base más grande para que se note el efecto de "lente"
-    this.baseSize = 2.0 + Math.random() * 3.0; 
+    this.baseSize = 0.6 + Math.random() * 1.4; 
+    this.history = [];
   }
 
-  update(musicState) {
+  // FUNCIÓN DE SUAVIZADO (La clave para quitar el parpadeo)
+  lerp(start, end, amt) {
+    return (1 - amt) * start + amt * end;
+  }
+
+  update(musicState, targetColor) {
+    // 1. CAMBIO DE COLOR SUAVE (FIX DEL PARPADEO)
+    // En lugar de copiar a lo bruto, nos acercamos un 10% (0.1) al color objetivo en cada frame.
+    if (targetColor && targetColor.r !== undefined) {
+        this.color.r = this.lerp(this.color.r, targetColor.r, 0.1);
+        this.color.g = this.lerp(this.color.g, targetColor.g, 0.1);
+        this.color.b = this.lerp(this.color.b, targetColor.b, 0.1);
+    }
+
+    // Guardar historial
+    if (this.x2d && this.y2d) {
+        this.history.push({ x: this.x2d, y: this.y2d });
+        if (this.history.length > this.MAX_HISTORY) this.history.shift();
+    }
+
     const bass = musicState?.bass || 0;
+    const mid = musicState?.mid || 0;
+
+    const speedMult = 1 + bass * 3; 
+    this.z -= this.speed * speedMult;
     
-    // El bajo empuja las partículas hacia el espectador
-    this.z -= this.speed * (1 + bass * 2);
+    const turnSpeed = (Math.random() - 0.5) * 0.1 * (1 + mid);
+    const currentAngle = Math.atan2(this.vy, this.vx);
+    const newAngle = currentAngle + turnSpeed;
+    
+    const moveSpeed = 0.5 * (1 + mid * 2);
+    this.vx = Math.cos(newAngle) * moveSpeed;
+    this.vy = Math.sin(newAngle) * moveSpeed;
 
     this.x += this.vx;
     this.y += this.vy;
 
-    // Reiniciar si sale de pantalla o pasa la cámara
     const fov = 400;
     const scale = fov / (fov + this.z);
     const limitX = (this.width / 2) / scale;
     const limitY = (this.height / 2) / scale;
 
-    if (this.z < 10 || Math.abs(this.x) > limitX * 1.5 || Math.abs(this.y) > limitY * 1.5) {
+    if (this.z < 10 || Math.abs(this.x) > limitX * 1.2 || Math.abs(this.y) > limitY * 1.2) {
       this.reset();
+      // Al reiniciar, sí copiamos el color directo para que no nazca blanca
+      if(targetColor) this.color = { ...targetColor };
     }
   }
 
@@ -55,27 +89,47 @@ class LensParticle {
     this.x2d = this.x * scale + centerX;
     this.y2d = this.y * scale + centerY;
     
-    const depthAlpha = Math.max(0, 1 - this.z / 1000); 
-    if (depthAlpha < 0.05) return false;
-
-    // Tamaño dinámico con la música
-    const size = this.baseSize * scale * (1 + (musicState?.bass || 0) * 0.5);
-
-    // DIBUJO DE LA "LENTE"
-    // No usamos un color fijo. Usamos un gradiente blanco/gris con transparencia.
-    // Al usar modos de fusión, esto "quemará" o "saturará" el video de fondo.
+    const depthAlpha = Math.pow(Math.max(0, 1 - this.z / 1200), 1.5); 
+    const musicAlpha = 0.4 + (musicState?.level || 0) * 0.6;
+    const alpha = depthAlpha * musicAlpha;
     
-    const gradient = ctx.createRadialGradient(this.x2d, this.y2d, 0, this.x2d, this.y2d, size * 2);
-    
-    // Centro: Casi transparente o blanco muy suave para brillo especular
-    gradient.addColorStop(0, `rgba(255, 255, 255, ${depthAlpha * 0.8})`); 
-    
-    // Borde: Cae a transparente
-    gradient.addColorStop(1, 'rgba(128, 128, 128, 0)'); 
+    if (alpha < 0.01) return false;
 
-    ctx.fillStyle = gradient;
+    // Aseguramos que los valores sean enteros para mejor rendimiento de renderizado
+    const r = Math.floor(this.color.r);
+    const g = Math.floor(this.color.g);
+    const b = Math.floor(this.color.b);
+
+    // Estela (Trail)
+    if (this.history.length > 2) {
+        ctx.beginPath();
+        ctx.moveTo(this.history[0].x, this.history[0].y);
+        for (let i = 1; i < this.history.length; i++) ctx.lineTo(this.history[i].x, this.history[i].y);
+        ctx.lineTo(this.x2d, this.y2d);
+        ctx.lineCap = 'round';
+        ctx.lineWidth = this.baseSize * scale * 0.8;
+        ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha * 0.4})`;
+        ctx.stroke();
+    }
+
+    const size = Math.max(0.5, this.baseSize * scale * (1 + (musicState?.bass || 0)));
+    
+    // Glow
+    if ((musicState?.level || 0) > 0.2) {
+      const glowSize = size * 4;
+      const gradient = ctx.createRadialGradient(this.x2d, this.y2d, 0, this.x2d, this.y2d, glowSize);
+      gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${alpha})`);
+      gradient.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(this.x2d, this.y2d, glowSize, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Núcleo (Añadimos un poco de blanco al color base para que brille pero mantenga el tono)
+    ctx.fillStyle = `rgba(${Math.min(255, r + 50)}, ${Math.min(255, g + 50)}, ${Math.min(255, b + 50)}, ${alpha})`;
     ctx.beginPath();
-    ctx.arc(this.x2d, this.y2d, size * 2, 0, Math.PI * 2);
+    ctx.arc(this.x2d, this.y2d, size, 0, Math.PI * 2);
     ctx.fill();
     
     return true;
@@ -86,14 +140,18 @@ export class ParticleSystem {
   constructor(canvas, colorSampler, audioAnalyzer) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d', { alpha: true });
+    this.colorSampler = colorSampler;
     this.audioAnalyzer = audioAnalyzer;
     
     this.particles = [];
-    this.MAX_PARTICLES = 60; // Menos partículas pero más grandes
-    this.CONNECTION_DISTANCE = 150;
+    this.MAX_PARTICLES = 80;
+    this.CONNECTION_DISTANCE = 130;
+    this.MAX_CONNECTIONS_PER_PARTICLE = 4;
     
+    this.currentColor = { r: 255, g: 255, b: 255 };
+
     for (let i = 0; i < this.MAX_PARTICLES; i++) {
-      this.particles.push(new LensParticle(this.canvas.width, this.canvas.height));
+      this.particles.push(new NeuralParticle(this.canvas.width, this.canvas.height));
     }
     
     this.animate = this.animate.bind(this);
@@ -101,21 +159,23 @@ export class ParticleSystem {
 
   drawConnections(musicState) {
     const level = musicState?.level || 0;
-    if (level < 0.15) return; 
+    if (level < 0.1) return; 
 
-    // Usaremos las líneas también como potenciadores de color
     const bassInfluence = musicState?.bass || 0;
-    const dynamicReach = this.CONNECTION_DISTANCE * (1 + bassInfluence * 1.5);
+    const dynamicReach = this.CONNECTION_DISTANCE * (1 + bassInfluence * 1.8);
     
     this.ctx.lineCap = 'round';
     
     for (let i = 0; i < this.particles.length; i++) {
       const p1 = this.particles[i];
-      if (p1.z > 800) continue;
+      if (!p1.x2d || p1.z > 900) continue;
+
+      let connectionsMade = 0;
 
       for (let j = i + 1; j < this.particles.length; j++) {
+        if (connectionsMade >= this.MAX_CONNECTIONS_PER_PARTICLE) break;
         const p2 = this.particles[j];
-        if (p2.z > 800) continue;
+        if (!p2.x2d || p2.z > 900) continue;
 
         const dx = p1.x2d - p2.x2d;
         const dy = p1.y2d - p2.y2d;
@@ -124,16 +184,21 @@ export class ParticleSystem {
         const dist = Math.sqrt(dx * dx + dy * dy);
 
         if (dist < dynamicReach) {
+          connectionsMade++;
           const proximity = 1 - (dist / dynamicReach);
-          const alpha = proximity * level; // Sin multiplicador 0.6 para que sea más intenso
+          let alpha = proximity * level * 0.6;
+          if ((musicState?.impact || 0) > 0.5) alpha += 0.3;
+          
+          const width = (0.2 + bassInfluence * 1.5) * proximity;
 
-          if (alpha > 0.1) {
-            this.ctx.lineWidth = (1 + bassInfluence * 4) * proximity;
+          if (alpha > 0.05) {
+            this.ctx.lineWidth = width;
             
-            // Color GRIS MEDIO (128,128,128) es neutro en modos de fusión como Overlay.
-            // Blanco (255) aclara/satura. Negro (0) oscurece.
-            // Usaremos blanco con transparencia para "iluminar" la conexión sobre el video.
-            this.ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.5})`;
+            const r = Math.floor((p1.color.r + p2.color.r) / 2);
+            const g = Math.floor((p1.color.g + p2.color.g) / 2);
+            const b = Math.floor((p1.color.b + p2.color.b) / 2);
+            
+            this.ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
             
             this.ctx.beginPath();
             this.ctx.moveTo(p1.x2d, p1.y2d);
@@ -146,28 +211,32 @@ export class ParticleSystem {
   }
 
   animate() {
-    let musicState = { bass: 0, mid: 0, treble: 0, level: 0 };
+    let musicState = { bass: 0, mid: 0, treble: 0, level: 0, impact: 0 };
     try {
         if (this.audioAnalyzer) musicState = this.audioAnalyzer.getState();
     } catch(e) {}
     
+    // Obtener color (intentar que sea el dominante o un promedio si es posible en el sampler)
+    try {
+        if (this.colorSampler) {
+            const sampled = this.colorSampler.sampleColor(); 
+            if (sampled && sampled.r !== undefined) {
+                // Pequeña corrección: si el sampler devuelve negros puros por error, ignorar
+                if (sampled.r + sampled.g + sampled.b > 10) {
+                    this.currentColor = sampled;
+                }
+            }
+        }
+    } catch(e) {}
+
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.globalCompositeOperation = 'lighter'; 
 
-    // --- MAGIA DE LOS MODOS DE FUSIÓN ---
+    // Aquí es donde sucede la magia del suavizado
+    this.particles.forEach(p => p.update(musicState, this.currentColor));
     
-    // 'overlay': Aumenta el contraste. Donde hay blanco, aclara. Donde hay gris, satura.
-    // 'color-dodge': Quema el color, haciéndolo muy intenso (estilo neón).
-    // 'soft-light': Más sutil.
-    
-    // Prueba 'overlay' primero. Si quieres más intensidad, cambia a 'color-dodge'.
-    this.ctx.globalCompositeOperation = 'overlay'; 
-
-    this.particles.forEach(p => p.update(musicState));
-    
-    // Dibujar conexiones (ahora son rayos de luz que intensifican el fondo)
     this.drawConnections(musicState);
     
-    // Ordenar (aunque en overlay importa menos el orden)
     this.particles.sort((a, b) => b.z - a.z);
     
     const centerX = this.canvas.width / 2;
@@ -177,13 +246,18 @@ export class ParticleSystem {
         p.draw(this.ctx, centerX, centerY, musicState);
     });
 
-    // Restaurar para no romper otros dibujos
     this.ctx.globalCompositeOperation = 'source-over';
-    
     requestAnimationFrame(this.animate);
   }
 
   start() { this.animate(); }
   setConnectionDistance(d) { this.CONNECTION_DISTANCE = d; }
-  setParticleCount(c) { /* lógica estándar */ }
+  setParticleCount(c) { 
+      const current = this.particles.length;
+      if(c > current) {
+          for(let i=0; i<c-current; i++) this.particles.push(new NeuralParticle(this.canvas.width, this.canvas.height));
+      } else {
+          this.particles.length = c;
+      }
+  }
 }
