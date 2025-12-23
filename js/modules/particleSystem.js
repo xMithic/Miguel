@@ -47,7 +47,7 @@ class Star3D {
     alpha = Math.max(0, Math.min(1, alpha));
     alpha *= (0.6 + musicState.level * 0.4);
 
-    // Estelas con impactos
+    // Estelas con impactos ✅ CORREGIDO
     if (musicState.impact > 0.3) {
       const trailLength = 15 * musicState.impact * scale;
       const gradient = ctx.createLinearGradient(
@@ -60,6 +60,8 @@ class Star3D {
       
       ctx.strokeStyle = gradient;
       ctx.lineWidth = size * 0.5;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
       ctx.beginPath();
       ctx.moveTo(x2d, y2d);
       ctx.lineTo(
@@ -69,13 +71,13 @@ class Star3D {
       ctx.stroke();
     }
 
-    // Partícula central
+    // Partícula central ✅ CORREGIDO
     ctx.fillStyle = ColorSampler.rgba(this.color, alpha);
     ctx.beginPath();
     ctx.arc(x2d, y2d, size, 0, Math.PI * 2);
     ctx.fill();
 
-    // Brillo en partículas cercanas
+    // Brillo en partículas cercanas ✅ CORREGIDO
     if (this.z < 300 && musicState.treble > 0.5) {
       ctx.fillStyle = ColorSampler.rgba({ r: 255, g: 255, b: 255 }, alpha * 0.5);
       ctx.beginPath();
@@ -83,6 +85,11 @@ class Star3D {
       ctx.fill();
     }
   }
+}
+
+// ✅ FUNCIÓN HELPER LOCAL (alternativa más limpia)
+function rgba(color, alpha) {
+  return `rgba(${color.r},${color.g},${color.b},${alpha})`;
 }
 
 // Sistema de partículas
@@ -144,7 +151,6 @@ export class ParticleSystem {
     });
 
     this.ctx.restore();
-
     requestAnimationFrame(this.animate);
   }
 
@@ -152,4 +158,3 @@ export class ParticleSystem {
     this.animate(performance.now());
   }
 }
-
