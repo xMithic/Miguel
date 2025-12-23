@@ -1,0 +1,5 @@
+node_modules/
+.DS_Store
+Thumbs.db
+*.log
+assets/*.mp4  # Si no quieres subir videos pesados
