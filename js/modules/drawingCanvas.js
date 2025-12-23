@@ -1,14 +1,12 @@
 export class DrawingCanvas {
   constructor(canvas, cursorManager, audioBtn) {
     this.canvas = canvas;
-    this.ctx = canvas.getContext('2d', { alpha: true, willReadFrequently: false });
+    this.ctx = canvas.getContext('2d', { alpha: true });
     this.cursorManager = cursorManager;
     this.audioBtn = audioBtn;
     
     this.isDrawing = false;
-    this.lastPoint = null;
     this.points = []; // Para curvas suaves
-    this.particles = []; // Sistema de partículas
     
     this.setupEventListeners();
     this.animate();
@@ -23,15 +21,14 @@ export class DrawingCanvas {
   startDrawing(e) {
     if (e.target === this.audioBtn) return;
     this.isDrawing = true;
-    this.lastPoint = { x: e.clientX, y: e.clientY };
     this.points = [{ x: e.clientX, y: e.clientY }];
   }
 
   handleMove(e) {
     if (this.isDrawing) {
       this.points.push({ x: e.clientX, y: e.clientY });
-      // Mantener solo los últimos 6 puntos para curvas suaves
-      if (this.points.length > 6) {
+      // Mantener solo los últimos 5 puntos para curvas suaves
+      if (this.points.length > 5) {
         this.points.shift();
       }
     }
@@ -39,149 +36,76 @@ export class DrawingCanvas {
 
   stopDrawing() {
     this.isDrawing = false;
-    this.lastPoint = null;
     this.points = [];
   }
 
-  createParticles(x, y, hue) {
-    // Crear partículas en el punto de dibujo
-    const particleCount = 3;
-    for (let i = 0; i < particleCount; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = Math.random() * 2 + 1;
-      const size = Math.random() * 3 + 2;
-      
-      this.particles.push({
-        x: x,
-        y: y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        size: size,
-        alpha: 1,
-        hue: hue,
-        decay: Math.random() * 0.02 + 0.02
-      });
-    }
-  }
-
-  updateParticles() {
-    for (let i = this.particles.length - 1; i >= 0; i--) {
-      const p = this.particles[i];
-      
-      // Actualizar posición y propiedades
-      p.x += p.vx;
-      p.y += p.vy;
-      p.vy += 0.1; // Gravedad ligera
-      p.alpha -= p.decay;
-      p.size *= 0.97;
-      
-      // Dibujar partícula con glow
-      this.ctx.globalCompositeOperation = 'lighter';
-      this.ctx.fillStyle = `hsla(${p.hue}, 100%, 60%, ${p.alpha})`;
-      this.ctx.shadowBlur = 20;
-      this.ctx.shadowColor = `hsla(${p.hue}, 100%, 50%, ${p.alpha})`;
-      
-      this.ctx.beginPath();
-      this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      this.ctx.fill();
-      
-      // Eliminar partículas muertas
-      if (p.alpha <= 0 || p.size <= 0.5) {
-        this.particles.splice(i, 1);
-      }
-    }
-    this.ctx.shadowBlur = 0;
-  }
-
-  drawSmoothLine() {
+  drawSmoothStroke() {
     if (this.points.length < 2) return;
     
     const mousePos = this.cursorManager.getMousePosition();
-    const hue = (performance.now() * 0.15) % 360;
     const time = performance.now() * 0.001;
+    const hue = (performance.now() * 0.1) % 360;
     
-    // Crear partículas en la posición actual
-    if (Math.random() < 0.5) {
-      this.createParticles(mousePos.x, mousePos.y, hue);
-    }
+    // Calcular velocidad del trazo para grosor dinámico
+    const lastPoint = this.points[this.points.length - 1];
+    const dx = mousePos.x - lastPoint.x;
+    const dy = mousePos.y - lastPoint.y;
+    const velocity = Math.sqrt(dx * dx + dy * dy);
+    const baseWidth = Math.max(2, 8 - velocity * 0.3); // Más delgado al ir rápido
     
-    // Dibujar múltiples líneas paralelas para efecto de "pincel"
-    const brushLines = 5;
-    for (let j = 0; j < brushLines; j++) {
-      const offset = (j - brushLines / 2) * 2;
-      const alphaVariation = 1 - (Math.abs(offset) / brushLines) * 0.5;
-      const widthVariation = 1 - (Math.abs(offset) / brushLines) * 0.3;
-      
-      // Color con variación de matiz
-      const hueVariation = hue + (j * 10);
-      this.ctx.strokeStyle = `hsla(${hueVariation}, 100%, ${60 + j * 4}%, ${0.6 * alphaVariation})`;
-      this.ctx.lineWidth = (5 + Math.sin(time * 2) * 2) * widthVariation;
-      this.ctx.lineCap = 'round';
-      this.ctx.lineJoin = 'round';
-      
-      // Efecto de resplandor intenso
-      this.ctx.shadowBlur = 25 + Math.sin(time * 3) * 5;
-      this.ctx.shadowColor = `hsla(${hueVariation}, 100%, 50%, 0.9)`;
-      this.ctx.globalCompositeOperation = 'lighter';
-      
-      this.ctx.beginPath();
-      
-      // Usar curvas de Bézier para suavidad
-      if (this.points.length >= 3) {
-        this.ctx.moveTo(
-          this.points[0].x + offset * Math.cos(time),
-          this.points[0].y + offset * Math.sin(time)
-        );
-        
-        for (let i = 1; i < this.points.length - 1; i++) {
-          const xc = (this.points[i].x + this.points[i + 1].x) / 2 + offset * Math.cos(time);
-          const yc = (this.points[i].y + this.points[i + 1].y) / 2 + offset * Math.sin(time);
-          this.ctx.quadraticCurveTo(
-            this.points[i].x + offset * Math.cos(time),
-            this.points[i].y + offset * Math.sin(time),
-            xc,
-            yc
-          );
-        }
-        
-        // Línea final hasta la posición actual del mouse
-        const lastIdx = this.points.length - 1;
-        this.ctx.quadraticCurveTo(
-          this.points[lastIdx].x + offset * Math.cos(time),
-          this.points[lastIdx].y + offset * Math.sin(time),
-          mousePos.x + offset * Math.cos(time),
-          mousePos.y + offset * Math.sin(time)
-        );
-      } else {
-        // Línea simple si no hay suficientes puntos
-        this.ctx.moveTo(
-          this.points[0].x + offset * Math.cos(time),
-          this.points[0].y + offset * Math.sin(time)
-        );
-        this.ctx.lineTo(
-          mousePos.x + offset * Math.cos(time),
-          mousePos.y + offset * Math.sin(time)
-        );
-      }
-      
-      this.ctx.stroke();
-    }
-    
-    // Dibujar línea central más brillante
+    // Dibujar trazo principal con resplandor
+    this.ctx.lineCap = 'round';
+    this.ctx.lineJoin = 'round';
     this.ctx.globalCompositeOperation = 'screen';
-    this.ctx.strokeStyle = `hsla(${hue}, 100%, 90%, 0.8)`;
-    this.ctx.lineWidth = 2;
-    this.ctx.shadowBlur = 30;
-    this.ctx.shadowColor = `hsla(${hue}, 100%, 70%, 1)`;
     
+    // Capa de resplandor exterior
+    this.ctx.strokeStyle = `hsla(${hue}, 100%, 60%, 0.4)`;
+    this.ctx.lineWidth = baseWidth * 3;
+    this.ctx.shadowBlur = 20;
+    this.ctx.shadowColor = `hsla(${hue}, 100%, 50%, 0.6)`;
+    this.drawCurve(mousePos);
+    
+    // Capa intermedia
+    this.ctx.strokeStyle = `hsla(${hue}, 100%, 70%, 0.7)`;
+    this.ctx.lineWidth = baseWidth * 1.8;
+    this.ctx.shadowBlur = 12;
+    this.ctx.shadowColor = `hsla(${hue}, 100%, 60%, 0.8)`;
+    this.drawCurve(mousePos);
+    
+    // Núcleo brillante
+    this.ctx.globalCompositeOperation = 'lighter';
+    this.ctx.strokeStyle = `hsla(${hue}, 100%, 85%, 0.9)`;
+    this.ctx.lineWidth = baseWidth;
+    this.ctx.shadowBlur = 8;
+    this.ctx.shadowColor = `hsla(${hue}, 100%, 70%, 1)`;
+    this.drawCurve(mousePos);
+    
+    // Línea central ultra brillante
+    this.ctx.strokeStyle = `hsla(${hue + 30}, 100%, 95%, 0.8)`;
+    this.ctx.lineWidth = baseWidth * 0.4;
+    this.ctx.shadowBlur = 15;
+    this.ctx.shadowColor = 'white';
+    this.drawCurve(mousePos);
+    
+    this.ctx.shadowBlur = 0;
+    this.ctx.globalCompositeOperation = 'source-over';
+  }
+
+  drawCurve(mousePos) {
     this.ctx.beginPath();
+    
     if (this.points.length >= 3) {
+      // Empezar desde el primer punto
       this.ctx.moveTo(this.points[0].x, this.points[0].y);
+      
+      // Dibujar curvas cuadráticas suaves entre puntos
       for (let i = 1; i < this.points.length - 1; i++) {
         const xc = (this.points[i].x + this.points[i + 1].x) / 2;
         const yc = (this.points[i].y + this.points[i + 1].y) / 2;
         this.ctx.quadraticCurveTo(this.points[i].x, this.points[i].y, xc, yc);
       }
+      
+      // Curva final hasta el mouse
       const lastIdx = this.points.length - 1;
       this.ctx.quadraticCurveTo(
         this.points[lastIdx].x,
@@ -189,27 +113,26 @@ export class DrawingCanvas {
         mousePos.x,
         mousePos.y
       );
+    } else {
+      // Línea simple si solo hay 2 puntos
+      this.ctx.moveTo(this.points[0].x, this.points[0].y);
+      this.ctx.lineTo(mousePos.x, mousePos.y);
     }
-    this.ctx.stroke();
     
-    this.ctx.shadowBlur = 0;
-    this.lastPoint = { x: mousePos.x, y: mousePos.y };
+    this.ctx.stroke();
   }
 
   animate() {
-    // Efecto de desvanecimiento más suave y gradual
+    // Efecto de rastro - fillRect con transparencia
     this.ctx.globalCompositeOperation = 'destination-out';
-    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.025)';
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.03)'; // Rastro más duradero
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     
     this.ctx.globalCompositeOperation = 'source-over';
 
-    // Actualizar y dibujar partículas
-    this.updateParticles();
-
-    // Dibujar línea principal si está dibujando
+    // Dibujar trazo si está dibujando
     if (this.isDrawing && this.points.length > 0) {
-      this.drawSmoothLine();
+      this.drawSmoothStroke();
     }
     
     requestAnimationFrame(() => this.animate());
