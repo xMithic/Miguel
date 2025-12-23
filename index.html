@@ -2,57 +2,49 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>PanitaMithico 2.0 - Ultra Viz</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>PanitaMithico | Zen Visualizer</title>
   <style>
     :root {
       --cursor-size: 20px;
-      --cursor-bg: rgba(255, 255, 255, 0.8);
-      --ui-blur: 30px;
-      --btn-size: 48px;
-      --btn-radius: 50%;
-      --font-main: 'Segoe UI', system-ui, sans-serif;
+      --ui-blur: 60px; /* Más suavidad en el fondo */
+      --btn-size: 50px;
+      --card-radius: 24px;
     }
 
-    /* --- Base --- */
+    /* Reset y Base */
     html, body {
       margin: 0; padding: 0;
       width: 100%; height: 100%;
       overflow: hidden;
+      background-color: #050505;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       cursor: none; /* Cursor personalizado */
-      background: #050505;
-      font-family: var(--font-main);
       user-select: none;
       -webkit-user-select: none;
     }
 
-    /* --- Capas (Z-Index) --- */
-    #bg-video-layer {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      object-fit: cover;
+    /* Capas (Layers) */
+    #background-layer {
+      position: fixed; inset: -10%; /* Un poco más grande para evitar bordes al blur */
+      width: 120%; height: 120%;
       z-index: 1;
-      opacity: 0.25;
-      filter: blur(var(--ui-blur)) saturate(1.5);
       pointer-events: none;
-      transition: opacity 1s ease;
-    }
-    
-    #particle-canvas {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      z-index: 2;
-      pointer-events: none;
-      /* mix-blend-mode: screen; Permite brillo intenso */
+      opacity: 0.6;
+      filter: blur(var(--ui-blur)) saturate(1.2) brightness(0.4);
+      object-fit: cover;
+      transition: opacity 2s ease;
     }
 
-    #drawing-canvas {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      z-index: 50;
-      touch-action: none;
-      mix-blend-mode: hard-light;
+    #particle-canvas, #drawing-canvas {
+      position: fixed; inset: 0;
+      width: 100%; height: 100%;
     }
+    #particle-canvas { z-index: 2; pointer-events: none; mix-blend-mode: screen; }
+    #drawing-canvas { z-index: 50; pointer-events: auto; touch-action: none; mix-blend-mode: overlay; }
 
-    /* --- Contenedor 3D Central --- */
-    .perspective-scene {
+    /* Contenedor 3D Central */
+    .perspective-container {
       position: absolute; inset: 0;
       display: flex; justify-content: center; align-items: center;
       perspective: 1200px;
@@ -60,476 +52,420 @@
       pointer-events: none;
     }
 
-    .video-card {
-      width: 600px; max-width: 90vw;
-      border-radius: 24px;
-      background: #000;
-      box-shadow: 0 20px 80px rgba(0,0,0,0.8);
-      transform-style: preserve-3d;
-      will-change: transform, box-shadow;
+    .card-wrapper {
+      width: 700px; max-width: 85%;
       position: relative;
-      overflow: hidden;
-      border: 1px solid rgba(255,255,255,0.1);
-    }
-    
-    .video-card video {
-      display: block; width: 100%; height: auto;
-      border-radius: 24px;
-      filter: contrast(1.1) brightness(1.1);
+      transform-style: preserve-3d;
+      will-change: transform;
     }
 
-    .video-card::after {
-      content: ''; position: absolute; inset: 0;
-      background: radial-gradient(circle at var(--shine-x, 50%) var(--shine-y, 50%), 
-                  rgba(255,255,255,0.2) 0%, transparent 60%);
+    #video-card {
+      position: relative;
+      border-radius: var(--card-radius);
+      background: rgba(20, 20, 20, 0.6);
+      /* Efecto cristal (Glassmorphism) sutil */
+      box-shadow: 
+        0 20px 50px rgba(0,0,0,0.5),
+        0 0 0 1px rgba(255,255,255,0.1) inset;
+      backdrop-filter: blur(20px);
+      overflow: hidden;
+      transform: translateZ(0);
+      transition: box-shadow 0.3s ease;
+    }
+
+    video.main-video {
+      display: block; width: 100%; height: auto;
+      border-radius: var(--card-radius);
+      mask-image: -webkit-radial-gradient(white, black); /* Fix para bordes redondeados en Safari */
+    }
+
+    /* Brillo dinámico en la tarjeta */
+    .card-shine {
+      position: absolute; inset: 0;
+      background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(255,255,255,0.15), transparent 60%);
       pointer-events: none;
       mix-blend-mode: overlay;
+      opacity: 0;
+      transition: opacity 0.3s;
     }
+    .card-wrapper:hover .card-shine { opacity: 1; }
 
-    /* --- UI: Botón y Cursor --- */
+    /* Cursor Custom */
     #custom-cursor {
-      position: fixed; top: 0; left: 0;
+      position: fixed;
       width: var(--cursor-size); height: var(--cursor-size);
-      border: 2px solid white;
+      border: 1.5px solid rgba(255,255,255,0.8);
       border-radius: 50%;
+      top: 0; left: 0;
       transform: translate(-50%, -50%);
       pointer-events: none;
       z-index: 9999;
       mix-blend-mode: difference;
-      transition: transform 0.1s ease, opacity 0.3s;
-      backdrop-filter: invert(1);
+      transition: transform 0.1s ease-out, opacity 0.3s ease;
+      will-change: transform, top, left;
     }
-    #custom-cursor.clicking { transform: translate(-50%, -50%) scale(0.8); background: white; }
+    #custom-cursor.active { transform: translate(-50%, -50%) scale(2.5); background: rgba(255,255,255,0.1); border-color: transparent; }
     #custom-cursor.hidden { opacity: 0; }
 
+    /* Botón de Audio Minimalista */
     #audio-btn {
-      position: fixed; top: 20px; right: 20px;
+      position: fixed;
+      bottom: 40px; /* Movido abajo para más minimalismo visual */
+      left: 50%; transform: translateX(-50%);
       width: var(--btn-size); height: var(--btn-size);
-      border-radius: var(--btn-radius);
+      border-radius: 50%;
       background: rgba(255,255,255,0.1);
       backdrop-filter: blur(10px);
       border: 1px solid rgba(255,255,255,0.2);
-      cursor: pointer;
+      cursor: none; /* Usamos el cursor custom */
       z-index: 100;
-      display: flex; align-items: center; justify-content: center;
-      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      display: flex; justify-content: center; align-items: center;
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
       pointer-events: auto;
     }
-    #audio-btn:hover { background: rgba(255,255,255,0.25); transform: scale(1.1); }
-    #audio-btn svg { width: 24px; fill: white; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
-    #audio-btn.active { background: rgba(0, 255, 150, 0.2); border-color: rgba(0, 255, 150, 0.4); }
-
-    /* Overlay de "Click para iniciar" si el autoplay falla */
-    #start-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.7);
-      z-index: 200; display: flex; justify-content: center; align-items: center;
-      color: white; font-size: 1.5rem; font-weight: bold;
-      opacity: 0; pointer-events: none; transition: opacity 0.5s;
+    #audio-btn svg { width: 20px; fill: white; opacity: 0.8; transition: transform 0.3s; }
+    #audio-btn:hover { background: rgba(255,255,255,0.25); transform: translateX(-50%) scale(1.1); }
+    #audio-btn.muted svg { opacity: 0.5; transform: scale(0.9); }
+    
+    /* Indicador de audio visual (pequeñas barras) */
+    .eq-bars {
+      position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 4px; z-index: 90; opacity: 0; transition: opacity 0.5s;
     }
-    #start-overlay.visible { opacity: 1; pointer-events: auto; cursor: pointer; }
+    .eq-bar { width: 3px; height: 10px; background: white; border-radius: 2px; animation: eqBounce 1s infinite ease-in-out; }
+    .playing .eq-bars { opacity: 0.7; }
+    @keyframes eqBounce { 0%, 100% { height: 6px; } 50% { height: 18px; } }
+    .eq-bar:nth-child(1) { animation-delay: 0s; }
+    .eq-bar:nth-child(2) { animation-delay: 0.1s; }
+    .eq-bar:nth-child(3) { animation-delay: 0.2s; }
+
   </style>
 </head>
 <body>
 
+  <!-- Elementos UI -->
   <div id="custom-cursor"></div>
-  <video id="bg-video-layer" loop muted playsinline></video>
+  <video id="background-layer" muted loop playsinline></video>
+  
   <canvas id="particle-canvas"></canvas>
   <canvas id="drawing-canvas"></canvas>
 
-  <div class="perspective-scene" id="scene">
-    <div class="video-card" id="card">
-      <video id="main-video" loop muted playsinline autoplay>
-        <source src="Laufey.mp4" type="video/mp4" />
-      </video>
+  <div class="perspective-container">
+    <div class="card-wrapper" id="card-wrapper">
+      <div id="video-card">
+        <div class="card-shine"></div>
+        <video class="main-video" id="main-video" loop muted playsinline autoplay>
+          <!-- Reemplaza con tu video -->
+          <source src="Laufey.mp4" type="video/mp4" />
+        </video>
+      </div>
     </div>
   </div>
 
-  <button id="audio-btn" aria-label="Activar Audio">
-    <svg id="icon-mute" viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9zM12 4L9.91 6.09 12 8.18V4z"/></svg>
-    <svg id="icon-sound" viewBox="0 0 24 24" style="display:none"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
-  </button>
+  <div class="eq-bars" id="eq-visual">
+    <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
+  </div>
 
-  <div id="start-overlay">Click para iniciar experiencia</div>
+  <button id="audio-btn" class="muted" aria-label="Toggle Sound">
+    <svg viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+  </button>
 
 <script>
 /**
- * PanitaMithico Engine v2.0
- * Optimizado para rendimiento y física reactiva
+ * PanitaMithico Audio Visualizer Engine 2.0
+ * Física de partículas basada en campos vectoriales radiales
  */
 
-const CONFIG = {
-  particleCount: 1500, // Equilibrado para visuales vs rendimiento
-  sampleRate: 15,      // Cuántos frames esperar para re-muestrear el video de fondo (menor = más CPU)
-  audioSmooth: 0.8,    // Suavizado del audio
-  baseGravity: 0.15,
-  friction: 0.94
-};
-
-// --- Referencias ---
-const cursor = document.getElementById('custom-cursor');
-const mainVideo = document.getElementById('main-video');
-const bgVideo = document.getElementById('bg-video-layer');
-const card = document.getElementById('card');
-const pCanvas = document.getElementById('particle-canvas');
-const dCanvas = document.getElementById('drawing-canvas');
-const pCtx = pCanvas.getContext('2d', { alpha: true }); // Deshabilita alpha si quieres más performance pura
-const dCtx = dCanvas.getContext('2d');
-const audioBtn = document.getElementById('audio-btn');
-
-// --- Estado Global ---
-let width, height;
-let mouse = { x: -1000, y: -1000, down: false };
-let audioCtx, analyser, dataArray, sourceNode;
-let audioData = { bass: 0, mid: 0, high: 0, level: 0 };
-let pixelBuffer = null; // Buffer para el color del video
-let particles = [];
-let shockwaves = []; // Ondas de choque
-
-// Canvas oculto para leer píxeles
-const vCanvas = new OffscreenCanvas(200, 150); // Baja resolución para velocidad
-const vCtx = vCanvas.getContext('2d', { willReadFrequently: true });
-
-// --- Inicialización ---
-function resize() {
-  width = window.innerWidth;
-  height = window.innerHeight;
-  pCanvas.width = width; pCanvas.height = height;
-  dCanvas.width = width; dCanvas.height = height;
-  // Ajuste de dibujo
-  dCtx.lineCap = 'round'; dCtx.lineJoin = 'round';
-}
-window.addEventListener('resize', resize);
-resize();
-
-// --- Audio System (Beat Detection Stats) ---
-let bassHistory = [];
-function updateAudio() {
-  if (!analyser) return;
-  analyser.getByteFrequencyData(dataArray);
+document.addEventListener('DOMContentLoaded', () => {
+  const mainVideo = document.getElementById('main-video');
+  const bgVideo = document.getElementById('background-layer');
+  const cardWrapper = document.getElementById('card-wrapper');
+  const shine = document.querySelector('.card-shine');
+  const cursor = document.getElementById('custom-cursor');
+  const audioBtn = document.getElementById('audio-btn');
+  const eqVisual = document.getElementById('eq-visual');
   
-  // Dividir bandas
-  const bLen = Math.floor(dataArray.length / 3);
-  let b = 0, m = 0, h = 0;
-  for(let i=0; i<bLen; i++) b += dataArray[i];
-  for(let i=bLen; i<bLen*2; i++) m += dataArray[i];
-  for(let i=bLen*2; i<dataArray.length; i++) h += dataArray[i];
+  // Canvas
+  const pCanvas = document.getElementById('particle-canvas');
+  const dCanvas = document.getElementById('drawing-canvas');
+  const pCtx = pCanvas.getContext('2d', { alpha: true });
+  const dCtx = dCanvas.getContext('2d', { alpha: true });
+
+  // Canvas oculto para muestreo de color (optimizadísimo)
+  const smCanvas = new OffscreenCanvas(64, 64);
+  const smCtx = smCanvas.getContext('2d', { willReadFrequently: true });
+
+  let width, height, centerX, centerY;
+  let audioContext, analyser, dataArray, source;
+  let isAudioActive = false;
   
-  audioData.bass = b / bLen;
-  audioData.mid = m / bLen;
-  audioData.high = h / (dataArray.length - bLen*2);
-  audioData.level = (audioData.bass + audioData.mid + audioData.high) / 3;
+  // Variables de Música
+  const musicState = {
+    bass: 0, mid: 0, treble: 0, level: 0,
+    history: [] // Para detectar beats con media móvil
+  };
 
-  // Beat Detection
-  bassHistory.push(audioData.bass);
-  if(bassHistory.length > 40) bassHistory.shift();
-  
-  // Calcular media y varianza local para detectar picos
-  const avg = bassHistory.reduce((a,v)=>a+v,0)/bassHistory.length;
-  const variance = bassHistory.reduce((a,v)=>a + Math.pow(v-avg,2),0)/bassHistory.length;
-  const threshold = avg + Math.sqrt(variance) * 1.5;
+  // --- 1. Inicialización y Resize ---
+  const resize = () => {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    [pCanvas, dCanvas].forEach(c => { c.width = width; c.height = height; });
+    centerX = width / 2;
+    centerY = height / 2;
+  };
+  window.addEventListener('resize', resize);
+  resize();
 
-  if (audioData.bass > threshold && audioData.bass > 100) {
-    createShockwave(); // ¡BOOM!
-    // Empujar un poco el "his" para que no rebote a lo loco
-    bassHistory.fill(255); 
-  }
-}
-
-// --- Física Avanzada ---
-
-class Shockwave {
-  constructor() {
-    this.x = width / 2;
-    this.y = height / 2;
-    this.r = 10;
-    this.force = 30 + Math.random() * 20;
-    this.alpha = 1;
-    this.active = true;
-  }
-  update() {
-    this.r += this.force * 0.8;
-    this.alpha -= 0.04;
-    if(this.alpha <= 0) this.active = false;
-  }
-  draw(ctx) {
-    if(!this.active) return;
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.r, 0, Math.PI*2);
-    ctx.strokeStyle = `rgba(255, 255, 255, ${this.alpha * 0.5})`;
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.restore();
-  }
-}
-
-class Particle {
-  constructor() {
-    this.reset(true);
-  }
-
-  reset(randomY = false) {
-    this.x = Math.random() * width;
-    this.y = randomY ? Math.random() * height : height + 10;
-    this.vx = (Math.random() - 0.5) * 2;
-    this.vy = -(Math.random() * 3 + 1);
-    this.ax = 0;
-    this.ay = 0;
-    this.size = Math.random() * 2 + 1;
-    this.life = 1; // 1 = vivo, 0 = muerto
-    this.decay = 0.003 + Math.random() * 0.005;
-    this.color = 'white';
-    this.mass = this.size * 0.5;
-  }
-
-  updateColors() {
-    // Optimización: Leer del buffer de baja resolución
-    if (pixelBuffer) {
-      // Mapear coordenadas de pantalla a coordenadas del buffer
-      const bx = Math.floor((this.x / width) * 200);
-      const by = Math.floor((this.y / height) * 150);
-      const i = (by * 200 + bx) * 4;
-      
-      if (i >= 0 && i < pixelBuffer.length) {
-        // Invertir colores para efecto visual
-        const r = 255 - pixelBuffer[i];
-        const g = 255 - pixelBuffer[i+1];
-        const b = 255 - pixelBuffer[i+2];
-        this.color = `rgb(${r},${g},${b})`;
+  // Sincronización de videos (Espejo de fondo)
+  const syncBgVideo = () => {
+    try {
+      if (mainVideo.captureStream) {
+        bgVideo.srcObject = mainVideo.captureStream();
+      } else {
+        bgVideo.src = mainVideo.currentSrc; // Fallback
       }
-    }
-  }
+      bgVideo.play().catch(() => {});
+    } catch(e) {}
+  };
+  mainVideo.addEventListener('play', syncBgVideo, { once: true });
 
-  update() {
-    // 1. Física Básica
-    this.vy += CONFIG.baseGravity * 0.1; // Gravedad leve
-    this.vx *= CONFIG.friction;
-    this.vy *= CONFIG.friction;
+  // --- 2. Sistema de Interacción (Tilt 3D + Cursor) ---
+  let mouseX = centerX, mouseY = centerY;
+  let cursorTimer;
 
-    // 2. Reactividad al Audio
-    // El "High" da jitter/vibración
-    const jitter = (audioData.high / 255) * 0.5;
-    this.x += (Math.random() - 0.5) * jitter;
-    this.y += (Math.random() - 0.5) * jitter;
+  const handleInput = (x, y, isClicking) => {
+    mouseX = x; mouseY = y;
+    
+    // Mover cursor
+    cursor.style.left = x + 'px';
+    cursor.style.top = y + 'px';
+    cursor.classList.remove('hidden');
+    clearTimeout(cursorTimer);
+    cursorTimer = setTimeout(() => cursor.classList.add('hidden'), 2500);
 
-    // El "Mid" afecta la turbulencia lateral
-    this.vx += Math.sin(this.y * 0.01 + performance.now()*0.001) * (audioData.mid/255) * 0.05;
+    // Tilt de la tarjeta (Suavizado)
+    const rotateX = (centerY - y) / 25; // Rango reducido para elegancia
+    const rotateY = (x - centerX) / 25;
+    
+    cardWrapper.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(${isClicking ? 0.98 : 1})`;
+    
+    // Mover el brillo (Shine)
+    shine.style.setProperty('--x', `${(x / width) * 100}%`);
+    shine.style.setProperty('--y', `${(y / height) * 100}%`);
+  };
 
-    // 3. Interacción con Mouse (Repulsión)
-    const dx = this.x - mouse.x;
-    const dy = this.y - mouse.y;
-    const distSq = dx*dx + dy*dy;
-    const minDist = 150 * 150;
-    if (distSq < minDist) {
-      const force = (minDist - distSq) / minDist;
-      const angle = Math.atan2(dy, dx);
-      this.vx += Math.cos(angle) * force * 1.5;
-      this.vy += Math.sin(angle) * force * 1.5;
-    }
-
-    // 4. Interacción con Ondas de Choque
-    for (let sw of shockwaves) {
-      if (!sw.active) continue;
-      const sdx = this.x - sw.x;
-      const sdy = this.y - sw.y;
-      const sDist = Math.hypot(sdx, sdy);
-      // Si la onda pasa por la partícula (grosor de la onda)
-      if (Math.abs(sDist - sw.r) < 30) {
-         const angle = Math.atan2(sdy, sdx);
-         const blast = (sw.force * 0.2) / this.mass;
-         this.vx += Math.cos(angle) * blast;
-         this.vy += Math.sin(angle) * blast;
-      }
-    }
-
-    // Integrar
-    this.x += this.vx;
-    this.y += this.vy;
-    this.life -= this.decay;
-
-    // Renacer
-    if (this.life <= 0 || this.x < 0 || this.x > width || this.y > height + 50) {
-      this.reset();
-    }
-  }
-
-  draw() {
-    pCtx.globalAlpha = this.life;
-    pCtx.fillStyle = this.color;
-    pCtx.beginPath();
-    pCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-    pCtx.fill();
-  }
-}
-
-// Inicializar Pool de Partículas
-for(let i=0; i<CONFIG.particleCount; i++) {
-  particles.push(new Particle());
-}
-
-function createShockwave() {
-  shockwaves.push(new Shockwave());
-  // Limitar ondas activas
-  if(shockwaves.length > 5) shockwaves.shift();
-}
-
-// --- Dibujo (Drawing) ---
-let drawing = false;
-let lastPoint = {x:0, y:0};
-let brushHue = 0;
-
-function startDraw(e) {
-  drawing = true;
-  lastPoint = { x: e.clientX, y: e.clientY };
-  cursor.classList.add('clicking');
-}
-function endDraw() {
-  drawing = false;
-  cursor.classList.remove('clicking');
-}
-function doDraw(e) {
-  // Mover Cursor Personalizado
-  mouse.x = e.clientX; 
-  mouse.y = e.clientY;
-  cursor.style.left = e.clientX + 'px';
-  cursor.style.top = e.clientY + 'px';
-  
-  // Efecto Tilt de la Tarjeta
-  const cx = width/2, cy = height/2;
-  const rx = (e.clientY - cy) / cy;
-  const ry = (e.clientX - cx) / cx;
-  card.style.transform = `rotateX(${-rx * 15}deg) rotateY(${ry * 15}deg)`;
-  card.style.setProperty('--shine-x', `${(ry + 1) * 50}%`);
-  card.style.setProperty('--shine-y', `${(rx + 1) * 50}%`);
-
-  if(!drawing) return;
-
-  dCtx.lineWidth = 3 + (audioData.bass / 255) * 10; // El grosor reacciona al bajo
-  brushHue = (brushHue + 1) % 360;
-  dCtx.strokeStyle = `hsl(${brushHue}, 100%, 60%)`;
-  dCtx.shadowColor = `hsl(${brushHue}, 100%, 60%)`;
-  dCtx.shadowBlur = 15;
-
-  dCtx.beginPath();
-  dCtx.moveTo(lastPoint.x, lastPoint.y);
-  dCtx.lineTo(e.clientX, e.clientY);
-  dCtx.stroke();
-
-  // Emitir partículas al dibujar
-  for(let i=0; i<2; i++) {
-    const p = particles[Math.floor(Math.random() * particles.length)];
-    if (p) {
-        p.x = e.clientX + (Math.random()-0.5)*10;
-        p.y = e.clientY + (Math.random()-0.5)*10;
-        p.vx = (e.clientX - lastPoint.x) * 0.1 + (Math.random()-0.5);
-        p.vy = (e.clientY - lastPoint.y) * 0.1 + (Math.random()-0.5);
-        p.life = 1;
-        p.color = dCtx.strokeStyle;
-    }
-  }
-
-  lastPoint = { x: e.clientX, y: e.clientY };
-}
-
-window.addEventListener('pointerdown', startDraw);
-window.addEventListener('pointerup', endDraw);
-window.addEventListener('pointermove', doDraw);
-
-// --- Loop Principal ---
-let frameCount = 0;
-
-function loop() {
-  requestAnimationFrame(loop);
-  
-  // 1. Audio
-  updateAudio();
-
-  // 2. Muestreo de Video (Optimizado)
-  frameCount++;
-  if (frameCount % CONFIG.sampleRate === 0 && mainVideo.readyState >= 2) {
-    vCtx.drawImage(mainVideo, 0, 0, 200, 150);
-    pixelBuffer = vCtx.getImageData(0,0,200,150).data;
-    // Actualizar colores de partículas es costoso, hacerlo escalonado
-    particles.forEach((p, i) => {
-        if (i % 2 === 0) p.updateColors(); // Solo actualizar mitad por ciclo de sampleo
-    });
-  }
-
-  // 3. Limpiar Particle Canvas (con trail suave)
-  pCtx.globalCompositeOperation = 'destination-out';
-  pCtx.fillStyle = 'rgba(0, 0, 0, 0.1)'; // Estela
-  pCtx.fillRect(0, 0, width, height);
-  pCtx.globalCompositeOperation = 'lighter'; // Modo de mezcla aditivo para brillo
-
-  // 4. Actualizar Shockwaves
-  shockwaves.forEach(sw => { sw.update(); sw.draw(pCtx); });
-
-  // 5. Actualizar Partículas
-  particles.forEach(p => {
-    p.update();
-    p.draw();
+  window.addEventListener('pointermove', e => handleInput(e.clientX, e.clientY, false));
+  window.addEventListener('pointerdown', e => {
+    handleInput(e.clientX, e.clientY, true);
+    cursor.classList.add('active');
+    startDrawing(e);
+  });
+  window.addEventListener('pointerup', () => {
+    cursor.classList.remove('active');
+    stopDrawing();
   });
 
-  // 6. Desvanecer dibujo
-  dCtx.globalCompositeOperation = 'destination-out';
-  dCtx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-  dCtx.fillRect(0, 0, width, height);
-  dCtx.globalCompositeOperation = 'source-over';
-}
+  // --- 3. Sistema de Dibujo (Trazos de luz) ---
+  let isDrawing = false;
+  let lastPoint = null;
 
-// --- Setup Audio ---
-function setupAudio() {
-  if (audioCtx) return;
-  const AudioContext = window.AudioContext || window.webkitAudioContext;
-  audioCtx = new AudioContext();
-  analyser = audioCtx.createAnalyser();
-  analyser.fftSize = 256; // 512, 2048 para más precisión, 256 para velocidad
-  analyser.smoothingTimeConstant = CONFIG.audioSmooth;
-  
-  sourceNode = audioCtx.createMediaElementSource(mainVideo);
-  sourceNode.connect(analyser);
-  analyser.connect(audioCtx.destination);
-  
-  dataArray = new Uint8Array(analyser.frequencyBinCount);
-}
-
-// --- Video Sync Logic ---
-mainVideo.addEventListener('play', () => {
-    if(!bgVideo.srcObject) {
-        try {
-            let stream = mainVideo.captureStream();
-            bgVideo.srcObject = stream;
-            bgVideo.play();
-        } catch(e) { console.log("Capture stream not supported"); }
-    }
-});
-
-audioBtn.addEventListener('click', () => {
-  setupAudio();
-  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-  
-  if (mainVideo.muted) {
-    mainVideo.muted = false;
-    document.getElementById('icon-mute').style.display = 'none';
-    document.getElementById('icon-sound').style.display = 'block';
-    audioBtn.classList.add('active');
-  } else {
-    mainVideo.muted = true;
-    document.getElementById('icon-mute').style.display = 'block';
-    document.getElementById('icon-sound').style.display = 'none';
-    audioBtn.classList.remove('active');
+  function startDrawing(e) {
+    if(e.target === audioBtn) return; // No dibujar sobre el botón
+    isDrawing = true;
+    lastPoint = { x: e.clientX, y: e.clientY };
   }
+
+  function stopDrawing() { isDrawing = false; lastPoint = null; }
+
+  function drawLoop() {
+    // Desvanecimiento rápido para efecto estela limpia
+    dCtx.globalCompositeOperation = 'destination-out';
+    dCtx.fillStyle = 'rgba(0, 0, 0, 0.1)'; 
+    dCtx.fillRect(0, 0, width, height);
+
+    if (isDrawing && lastPoint) {
+      dCtx.globalCompositeOperation = 'source-over';
+      dCtx.strokeStyle = `hsl(${musicState.treble * 1.5 + 180}, 100%, 70%)`;
+      dCtx.lineWidth = 2 + (musicState.bass * 10); // Grosor reacciona al bass
+      dCtx.lineCap = 'round';
+      dCtx.lineJoin = 'round';
+      dCtx.shadowBlur = 15;
+      dCtx.shadowColor = dCtx.strokeStyle;
+
+      dCtx.beginPath();
+      dCtx.moveTo(lastPoint.x, lastPoint.y);
+      dCtx.lineTo(mouseX, mouseY);
+      dCtx.stroke();
+      lastPoint = { x: mouseX, y: mouseY };
+    }
+    requestAnimationFrame(drawLoop);
+  }
+  drawLoop();
+
+  // --- 4. Sistema de Audio (Análisis FFT) ---
+  async function initAudio() {
+    if (audioContext) return;
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    audioContext = new AudioCtx();
+    analyser = audioContext.createAnalyser();
+    analyser.fftSize = 512;
+    analyser.smoothingTimeConstant = 0.85; // Muy suave
+    
+    source = audioContext.createMediaElementSource(mainVideo);
+    source.connect(analyser);
+    analyser.connect(audioContext.destination);
+    
+    dataArray = new Uint8Array(analyser.frequencyBinCount);
+  }
+
+  function updateAudioAnalysis() {
+    if (!analyser) return;
+    analyser.getByteFrequencyData(dataArray);
+
+    // Dividir bandas
+    const bassRange = dataArray.slice(0, 10);
+    const midRange = dataArray.slice(10, 80);
+    const trebleRange = dataArray.slice(80, 200);
+
+    const avg = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
+
+    // Normalizar valores 0.0 - 1.0
+    const b = avg(bassRange) / 255;
+    const m = avg(midRange) / 255;
+    const t = avg(trebleRange) / 255;
+
+    // Suavizado manual (Linear Interpolation)
+    musicState.bass += (b - musicState.bass) * 0.2;
+    musicState.mid += (m - musicState.mid) * 0.1;
+    musicState.treble += (t - musicState.treble) * 0.1;
+    musicState.level = (musicState.bass + musicState.mid + musicState.treble) / 3;
+  }
+
+  // --- 5. Sistema de Partículas (Flow Field Radial) ---
+  const particles = [];
+  const MAX_PARTICLES = 350; // Cantidad controlada para minimalismo
+
+  class Particle {
+    constructor() { this.reset(); }
+
+    reset() {
+      // Nacer desde el centro (detrás de la tarjeta)
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 100 + Math.random() * 150; // Radio inicial cerca de la tarjeta
+      this.x = centerX + Math.cos(angle) * radius;
+      this.y = centerY + Math.sin(angle) * radius;
+      
+      this.vx = (Math.random() - 0.5) * 2;
+      this.vy = (Math.random() - 0.5) * 2;
+      
+      this.size = Math.random() * 3 + 1;
+      this.life = 1; // 1.0 = vida llena
+      this.decay = 0.005 + Math.random() * 0.01;
+      this.baseColor = sampleColorFromVideo(); // Color inteligente
+    }
+
+    update() {
+      // Física Radial: El Bass empuja hacia afuera
+      const dx = this.x - centerX;
+      const dy = this.y - centerY;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      const angle = Math.atan2(dy, dx);
+
+      // Fuerza de empuje (Bass)
+      const push = 2 + (musicState.bass * 15);
+      
+      // Fuerza de rotación (Treble/Mid) - Efecto vórtice
+      const rotationSpeed = 0.02 + (musicState.mid * 0.05);
+      
+      // Aplicar movimiento polar
+      const newDist = dist + push * 0.5; // Expansión
+      const newAngle = angle + rotationSpeed * (dist > 0 ? 1 : 0); // Rotación
+
+      // Convertir polar a cartesiano suavemente
+      const tx = centerX + Math.cos(newAngle) * newDist;
+      const ty = centerY + Math.sin(newAngle) * newDist;
+
+      // Interpolación para movimiento fluido
+      this.x += (tx - this.x) * 0.1;
+      this.y += (ty - this.y) * 0.1;
+
+      // Vida
+      this.life -= this.decay + (musicState.level * 0.01);
+      
+      if (this.life <= 0 || this.x < 0 || this.x > width || this.y < 0 || this.y > height) {
+        this.reset();
+      }
+    }
+
+    draw(ctx) {
+      ctx.globalAlpha = this.life * (0.3 + musicState.treble); // Parpadeo con agudos
+      ctx.fillStyle = this.baseColor;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size * (1 + musicState.bass), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Muestreo de color inteligente
+  function sampleColorFromVideo() {
+    if (!mainVideo.videoWidth) return 'white';
+    // Muestrear un pixel aleatorio del centro
+    const rx = Math.floor(Math.random() * 64);
+    const ry = Math.floor(Math.random() * 64);
+    const pixel = smCtx.getImageData(rx, ry, 1, 1).data;
+    // Boost de saturación (HSL)
+    return `rgba(${pixel[0]}, ${pixel[1]}, ${pixel[2]}, 0.8)`;
+  }
+
+  // Actualizar buffer de color (baja frecuencia)
+  setInterval(() => {
+    if (mainVideo.readyState >= 2) {
+      smCtx.drawImage(mainVideo, 0, 0, 64, 64);
+    }
+  }, 500);
+
+  // Inicializar partículas
+  for(let i=0; i<MAX_PARTICLES; i++) particles.push(new Particle());
+
+  function animateParticles() {
+    updateAudioAnalysis();
+
+    // Fade suave (Trail corto para minimalismo)
+    pCtx.globalCompositeOperation = 'destination-out';
+    pCtx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+    pCtx.fillRect(0, 0, width, height);
+    
+    pCtx.globalCompositeOperation = 'lighter'; // Mezcla aditiva para brillo
+
+    particles.forEach(p => {
+      p.update();
+      p.draw(pCtx);
+    });
+
+    requestAnimationFrame(animateParticles);
+  }
+  animateParticles();
+
+  // --- 6. Control de Audio/Video ---
+  audioBtn.addEventListener('click', () => {
+    initAudio().then(() => {
+      if(audioContext.state === 'suspended') audioContext.resume();
+    });
+    
+    mainVideo.muted = !mainVideo.muted;
+    audioBtn.classList.toggle('muted', mainVideo.muted);
+    document.body.classList.toggle('playing', !mainVideo.muted);
+    
+    // Icono SVG cambio
+    const path = audioBtn.querySelector('path');
+    if(mainVideo.muted) {
+       path.setAttribute('d', 'M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9zM12 4L9.91 6.09 12 8.18V4z');
+    } else {
+       path.setAttribute('d', 'M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z');
+    }
+  });
+
 });
-
-// Manejo de Autoplay
-document.addEventListener('click', () => {
-    document.getElementById('start-overlay').classList.remove('visible');
-    if(mainVideo.paused) mainVideo.play();
-}, {once:true});
-
-// Arrancar loop
-loop();
-
 </script>
 </body>
 </html>
