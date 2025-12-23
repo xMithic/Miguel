@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport"
         content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>PanitaMithico - V2</title>
+  <title>PanitaMithica</title>
   <style>
     :root {
       --cursor-size: 20px;
@@ -370,102 +370,88 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ----------------------------------------------------------------
-  // NUEVO MOTOR DE PARTÍCULAS - "CONSTELACIÓN FLOTANTE"
+  // NUEVO MOTOR DE PARTÍCULAS - "LUCIÉRNAGAS AMBIENT"
   // ----------------------------------------------------------------
   const particles = [];
-  const MAX_PARTICLES = 45;
+  const MAX_PARTICLES = 60;
 
-  class ConstellationParticle {
+  class Firefly {
     constructor() {
       this.x = Math.random() * width;
       this.y = Math.random() * height;
-      this.vx = (Math.random() - 0.5) * 0.5;
-      this.vy = (Math.random() - 0.5) * 0.5;
-      this.size = 1 + Math.random() * 2;
+      this.baseSize = 2 + Math.random() * 3;
+      this.phase = Math.random() * Math.PI * 2;
+      this.speed = 0.3 + Math.random() * 0.5;
+      this.angle = Math.random() * Math.PI * 2;
       this.color = sampleColorFromVideo();
-      this.brightness = Math.random();
+      this.glowCycle = Math.random() * 1000;
     }
 
     update() {
-      // Movimiento suave y orgánico
-      this.x += this.vx + Math.sin(Date.now() * 0.001 + this.y * 0.01) * 0.2;
-      this.y += this.vy + Math.cos(Date.now() * 0.001 + this.x * 0.01) * 0.2;
+      // Movimiento flotante tipo "drunk walk"
+      this.angle += (Math.random() - 0.5) * 0.1;
+      this.x += Math.cos(this.angle) * this.speed;
+      this.y += Math.sin(this.angle) * this.speed + Math.sin(Date.now() * 0.001 + this.phase) * 0.3;
 
-      // Rebote en bordes
-      if (this.x < 0 || this.x > width) this.vx *= -1;
-      if (this.y < 0 || this.y > height) this.vy *= -1;
+      // Wrap around
+      if (this.x < -50) this.x = width + 50;
+      if (this.x > width + 50) this.x = -50;
+      if (this.y < -50) this.y = height + 50;
+      if (this.y > height + 50) this.y = -50;
 
-      // Mantener dentro del canvas
-      this.x = Math.max(0, Math.min(width, this.x));
-      this.y = Math.max(0, Math.min(height, this.y));
-
-      // Pulso sutil con la música
-      this.brightness = 0.3 + (musicState.mid * 0.7);
-      
-      // Actualizar color ocasionalmente
-      if (Math.random() < 0.002) {
+      // Actualizar color con la música
+      if (musicState.treble > 0.6 && Math.random() < 0.01) {
         this.color = sampleColorFromVideo();
       }
     }
 
     draw(ctx) {
-      const alpha = this.brightness * 0.8;
+      // Pulso natural de luciérnaga
+      const glow = (Math.sin(Date.now() * 0.002 + this.glowCycle) + 1) * 0.5;
       
-      // Partícula con glow suave
-      ctx.shadowBlur = 8 + (musicState.bass * 12);
-      ctx.shadowColor = rgba(this.color, 0.6);
-      ctx.fillStyle = rgba(this.color, alpha);
+      // Reacción a la música
+      const musicBoost = 1 + (musicState.mid * 0.8);
+      const size = this.baseSize * musicBoost;
+      const alpha = (0.3 + glow * 0.5) * (0.5 + musicState.level * 0.5);
+
+      // Halo exterior
+      const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, size * 4);
+      gradient.addColorStop(0, rgba(this.color, alpha * 0.8));
+      gradient.addColorStop(0.5, rgba(this.color, alpha * 0.3));
+      gradient.addColorStop(1, rgba(this.color, 0));
       
+      ctx.fillStyle = gradient;
       ctx.beginPath();
-      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.arc(this.x, this.y, size * 4, 0, Math.PI * 2);
       ctx.fill();
-      
-      ctx.shadowBlur = 0;
+
+      // Núcleo brillante
+      ctx.fillStyle = rgba({ r: 255, g: 255, b: 255 }, alpha * 0.9);
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, size * 0.4, 0, Math.PI * 2);
+      ctx.fill();
     }
   }
 
   // Inicializar partículas
   for (let i = 0; i < MAX_PARTICLES; i++) {
-    particles.push(new ConstellationParticle());
+    particles.push(new Firefly());
   }
 
   function animateParticles() {
     updateAudioAnalysis();
 
-    // Limpieza suave para efecto de estela
+    // Limpieza muy suave para rastros largos
     pCtx.globalCompositeOperation = 'destination-out';
-    pCtx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+    pCtx.fillStyle = 'rgba(0, 0, 0, 0.05)';
     pCtx.fillRect(0, 0, width, height);
     
     pCtx.globalCompositeOperation = 'lighter';
 
-    // Actualizar y dibujar partículas
     particles.forEach(p => {
       p.update();
       p.draw(pCtx);
     });
-
-    // Conectar partículas cercanas con líneas
-    const connectionDistance = 150 + (musicState.bass * 100);
-    
-    for (let i = 0; i < particles.length; i++) {
-      for (let j = i + 1; j < particles.length; j++) {
-        const dx = particles[i].x - particles[j].x;
-        const dy = particles[i].y - particles[j].y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        if (distance < connectionDistance) {
-          const alpha = (1 - distance / connectionDistance) * 0.3 * musicState.level;
-          
-          pCtx.strokeStyle = rgba(particles[i].color, alpha);
-          pCtx.lineWidth = 0.5;
-          pCtx.beginPath();
-          pCtx.moveTo(particles[i].x, particles[i].y);
-          pCtx.lineTo(particles[j].x, particles[j].y);
-          pCtx.stroke();
-        }
-      }
-    }
 
     requestAnimationFrame(animateParticles);
   }
