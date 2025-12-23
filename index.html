@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport"
         content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>PanitaMithico</title>
+  <title>PanitaMithico - V2</title>
   <style>
     :root {
       --cursor-size: 20px;
@@ -43,13 +43,14 @@
     #particle-canvas {
       z-index: 2;
       pointer-events: none;
-      mix-blend-mode: screen;
+      /* Cambiado a lighten para que las nuevas partículas brillen más */
+      mix-blend-mode: screen; 
     }
     #drawing-canvas {
       z-index: 50;
       pointer-events: auto;
       touch-action: none;
-      mix-blend-mode: overlay;
+      mix-blend-mode: screen; /* Mejor visibilidad para el dibujo neón */
     }
 
     .perspective-container {
@@ -103,7 +104,7 @@
     #custom-cursor {
       position: fixed;
       width: var(--cursor-size); height: var(--cursor-size);
-      border: 1.5px solid rgba(255,255,255,0.8);
+      border: 2px solid rgba(255,255,255,0.9);
       border-radius: 50%;
       top: 0; left: 0;
       transform: translate(-50%, -50%);
@@ -112,10 +113,11 @@
       mix-blend-mode: difference;
       transition: transform 0.1s ease-out, opacity 0.3s ease;
       will-change: transform, top, left;
+      box-shadow: 0 0 10px rgba(255,255,255,0.5);
     }
     #custom-cursor.active {
       transform: translate(-50%, -50%) scale(2.2);
-      background: rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.2);
       border-color: transparent;
     }
     #custom-cursor.hidden { opacity: 0; }
@@ -263,7 +265,9 @@ document.addEventListener('DOMContentLoaded', () => {
     stopDrawing();
   });
 
-  // Dibujo fino con estela
+  // ----------------------------------------------------------------
+  // MODIFICACIÓN 1: DIBUJO MUCHO MÁS VISIBLE Y GRUESO
+  // ----------------------------------------------------------------
   let isDrawing = false;
   let lastPoint = null;
 
@@ -275,31 +279,41 @@ document.addEventListener('DOMContentLoaded', () => {
   function stopDrawing() { isDrawing = false; lastPoint = null; }
 
   function drawLoop() {
+    // Fade out más lento para que el rastro dure más
     dCtx.globalCompositeOperation = 'destination-out';
-    dCtx.fillStyle = 'rgba(0, 0, 0, 0.02)';
+    dCtx.fillStyle = 'rgba(0, 0, 0, 0.04)'; // Valor un poco mayor para limpiar, pero...
     dCtx.fillRect(0, 0, width, height);
+    
     dCtx.globalCompositeOperation = 'source-over';
 
     if (isDrawing && lastPoint) {
-      const hue = (performance.now() * 0.12) % 360;
-      dCtx.strokeStyle = `hsla(${hue}, 100%, 72%, 0.85)`;
-      dCtx.lineWidth = 1;
+      const hue = (performance.now() * 0.15) % 360;
+      
+      // Configuración "Neón Intenso"
+      dCtx.strokeStyle = `hsla(${hue}, 100%, 70%, 1)`;
+      dCtx.lineWidth = 4; // Mucho más grueso (antes era 1)
       dCtx.lineCap = 'round';
       dCtx.lineJoin = 'round';
-      dCtx.shadowBlur = 10;
-      dCtx.shadowColor = `hsla(${hue}, 100%, 60%, 0.6)`;
+      
+      // Resplandor aumentado
+      dCtx.shadowBlur = 15; 
+      dCtx.shadowColor = `hsla(${hue}, 100%, 50%, 0.8)`;
 
       dCtx.beginPath();
       dCtx.moveTo(lastPoint.x, lastPoint.y);
       dCtx.lineTo(mouseX, mouseY);
       dCtx.stroke();
+      
+      // Restablecer shadow para no afectar el borrado siguiente
+      dCtx.shadowBlur = 0;
+      
       lastPoint = { x: mouseX, y: mouseY };
     }
     requestAnimationFrame(drawLoop);
   }
   drawLoop();
 
-  // Audio
+  // Audio Logic
   async function initAudio() {
     if (audioContext) return;
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -341,7 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Muestreo de color del video
+  // Muestreo de color
   function updateSampleCanvas() {
     if (mainVideo.readyState >= 2 && mainVideo.videoWidth && mainVideo.videoHeight) {
       smCtx.drawImage(mainVideo, 0, 0, smCanvas.width, smCanvas.height);
@@ -355,112 +369,123 @@ document.addEventListener('DOMContentLoaded', () => {
     const x = Math.floor(Math.random() * w);
     const y = Math.floor(Math.random() * h);
     const data = smCtx.getImageData(x, y, 1, 1).data;
-    const boost = 1.1;
-    const r = Math.min(255, data[0] * boost);
-    const g = Math.min(255, data[1] * boost);
-    const b = Math.min(255, data[2] * boost);
-    return { r, g, b };
+    // Boost para que los colores sean vivos
+    return { r: data[0], g: data[1], b: data[2] };
   }
 
   function rgba(c, a) {
     return `rgba(${c.r},${c.g},${c.b},${a})`;
   }
 
-  // Partículas tipo polvo flotando alrededor del video
+  // ----------------------------------------------------------------
+  // MODIFICACIÓN 2: NUEVO MOTOR DE PARTÍCULAS - "AURA RÍTMICA"
+  // ----------------------------------------------------------------
   const particles = [];
-  const MAX_PARTICLES = 260;
+  const MAX_PARTICLES = 150; // Menos partículas pero más significativas
 
-  class DustParticle {
-    constructor() { this.init(true); }
-
-    init(initial = false) {
-      const ringRadius = Math.min(width, height) * 0.28;
-      const jitter = Math.min(width, height) * 0.12;
-      const angle = Math.random() * Math.PI * 2;
-      const radius = ringRadius + (Math.random() - 0.5) * jitter;
-
-      this.baseX = centerX + Math.cos(angle) * radius;
-      this.baseY = centerY + Math.sin(angle) * radius * 0.7; // un poco más aplastado
-
-      this.x = this.baseX;
-      this.y = this.baseY;
-
-      this.sizeBase = 0.5 + Math.random() * 1.3; // polvo = más pequeño
-      this.size = this.sizeBase;
-
-      this.offsetSeedX = Math.random() * 1000;
-      this.offsetSeedY = Math.random() * 1000;
-
-      this.depth = 0.4 + Math.random() * 0.6; // 0.4 – 1: cercanía
-      this.colorBase = sampleColorFromVideo();
+  class RhythmOrb {
+    constructor() {
+      this.init();
     }
 
-    update(time) {
-      const t = time * 0.0002;
-      const wobbleAmp = 14 * this.depth; // movimiento muy suave
-      const slowFactor = 0.3 + musicState.level * 0.4;
+    init() {
+      // Nacen en el centro, detrás de la tarjeta
+      this.x = centerX;
+      this.y = centerY;
+      
+      // Ángulo aleatorio
+      this.angle = Math.random() * Math.PI * 2;
+      
+      // Velocidad inicial y radio de órbita
+      this.velocity = 0.5 + Math.random() * 1.5;
+      this.orbitRadius = 10 + Math.random() * 50; 
+      
+      this.size = 2 + Math.random() * 4;
+      this.life = 0;
+      this.maxLife = 100 + Math.random() * 100;
+      
+      this.color = sampleColorFromVideo();
+      this.hasBurst = false;
+    }
 
-      const ox = Math.sin(this.offsetSeedX + t * slowFactor) * wobbleAmp;
-      const oy = Math.cos(this.offsetSeedY + t * slowFactor) * wobbleAmp;
-
-      // leve respiración radial con la música
-      const radialPulse = 1 + musicState.bass * 0.15;
-      const dxBase = this.baseX - centerX;
-      const dyBase = this.baseY - centerY;
-      const baseRadius = Math.sqrt(dxBase*dxBase + dyBase*dyBase) || 1;
-      const dirX = dxBase / baseRadius;
-      const dirY = dyBase / baseRadius;
-
-      const pulsedX = centerX + dirX * baseRadius * radialPulse;
-      const pulsedY = centerY + dirY * baseRadius * radialPulse * 0.7;
-
-      this.x = pulsedX + ox;
-      this.y = pulsedY + oy;
-
-      // tamaño: crece poquito con la canción
-      const grow = 1 + musicState.bass * 0.9 + musicState.level * 0.4;
-      this.size = this.sizeBase * grow * (0.7 + this.depth * 0.6);
-
-      // reposicionar si se va muy lejos (seguro)
-      const dx = this.x - centerX;
-      const dy = this.y - centerY;
-      const dist = Math.sqrt(dx*dx + dy*dy);
-      const maxDist = Math.min(width, height) * 0.7;
-      if (dist > maxDist) {
-        this.init(false);
+    update() {
+      this.life++;
+      
+      // Si mueren o salen de pantalla, renacen
+      if (this.life > this.maxLife || 
+          this.x < 0 || this.x > width || 
+          this.y < 0 || this.y > height) {
+        this.init();
+        return;
       }
 
-      // refrescar color de vez en cuando
-      if (Math.random() < 0.01) {
-        this.colorBase = sampleColorFromVideo();
+      // 1. Movimiento Espiral hacia afuera
+      // El bajo empuja las partículas lejos del centro violentamente
+      const expansion = 1 + (musicState.bass * 8); 
+      
+      this.orbitRadius += this.velocity * expansion;
+      this.angle += 0.01 + (musicState.mid * 0.05); // Giran más rápido con los medios
+
+      // Calcular posición basada en ángulo y radio
+      this.x = centerX + Math.cos(this.angle) * this.orbitRadius;
+      this.y = centerY + Math.sin(this.angle) * this.orbitRadius;
+
+      // 2. Efecto de "Latido" en tamaño
+      const beatPulse = 1 + (musicState.bass * 1.5);
+      this.currentSize = this.size * beatPulse;
+
+      // 3. Cambiar color con agudos altos
+      if (musicState.treble > 0.6 && Math.random() < 0.05) {
+         this.color = { r: 255, g: 255, b: 255 }; // Flash blanco
       }
     }
 
     draw(ctx) {
-      const alphaBase = 0.25 + this.depth * 0.4;
-      const alpha = alphaBase * (0.9 + musicState.treble * 0.4);
-      const color = rgba(this.colorBase, alpha);
+      // Transparencia basada en vida (fade in - fade out)
+      let alpha = 1;
+      if (this.life < 20) alpha = this.life / 20;
+      else if (this.life > this.maxLife - 30) alpha = (this.maxLife - this.life) / 30;
+      
+      // Modificar alpha con la música (parpadeo)
+      alpha *= (0.3 + musicState.level); 
 
-      ctx.fillStyle = color;
+      ctx.fillStyle = rgba(this.color, alpha);
+      
+      // Dibujar orbe brillante
       ctx.beginPath();
-      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.arc(this.x, this.y, this.currentSize, 0, Math.PI * 2);
       ctx.fill();
+
+      // Opcional: conectar con líneas si hay mucho bajo (efecto eléctrico)
+      if (musicState.bass > 0.4 && Math.random() > 0.8) {
+         ctx.strokeStyle = rgba(this.color, alpha * 0.5);
+         ctx.lineWidth = 0.5;
+         ctx.beginPath();
+         ctx.moveTo(this.x, this.y);
+         // Conectar hacia el centro
+         ctx.lineTo(centerX + (this.x-centerX)*0.8, centerY + (this.y-centerY)*0.8);
+         ctx.stroke();
+      }
     }
   }
 
+  // Inicializar nuevo sistema
   for (let i = 0; i < MAX_PARTICLES; i++) {
-    particles.push(new DustParticle());
+    particles.push(new RhythmOrb());
   }
 
   function animateParticles() {
-    const time = performance.now();
     updateAudioAnalysis();
 
-    pCtx.clearRect(0, 0, width, height);
-    pCtx.globalCompositeOperation = 'lighter';
+    // Limpiar canvas con un rastro muy leve para efecto de movimiento (motion blur)
+    pCtx.globalCompositeOperation = 'destination-out';
+    pCtx.fillStyle = 'rgba(0, 0, 0, 0.1)'; 
+    pCtx.fillRect(0, 0, width, height);
+    
+    pCtx.globalCompositeOperation = 'lighter'; // Modo de mezcla para brillo
 
     particles.forEach(p => {
-      p.update(time);
+      p.update();
       p.draw(pCtx);
     });
 
@@ -494,4 +519,3 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
-
