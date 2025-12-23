@@ -1,35 +1,46 @@
-// Utilidad para muestrear colores del video
-export class ColorSampler {
-  constructor(videoElement) {
-    this.videoElement = videoElement;
-    this.smCanvas = new OffscreenCanvas(64, 64);
-    this.smCtx = this.smCanvas.getContext('2d', { willReadFrequently: true });
-    
-    // Actualizar muestra cada 180ms
-    setInterval(() => this.updateSample(), 180);
-  }
+import { ColorSampler } from './utils/colorSampler.js';
+import { AudioAnalyzer } from './modules/audioAnalyzer.js';
+import { ParticleSystem } from './modules/particleSystem.js';
+import { CursorManager } from './modules/cursorManager.js';
+import { DrawingCanvas } from './modules/drawingCanvas.js';
+import { VideoController } from './modules/videoController.js';
 
-  updateSample() {
-    const video = this.videoElement;
-    if (video.readyState >= 2 && video.videoWidth && video.videoHeight) {
-      this.smCtx.drawImage(video, 0, 0, this.smCanvas.width, this.smCanvas.height);
-    }
-  }
+document.addEventListener('DOMContentLoaded', () => {
+  // Elementos del DOM
+  const mainVideo = document.getElementById('main-video');
+  const bgVideo = document.getElementById('background-layer');
+  const cardWrapper = document.getElementById('card-wrapper');
+  const shine = document.querySelector('.card-shine');
+  const cursor = document.getElementById('custom-cursor');
+  const audioBtn = document.getElementById('audio-btn');
+  const pCanvas = document.getElementById('particle-canvas');
+  const dCanvas = document.getElementById('drawing-canvas');
 
-  sampleColor() {
-    const w = this.smCanvas.width;
-    const h = this.smCanvas.height;
-    
-    if (!w || !h) return { r: 255, g: 255, b: 255 };
-    
-    const x = Math.floor(Math.random() * w);
-    const y = Math.floor(Math.random() * h);
-    const data = this.smCtx.getImageData(x, y, 1, 1).data;
-    
-    return { r: data[0], g: data[1], b: data[2] };
-  }
+  // Resize handler
+  const resize = () => {
+    pCanvas.width = window.innerWidth;
+    pCanvas.height = window.innerHeight;
+    dCanvas.width = window.innerWidth;
+    dCanvas.height = window.innerHeight;
+  };
+  window.addEventListener('resize', resize);
+  resize();
 
-  static rgba(color, alpha) {
-    return `rgba(${color.r},${color.g},${color.b},${alpha})`;
+  // Inicializar módulos
+  const colorSampler = new ColorSampler(mainVideo);
+  const audioAnalyzer = new AudioAnalyzer(mainVideo);
+  const cursorManager = new CursorManager(cursor, cardWrapper, shine);
+  const drawingCanvas = new DrawingCanvas(dCanvas, cursorManager, audioBtn);
+  const videoController = new VideoController(mainVideo, bgVideo, audioBtn, audioAnalyzer);
+  const particleSystem = new ParticleSystem(pCanvas, colorSampler, audioAnalyzer);
+
+  // Iniciar sistema de partículas
+  particleSystem.start();
+
+  // Loop de actualización de audio
+  function audioLoop() {
+    audioAnalyzer.update();
+    requestAnimationFrame(audioLoop);
   }
-}
+  audioLoop();
+});
