@@ -377,104 +377,108 @@ document.addEventListener('DOMContentLoaded', () => {
     return `rgba(${c.r},${c.g},${c.b},${a})`;
   }
 
-  // ----------------------------------------------------------------
-  // MODIFICACIÓN 2: NUEVO MOTOR DE PARTÍCULAS - "AURA RÍTMICA"
-  // ----------------------------------------------------------------
-  const particles = [];
-  const MAX_PARTICLES = 150; // Menos partículas pero más significativas
+// ----------------------------------------------------------------
+// NUEVO MOTOR DE PARTÍCULAS - "CONSTELACIÓN FLOTANTE"
+// ----------------------------------------------------------------
+const particles = [];
+const MAX_PARTICLES = 45; // Mucho menos saturado
 
-  class RhythmOrb {
-    constructor() {
-      this.init();
-    }
+class ConstellationParticle {
+  constructor() {
+    this.x = Math.random() * width;
+    this.y = Math.random() * height;
+    this.vx = (Math.random() - 0.5) * 0.5;
+    this.vy = (Math.random() - 0.5) * 0.5;
+    this.size = 1 + Math.random() * 2;
+    this.color = sampleColorFromVideo();
+    this.brightness = Math.random();
+  }
 
-    init() {
-      // Nacen en el centro, detrás de la tarjeta
-      this.x = centerX;
-      this.y = centerY;
-      
-      // Ángulo aleatorio
-      this.angle = Math.random() * Math.PI * 2;
-      
-      // Velocidad inicial y radio de órbita
-      this.velocity = 0.5 + Math.random() * 1.5;
-      this.orbitRadius = 10 + Math.random() * 50; 
-      
-      this.size = 2 + Math.random() * 4;
-      this.life = 0;
-      this.maxLife = 100 + Math.random() * 100;
-      
+  update() {
+    // Movimiento suave y orgánico
+    this.x += this.vx + Math.sin(Date.now() * 0.001 + this.y * 0.01) * 0.2;
+    this.y += this.vy + Math.cos(Date.now() * 0.001 + this.x * 0.01) * 0.2;
+
+    // Rebote en bordes
+    if (this.x < 0 || this.x > width) this.vx *= -1;
+    if (this.y < 0 || this.y > height) this.vy *= -1;
+
+    // Mantener dentro del canvas
+    this.x = Math.max(0, Math.min(width, this.x));
+    this.y = Math.max(0, Math.min(height, this.y));
+
+    // Pulso sutil con la música
+    this.brightness = 0.3 + (musicState.mid * 0.7);
+    
+    // Actualizar color ocasionalmente
+    if (Math.random() < 0.002) {
       this.color = sampleColorFromVideo();
-      this.hasBurst = false;
     }
+  }
 
-    update() {
-      this.life++;
-      
-      // Si mueren o salen de pantalla, renacen
-      if (this.life > this.maxLife || 
-          this.x < 0 || this.x > width || 
-          this.y < 0 || this.y > height) {
-        this.init();
-        return;
-      }
+  draw(ctx) {
+    const alpha = this.brightness * 0.8;
+    
+    // Partícula con glow suave
+    ctx.shadowBlur = 8 + (musicState.bass * 12);
+    ctx.shadowColor = rgba(this.color, 0.6);
+    ctx.fillStyle = rgba(this.color, alpha);
+    
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.shadowBlur = 0;
+  }
+}
 
-      // 1. Movimiento Espiral hacia afuera
-      // El bajo empuja las partículas lejos del centro violentamente
-      const expansion = 1 + (musicState.bass * 8); 
-      
-      this.orbitRadius += this.velocity * expansion;
-      this.angle += 0.01 + (musicState.mid * 0.05); // Giran más rápido con los medios
+// Inicializar partículas
+for (let i = 0; i < MAX_PARTICLES; i++) {
+  particles.push(new ConstellationParticle());
+}
 
-      // Calcular posición basada en ángulo y radio
-      this.x = centerX + Math.cos(this.angle) * this.orbitRadius;
-      this.y = centerY + Math.sin(this.angle) * this.orbitRadius;
+function animateParticles() {
+  updateAudioAnalysis();
 
-      // 2. Efecto de "Latido" en tamaño
-      const beatPulse = 1 + (musicState.bass * 1.5);
-      this.currentSize = this.size * beatPulse;
+  // Limpieza suave para efecto de estela
+  pCtx.globalCompositeOperation = 'destination-out';
+  pCtx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+  pCtx.fillRect(0, 0, width, height);
+  
+  pCtx.globalCompositeOperation = 'lighter';
 
-      // 3. Cambiar color con agudos altos
-      if (musicState.treble > 0.6 && Math.random() < 0.05) {
-         this.color = { r: 255, g: 255, b: 255 }; // Flash blanco
-      }
-    }
+  // Actualizar y dibujar partículas
+  particles.forEach(p => {
+    p.update();
+    p.draw(pCtx);
+  });
 
-    draw(ctx) {
-      // Transparencia basada en vida (fade in - fade out)
-      let alpha = 1;
-      if (this.life < 20) alpha = this.life / 20;
-      else if (this.life > this.maxLife - 30) alpha = (this.maxLife - this.life) / 30;
-      
-      // Modificar alpha con la música (parpadeo)
-      alpha *= (0.3 + musicState.level); 
+  // Conectar partículas cercanas con líneas
+  const connectionDistance = 150 + (musicState.bass * 100);
+  
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i + 1; j < particles.length; j++) {
+      const dx = particles[i].x - particles[j].x;
+      const dy = particles[i].y - particles[j].y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
 
-      ctx.fillStyle = rgba(this.color, alpha);
-      
-      // Dibujar orbe brillante
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, this.currentSize, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Opcional: conectar con líneas si hay mucho bajo (efecto eléctrico)
-      if (musicState.bass > 0.4 && Math.random() > 0.8) {
-         ctx.strokeStyle = rgba(this.color, alpha * 0.5);
-         ctx.lineWidth = 0.5;
-         ctx.beginPath();
-         ctx.moveTo(this.x, this.y);
-         // Conectar hacia el centro
-         ctx.lineTo(centerX + (this.x-centerX)*0.8, centerY + (this.y-centerY)*0.8);
-         ctx.stroke();
+      if (distance < connectionDistance) {
+        const alpha = (1 - distance / connectionDistance) * 0.3 * musicState.level;
+        
+        pCtx.strokeStyle = rgba(particles[i].color, alpha);
+        pCtx.lineWidth = 0.5;
+        pCtx.beginPath();
+        pCtx.moveTo(particles[i].x, particles[i].y);
+        pCtx.lineTo(particles[j].x, particles[j].y);
+        pCtx.stroke();
       }
     }
   }
 
-  // Inicializar nuevo sistema
-  for (let i = 0; i < MAX_PARTICLES; i++) {
-    particles.push(new RhythmOrb());
-  }
+  requestAnimationFrame(animateParticles);
+}
+animateParticles();
 
-  function animateParticles() {
     updateAudioAnalysis();
 
     // Limpiar canvas con un rastro muy leve para efecto de movimiento (motion blur)
@@ -519,3 +523,4 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
