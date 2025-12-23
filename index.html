@@ -43,14 +43,13 @@
     #particle-canvas {
       z-index: 2;
       pointer-events: none;
-      /* Cambiado a lighten para que las nuevas partículas brillen más */
       mix-blend-mode: screen; 
     }
     #drawing-canvas {
       z-index: 50;
       pointer-events: auto;
       touch-action: none;
-      mix-blend-mode: screen; /* Mejor visibilidad para el dibujo neón */
+      mix-blend-mode: screen;
     }
 
     .perspective-container {
@@ -265,9 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
     stopDrawing();
   });
 
-  // ----------------------------------------------------------------
-  // MODIFICACIÓN 1: DIBUJO MUCHO MÁS VISIBLE Y GRUESO
-  // ----------------------------------------------------------------
+  // Sistema de dibujo
   let isDrawing = false;
   let lastPoint = null;
 
@@ -279,9 +276,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function stopDrawing() { isDrawing = false; lastPoint = null; }
 
   function drawLoop() {
-    // Fade out más lento para que el rastro dure más
     dCtx.globalCompositeOperation = 'destination-out';
-    dCtx.fillStyle = 'rgba(0, 0, 0, 0.04)'; // Valor un poco mayor para limpiar, pero...
+    dCtx.fillStyle = 'rgba(0, 0, 0, 0.04)';
     dCtx.fillRect(0, 0, width, height);
     
     dCtx.globalCompositeOperation = 'source-over';
@@ -289,13 +285,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (isDrawing && lastPoint) {
       const hue = (performance.now() * 0.15) % 360;
       
-      // Configuración "Neón Intenso"
       dCtx.strokeStyle = `hsla(${hue}, 100%, 70%, 1)`;
-      dCtx.lineWidth = 4; // Mucho más grueso (antes era 1)
+      dCtx.lineWidth = 4;
       dCtx.lineCap = 'round';
       dCtx.lineJoin = 'round';
       
-      // Resplandor aumentado
       dCtx.shadowBlur = 15; 
       dCtx.shadowColor = `hsla(${hue}, 100%, 50%, 0.8)`;
 
@@ -304,7 +298,6 @@ document.addEventListener('DOMContentLoaded', () => {
       dCtx.lineTo(mouseX, mouseY);
       dCtx.stroke();
       
-      // Restablecer shadow para no afectar el borrado siguiente
       dCtx.shadowBlur = 0;
       
       lastPoint = { x: mouseX, y: mouseY };
@@ -369,7 +362,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const x = Math.floor(Math.random() * w);
     const y = Math.floor(Math.random() * h);
     const data = smCtx.getImageData(x, y, 1, 1).data;
-    // Boost para que los colores sean vivos
     return { r: data[0], g: data[1], b: data[2] };
   }
 
@@ -377,121 +369,103 @@ document.addEventListener('DOMContentLoaded', () => {
     return `rgba(${c.r},${c.g},${c.b},${a})`;
   }
 
-// ----------------------------------------------------------------
-// NUEVO MOTOR DE PARTÍCULAS - "CONSTELACIÓN FLOTANTE"
-// ----------------------------------------------------------------
-const particles = [];
-const MAX_PARTICLES = 45; // Mucho menos saturado
+  // ----------------------------------------------------------------
+  // NUEVO MOTOR DE PARTÍCULAS - "CONSTELACIÓN FLOTANTE"
+  // ----------------------------------------------------------------
+  const particles = [];
+  const MAX_PARTICLES = 45;
 
-class ConstellationParticle {
-  constructor() {
-    this.x = Math.random() * width;
-    this.y = Math.random() * height;
-    this.vx = (Math.random() - 0.5) * 0.5;
-    this.vy = (Math.random() - 0.5) * 0.5;
-    this.size = 1 + Math.random() * 2;
-    this.color = sampleColorFromVideo();
-    this.brightness = Math.random();
-  }
-
-  update() {
-    // Movimiento suave y orgánico
-    this.x += this.vx + Math.sin(Date.now() * 0.001 + this.y * 0.01) * 0.2;
-    this.y += this.vy + Math.cos(Date.now() * 0.001 + this.x * 0.01) * 0.2;
-
-    // Rebote en bordes
-    if (this.x < 0 || this.x > width) this.vx *= -1;
-    if (this.y < 0 || this.y > height) this.vy *= -1;
-
-    // Mantener dentro del canvas
-    this.x = Math.max(0, Math.min(width, this.x));
-    this.y = Math.max(0, Math.min(height, this.y));
-
-    // Pulso sutil con la música
-    this.brightness = 0.3 + (musicState.mid * 0.7);
-    
-    // Actualizar color ocasionalmente
-    if (Math.random() < 0.002) {
+  class ConstellationParticle {
+    constructor() {
+      this.x = Math.random() * width;
+      this.y = Math.random() * height;
+      this.vx = (Math.random() - 0.5) * 0.5;
+      this.vy = (Math.random() - 0.5) * 0.5;
+      this.size = 1 + Math.random() * 2;
       this.color = sampleColorFromVideo();
+      this.brightness = Math.random();
     }
-  }
 
-  draw(ctx) {
-    const alpha = this.brightness * 0.8;
-    
-    // Partícula con glow suave
-    ctx.shadowBlur = 8 + (musicState.bass * 12);
-    ctx.shadowColor = rgba(this.color, 0.6);
-    ctx.fillStyle = rgba(this.color, alpha);
-    
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-    ctx.fill();
-    
-    ctx.shadowBlur = 0;
-  }
-}
+    update() {
+      // Movimiento suave y orgánico
+      this.x += this.vx + Math.sin(Date.now() * 0.001 + this.y * 0.01) * 0.2;
+      this.y += this.vy + Math.cos(Date.now() * 0.001 + this.x * 0.01) * 0.2;
 
-// Inicializar partículas
-for (let i = 0; i < MAX_PARTICLES; i++) {
-  particles.push(new ConstellationParticle());
-}
+      // Rebote en bordes
+      if (this.x < 0 || this.x > width) this.vx *= -1;
+      if (this.y < 0 || this.y > height) this.vy *= -1;
 
-function animateParticles() {
-  updateAudioAnalysis();
+      // Mantener dentro del canvas
+      this.x = Math.max(0, Math.min(width, this.x));
+      this.y = Math.max(0, Math.min(height, this.y));
 
-  // Limpieza suave para efecto de estela
-  pCtx.globalCompositeOperation = 'destination-out';
-  pCtx.fillStyle = 'rgba(0, 0, 0, 0.08)';
-  pCtx.fillRect(0, 0, width, height);
-  
-  pCtx.globalCompositeOperation = 'lighter';
-
-  // Actualizar y dibujar partículas
-  particles.forEach(p => {
-    p.update();
-    p.draw(pCtx);
-  });
-
-  // Conectar partículas cercanas con líneas
-  const connectionDistance = 150 + (musicState.bass * 100);
-  
-  for (let i = 0; i < particles.length; i++) {
-    for (let j = i + 1; j < particles.length; j++) {
-      const dx = particles[i].x - particles[j].x;
-      const dy = particles[i].y - particles[j].y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-
-      if (distance < connectionDistance) {
-        const alpha = (1 - distance / connectionDistance) * 0.3 * musicState.level;
-        
-        pCtx.strokeStyle = rgba(particles[i].color, alpha);
-        pCtx.lineWidth = 0.5;
-        pCtx.beginPath();
-        pCtx.moveTo(particles[i].x, particles[i].y);
-        pCtx.lineTo(particles[j].x, particles[j].y);
-        pCtx.stroke();
+      // Pulso sutil con la música
+      this.brightness = 0.3 + (musicState.mid * 0.7);
+      
+      // Actualizar color ocasionalmente
+      if (Math.random() < 0.002) {
+        this.color = sampleColorFromVideo();
       }
     }
+
+    draw(ctx) {
+      const alpha = this.brightness * 0.8;
+      
+      // Partícula con glow suave
+      ctx.shadowBlur = 8 + (musicState.bass * 12);
+      ctx.shadowColor = rgba(this.color, 0.6);
+      ctx.fillStyle = rgba(this.color, alpha);
+      
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.shadowBlur = 0;
+    }
   }
 
-  requestAnimationFrame(animateParticles);
-}
-animateParticles();
+  // Inicializar partículas
+  for (let i = 0; i < MAX_PARTICLES; i++) {
+    particles.push(new ConstellationParticle());
+  }
 
+  function animateParticles() {
     updateAudioAnalysis();
 
-    // Limpiar canvas con un rastro muy leve para efecto de movimiento (motion blur)
+    // Limpieza suave para efecto de estela
     pCtx.globalCompositeOperation = 'destination-out';
-    pCtx.fillStyle = 'rgba(0, 0, 0, 0.1)'; 
+    pCtx.fillStyle = 'rgba(0, 0, 0, 0.08)';
     pCtx.fillRect(0, 0, width, height);
     
-    pCtx.globalCompositeOperation = 'lighter'; // Modo de mezcla para brillo
+    pCtx.globalCompositeOperation = 'lighter';
 
+    // Actualizar y dibujar partículas
     particles.forEach(p => {
       p.update();
       p.draw(pCtx);
     });
+
+    // Conectar partículas cercanas con líneas
+    const connectionDistance = 150 + (musicState.bass * 100);
+    
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < connectionDistance) {
+          const alpha = (1 - distance / connectionDistance) * 0.3 * musicState.level;
+          
+          pCtx.strokeStyle = rgba(particles[i].color, alpha);
+          pCtx.lineWidth = 0.5;
+          pCtx.beginPath();
+          pCtx.moveTo(particles[i].x, particles[i].y);
+          pCtx.lineTo(particles[j].x, particles[j].y);
+          pCtx.stroke();
+        }
+      }
+    }
 
     requestAnimationFrame(animateParticles);
   }
@@ -523,4 +497,3 @@ animateParticles();
 </script>
 </body>
 </html>
-
