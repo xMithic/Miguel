@@ -417,27 +417,40 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   animateParticles();
 
-  // --- Botón de audio ---
-  audioBtn.addEventListener('click', () => {
-    initAudio().then(() => {
-      if (audioContext.state === 'suspended') audioContext.resume();
-    });
-
-    mainVideo.muted = !mainVideo.muted;
-    audioBtn.classList.toggle('muted', mainVideo.muted);
-
-    const path = audioBtn.querySelector('path');
-    if (mainVideo.muted) {
-      path.setAttribute('d',
-        'M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9zM12 4L9.91 6.09 12 8.18V4z'
-      );
-    } else {
-      path.setAttribute('d',
-        'M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-8.77s-2.99-7.86-7-8.77z'
-      );
+    /* Botón de Audio Minimalista */
+    #audio-btn {
+      position: fixed;
+      bottom: 40px; /* Movido abajo para más minimalismo visual */
+      left: 50%; transform: translateX(-50%);
+      width: var(--btn-size); height: var(--btn-size);
+      border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.2);
+      cursor: none; /* Usamos el cursor custom */
+      z-index: 100;
+      display: flex; justify-content: center; align-items: center;
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      pointer-events: auto;
     }
-  });
-});
-</script>
-</body>
+    #audio-btn svg { width: 20px; fill: white; opacity: 0.8; transition: transform 0.3s; }
+    #audio-btn:hover { background: rgba(255,255,255,0.25); transform: translateX(-50%) scale(1.1); }
+    #audio-btn.muted svg { opacity: 0.5; transform: scale(0.9); }
+    
+    /* Indicador de audio visual (pequeñas barras) */
+    .eq-bars {
+      position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 4px; z-index: 90; opacity: 0; transition: opacity 0.5s;
+    }
+    .eq-bar { width: 3px; height: 10px; background: white; border-radius: 2px; animation: eqBounce 1s infinite ease-in-out; }
+    .playing .eq-bars { opacity: 0.7; }
+    @keyframes eqBounce { 0%, 100% { height: 6px; } 50% { height: 18px; } }
+    .eq-bar:nth-child(1) { animation-delay: 0s; }
+    .eq-bar:nth-child(2) { animation-delay: 0.1s; }
+    .eq-bar:nth-child(3) { animation-delay: 0.2s; }
+
+  </style>
+</head>
+<body>
 </html>
+
