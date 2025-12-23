@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>PanitaMithico | Neon Gravity v4</title>
+  <title>PanitaMithico | Orbital Visualizer</title>
   <style>
     :root {
       --cursor-size: 10px;
@@ -14,19 +14,19 @@
       margin: 0; padding: 0;
       width: 100%; height: 100%;
       overflow: hidden;
-      background-color: #050608;
+      background-color: #05060a;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       cursor: none;
       user-select: none;
     }
 
-    /* Fondo con video, menos blur */
+    /* Fondo con menos blur */
     #background-layer {
       position: fixed; inset: -3%;
       width: 106%; height: 106%;
       z-index: 0;
-      opacity: 0.55;
-      filter: blur(22px) saturate(1.4) brightness(0.55);
+      opacity: 0.58;
+      filter: blur(18px) saturate(1.35) brightness(0.55);
       object-fit: cover;
       transition: opacity 1s ease;
       pointer-events: none;
@@ -97,6 +97,35 @@
     }
     #custom-cursor.hidden { opacity: 0; }
 
+    /* Indicador minimalista de visualizer */
+    .visualizer-label {
+      position: fixed;
+      bottom: 72px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.6);
+      opacity: 0.75;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      z-index: 90;
+      pointer-events: none;
+    }
+    .visualizer-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #6ff8ff;
+      box-shadow: 0 0 10px #6ff8ff;
+      animation: dotPulse 1.4s ease-in-out infinite;
+    }
+    @keyframes dotPulse {
+      0%, 100% { transform: scale(0.9); opacity: 0.5; }
+      50% { transform: scale(1.3); opacity: 1; }
+    }
+
     #audio-btn {
       position: fixed;
       bottom: 30px; left: 50%; transform: translateX(-50%);
@@ -143,6 +172,12 @@
     </div>
   </div>
 
+  <!-- Indicador minimalista de visualizer -->
+  <div class="visualizer-label">
+    <div class="visualizer-dot"></div>
+    <span>Audio Visualizer</span>
+  </div>
+
   <button id="audio-btn" class="muted" aria-label="Activar/Desactivar audio">
     <svg viewBox="0 0 24 24">
       <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9zM12 4L9.91 6.09 12 8.18V4z"/>
@@ -151,11 +186,11 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  const mainVideo = document.getElementById('main-video');
-  const bgVideo = document.getElementById('background-layer');
-  const card = document.getElementById('video-card');
-  const cursor = document.getElementById('custom-cursor');
-  const audioBtn = document.getElementById('audio-btn');
+  const mainVideo   = document.getElementById('main-video');
+  const bgVideo     = document.getElementById('background-layer');
+  const card        = document.getElementById('video-card');
+  const cursor      = document.getElementById('custom-cursor');
+  const audioBtn    = document.getElementById('audio-btn');
 
   const pCanvas = document.getElementById('particle-canvas');
   const dCanvas = document.getElementById('drawing-canvas');
@@ -168,11 +203,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let width, height, centerX, centerY;
   let audioContext, analyser, dataArray, source;
-
-  // Audio bands
   let bass = 0, mid = 0, high = 0;
 
-  // --- Resize / Layout ---
+  // --- Layout ---
   const resize = () => {
     width = window.innerWidth;
     height = window.innerHeight;
@@ -183,7 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('resize', resize);
   resize();
 
-  // Sincronizar fondo con video principal
+  // Sincronizar fondo
   mainVideo.addEventListener('play', () => {
     try {
       if (mainVideo.captureStream) bgVideo.srcObject = mainVideo.captureStream();
@@ -192,7 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch(e){}
   }, { once: true });
 
-  // --- Input + Dibujo fino ---
+  // --- Dibujo fino ---
   let mouseX = centerX, mouseY = centerY;
   let isDrawing = false;
   let lastPoint = null;
@@ -207,10 +240,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const hue = (performance.now() * 0.12) % 360;
     dCtx.strokeStyle = `hsla(${hue}, 100%, 72%, 0.85)`;
-    dCtx.lineWidth = 1.2;
+    dCtx.lineWidth = 1.1;
     dCtx.lineCap = 'round';
     dCtx.lineJoin = 'round';
-    dCtx.shadowBlur = 10;
+    dCtx.shadowBlur = 9;
     dCtx.shadowColor = `hsla(${hue}, 100%, 60%, 0.7)`;
 
     dCtx.stroke();
@@ -252,14 +285,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function drawingLoop() {
     dCtx.globalCompositeOperation = 'destination-out';
-    dCtx.fillStyle = 'rgba(0, 0, 0, 0.025)'; // tarda bastante en desaparecer
+    dCtx.fillStyle = 'rgba(0, 0, 0, 0.03)';
     dCtx.fillRect(0, 0, width, height);
     dCtx.globalCompositeOperation = 'source-over';
     requestAnimationFrame(drawingLoop);
   }
   drawingLoop();
 
-  // --- Audio setup ---
+  // --- Audio ---
   async function initAudio() {
     if (audioContext) return;
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -300,7 +333,7 @@ document.addEventListener('DOMContentLoaded', () => {
       smCtx.drawImage(mainVideo, 0, 0, smCanvas.width, smCanvas.height);
     }
   }
-  setInterval(updateSampleCanvas, 160); // actualizar color ~6 veces/seg
+  setInterval(updateSampleCanvas, 160);
 
   function getVideoColor() {
     const w = smCanvas.width, h = smCanvas.height;
@@ -308,89 +341,48 @@ document.addEventListener('DOMContentLoaded', () => {
     const x = Math.floor(Math.random() * w);
     const y = Math.floor(Math.random() * h);
     const data = smCtx.getImageData(x, y, 1, 1).data;
-    const boost = 1.15;
+    const boost = 1.2;
     const r = Math.min(255, data[0] * boost);
     const g = Math.min(255, data[1] * boost);
     const b = Math.min(255, data[2] * boost);
     return `rgba(${r},${g},${b},${0.75 + high * 0.2})`;
   }
 
-  // --- Partículas mejoradas ---
+  // --- Sistema de partículas ORBITAL estable ---
   const particles = [];
   const MAX_PARTICLES = 260;
 
   class Particle {
     constructor() {
-      this.reset(true);
+      this.init();
     }
 
-    reset(initialRing = false) {
-      // Posición inicial en un anillo alrededor del centro para que no "salgan volando"
+    init() {
       const angle = Math.random() * Math.PI * 2;
-      const baseRadius = initialRing ? (height * 0.25) : (height * 0.28 + Math.random() * height * 0.1);
-      const r = baseRadius + (Math.random() - 0.5) * 40;
-      this.x = centerX + Math.cos(angle) * r;
-      this.y = centerY + Math.sin(angle) * r;
-
-      // Velocidad inicial muy suave (estabilidad)
-      this.vx = (Math.random() - 0.5) * 0.3;
-      this.vy = (Math.random() - 0.5) * 0.3;
-
-      this.sizeBase = 0.8 + Math.random() * 1.8;
-      this.size = this.sizeBase;
-      this.bassReactivity = 0.4 + Math.random() * 0.6;
+      const radiusBase = Math.min(width, height) * 0.32;
+      const radiusJitter = Math.random() * Math.min(width, height) * 0.08;
+      this.radius = radiusBase + (Math.random() - 0.5) * radiusJitter;
+      this.angle = angle;
+      this.baseSpeed = (0.001 + Math.random() * 0.0025) * (Math.random() < 0.5 ? 1 : -1);
+      this.sizeBase = 0.7 + Math.random() * 1.5;
       this.color = getVideoColor();
+      this.orbitOffset = Math.random() * 1000;
     }
 
-    update() {
-      // vector al centro
-      const dx = centerX - this.x;
-      const dy = centerY - this.y;
-      const dist = Math.sqrt(dx*dx + dy*dy) || 1;
-      const ndx = dx / dist;
-      const ndy = dy / dist;
+    update(dt) {
+      // velocidad base + ligera reacción al audio
+      const speedBoost = 1 + bass * 1.6 + high * 0.6;
+      this.angle += this.baseSpeed * speedBoost * dt;
 
-      const preferredRadius = height * 0.3;
-      const offset = dist - preferredRadius;
+      const wobble = Math.sin((performance.now() + this.orbitOffset) * 0.001 + this.radius * 0.002) * 6 * (0.3 + mid);
+      const r = this.radius + wobble;
 
-      // fuerza suave para mantenerlas cerca del anillo (como un "resorte")
-      const springStrength = 0.012;
-      this.vx += -ndx * offset * springStrength;
-      this.vy += -ndy * offset * springStrength;
+      this.x = centerX + Math.cos(this.angle) * r;
+      this.y = centerY + Math.sin(this.angle) * r;
 
-      // repulsión musical desde el centro (bass)
-      if (bass > 0.22) {
-        const repulsion = bass * 2.4 * this.bassReactivity;
-        this.vx -= ndx * repulsion;
-        this.vy -= ndy * repulsion;
-      }
+      this.size = this.sizeBase * (1 + bass * 2.2 + mid * 0.4);
 
-      // ligera turbulencia con medios/altos
-      const t = performance.now() * 0.001;
-      const turbulence = 0.18 + high * 0.4 + mid * 0.3;
-      this.vx += Math.cos(t + this.x * 0.002) * turbulence * 0.02;
-      this.vy += Math.sin(t + this.y * 0.002) * turbulence * 0.02;
-
-      // fricción
-      const drag = 0.94;
-      this.vx *= drag;
-      this.vy *= drag;
-
-      this.x += this.vx;
-      this.y += this.vy;
-
-      // tamaño reacciona con bass y mid
-      this.size = this.sizeBase * (1 + bass * 2.2 + mid * 0.5);
-
-      // respawn si se va MUY lejos
-      if (this.x < -width*0.5 || this.x > width*1.5 || this.y < -height*0.5 || this.y > height*1.5) {
-        this.reset(false);
-      }
-
-      // refrescar color de vez en cuando
-      if (Math.random() < 0.02) {
-        this.color = getVideoColor();
-      }
+      if (Math.random() < 0.01) this.color = getVideoColor();
     }
 
     draw(ctx) {
@@ -405,14 +397,19 @@ document.addEventListener('DOMContentLoaded', () => {
     particles.push(new Particle());
   }
 
+  let lastTime = performance.now();
   function animateParticles() {
+    const now = performance.now();
+    const dt = (now - lastTime) || 16;
+    lastTime = now;
+
     updateAudio();
 
     pCtx.clearRect(0, 0, width, height);
     pCtx.globalCompositeOperation = 'lighter';
 
     particles.forEach(p => {
-      p.update();
+      p.update(dt);
       p.draw(pCtx);
     });
 
@@ -420,7 +417,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   animateParticles();
 
-  // --- Audio toggle ---
+  // --- Botón de audio ---
   audioBtn.addEventListener('click', () => {
     initAudio().then(() => {
       if (audioContext.state === 'suspended') audioContext.resume();
@@ -436,7 +433,7 @@ document.addEventListener('DOMContentLoaded', () => {
       );
     } else {
       path.setAttribute('d',
-        'M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z'
+        'M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-8.77s-2.99-7.86-7-8.77z'
       );
     }
   });
