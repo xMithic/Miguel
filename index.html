@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport"
         content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>PanitaMithica</title>
+  <title>PanitaMithico - V2</title>
   <style>
     :root {
       --cursor-size: 20px;
@@ -197,7 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const pCanvas = document.getElementById('particle-canvas');
   const dCanvas = document.getElementById('drawing-canvas');
-  const pCtx = pCanvas.getContext('2d', { alpha: true });
+  const pCtx = pCanvas.getContext('2d', { alpha: true, desynchronized: true });
   const dCtx = dCanvas.getContext('2d', { alpha: true });
 
   const smCanvas = new OffscreenCanvas(64, 64);
@@ -206,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let width, height, centerX, centerY;
   let audioContext, analyser, dataArray, source;
 
-  const musicState = { bass: 0, mid: 0, treble: 0, level: 0 };
+  const musicState = { bass: 0, mid: 0, treble: 0, level: 0, impact: 0 };
 
   const resize = () => {
     width = window.innerWidth;
@@ -313,7 +313,7 @@ document.addEventListener('DOMContentLoaded', () => {
     audioContext = new AudioCtx();
     analyser = audioContext.createAnalyser();
     analyser.fftSize = 512;
-    analyser.smoothingTimeConstant = 0.85;
+    analyser.smoothingTimeConstant = 0.8;
 
     source = audioContext.createMediaElementSource(mainVideo);
     source.connect(analyser);
@@ -322,6 +322,7 @@ document.addEventListener('DOMContentLoaded', () => {
     dataArray = new Uint8Array(analyser.frequencyBinCount);
   }
 
+  let prevBass = 0;
   function updateAudioAnalysis() {
     if (!analyser) return;
     analyser.getByteFrequencyData(dataArray);
@@ -336,10 +337,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const m = avg(midRange)    / 255;
     const t = avg(trebleRange) / 255;
 
-    musicState.bass   += (b - musicState.bass) * 0.25;
-    musicState.mid    += (m - musicState.mid) * 0.15;
-    musicState.treble += (t - musicState.treble) * 0.15;
+    musicState.bass   += (b - musicState.bass) * 0.3;
+    musicState.mid    += (m - musicState.mid) * 0.2;
+    musicState.treble += (t - musicState.treble) * 0.2;
     musicState.level   = (musicState.bass + musicState.mid + musicState.treble) / 3;
+
+    // Detector de impacto (súbita subida de graves)
+    const bassDelta = musicState.bass - prevBass;
+    if (bassDelta > 0.15) {
+      musicState.impact = 1;
+    }
+    musicState.impact *= 0.92; // Decay rápido
+    prevBass = musicState.bass;
 
     if (!mainVideo.muted && musicState.level > 0.05) {
       document.body.classList.add('playing');
@@ -348,7 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Muestreo de color
+  // Muestreo de color optimizado
   function updateSampleCanvas() {
     if (mainVideo.readyState >= 2 && mainVideo.videoWidth && mainVideo.videoHeight) {
       smCtx.drawImage(mainVideo, 0, 0, smCanvas.width, smCanvas.height);
@@ -370,92 +379,151 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ----------------------------------------------------------------
-  // NUEVO MOTOR DE PARTÍCULAS - "LUCIÉRNAGAS AMBIENT"
+  // MOTOR DE PARTÍCULAS OPTIMIZADO - "UNIVERSE WITHIN"
+  // Inspirado en Musicvid - Campo estelar en túnel 3D
   // ----------------------------------------------------------------
   const particles = [];
-  const MAX_PARTICLES = 60;
+  const MAX_PARTICLES = 200; // Optimizado para rendimiento
 
-  class Firefly {
+  // Pool de colores precalculados
+  const colorPalette = [];
+  for (let i = 0; i < 10; i++) {
+    colorPalette.push(sampleColorFromVideo());
+  }
+  setInterval(() => {
+    const idx = Math.floor(Math.random() * colorPalette.length);
+    colorPalette[idx] = sampleColorFromVideo();
+  }, 500);
+
+  class Star3D {
     constructor() {
-      this.x = Math.random() * width;
-      this.y = Math.random() * height;
-      this.baseSize = 2 + Math.random() * 3;
-      this.phase = Math.random() * Math.PI * 2;
-      this.speed = 0.3 + Math.random() * 0.5;
-      this.angle = Math.random() * Math.PI * 2;
-      this.color = sampleColorFromVideo();
-      this.glowCycle = Math.random() * 1000;
+      this.reset();
+    }
+
+    reset() {
+      // Posición en espacio 3D
+      const angle = Math.random() * Math.PI * 2;
+      const radius = Math.random() * 500;
+      
+      this.x = Math.cos(angle) * radius;
+      this.y = Math.sin(angle) * radius;
+      this.z = Math.random() * 2000 + 1000; // Lejos al principio
+      
+      this.baseSize = 0.5 + Math.random() * 1.5;
+      this.color = colorPalette[Math.floor(Math.random() * colorPalette.length)];
+      
+      // Velocidad base optimizada
+      this.speedZ = 2 + Math.random() * 3;
     }
 
     update() {
-      // Movimiento flotante tipo "drunk walk"
-      this.angle += (Math.random() - 0.5) * 0.1;
-      this.x += Math.cos(this.angle) * this.speed;
-      this.y += Math.sin(this.angle) * this.speed + Math.sin(Date.now() * 0.001 + this.phase) * 0.3;
+      // Movimiento hacia la cámara (efecto túnel)
+      const speedMultiplier = 1 + (musicState.bass * 4) + (musicState.impact * 8);
+      this.z -= this.speedZ * speedMultiplier;
 
-      // Wrap around
-      if (this.x < -50) this.x = width + 50;
-      if (this.x > width + 50) this.x = -50;
-      if (this.y < -50) this.y = height + 50;
-      if (this.y > height + 50) this.y = -50;
-
-      // Actualizar color con la música
-      if (musicState.treble > 0.6 && Math.random() < 0.01) {
-        this.color = sampleColorFromVideo();
+      // Resetear cuando pasa la cámara
+      if (this.z < 1) {
+        this.reset();
       }
     }
 
     draw(ctx) {
-      // Pulso natural de luciérnaga
-      const glow = (Math.sin(Date.now() * 0.002 + this.glowCycle) + 1) * 0.5;
+      // Proyección perspectiva optimizada
+      const fov = 300;
+      const scale = fov / (fov + this.z);
       
-      // Reacción a la música
-      const musicBoost = 1 + (musicState.mid * 0.8);
-      const size = this.baseSize * musicBoost;
-      const alpha = (0.3 + glow * 0.5) * (0.5 + musicState.level * 0.5);
+      const x2d = this.x * scale + centerX;
+      const y2d = this.y * scale + centerY;
+      
+      // Culling - no dibujar fuera de pantalla
+      if (x2d < -50 || x2d > width + 50 || y2d < -50 || y2d > height + 50) {
+        return;
+      }
 
-      // Halo exterior
-      const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, size * 4);
-      gradient.addColorStop(0, rgba(this.color, alpha * 0.8));
-      gradient.addColorStop(0.5, rgba(this.color, alpha * 0.3));
-      gradient.addColorStop(1, rgba(this.color, 0));
+      // Tamaño basado en profundidad y música
+      const size = this.baseSize * scale * (1 + musicState.mid * 1.5);
       
-      ctx.fillStyle = gradient;
+      // Alpha basado en profundidad
+      let alpha = 1 - (this.z / 2000);
+      alpha = Math.max(0, Math.min(1, alpha));
+      alpha *= (0.6 + musicState.level * 0.4);
+
+      // Efecto de estela con impactos
+      if (musicState.impact > 0.3) {
+        const trailLength = 15 * musicState.impact * scale;
+        const gradient = ctx.createLinearGradient(
+          x2d, y2d,
+          x2d + (this.x * 0.01 * scale), 
+          y2d + (this.y * 0.01 * scale)
+        );
+        gradient.addColorStop(0, rgba(this.color, alpha * 0.8));
+        gradient.addColorStop(1, rgba(this.color, 0));
+        
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = size * 0.5;
+        ctx.beginPath();
+        ctx.moveTo(x2d, y2d);
+        ctx.lineTo(
+          x2d + (this.x * 0.01 * scale * trailLength), 
+          y2d + (this.y * 0.01 * scale * trailLength)
+        );
+        ctx.stroke();
+      }
+
+      // Partícula central
+      ctx.fillStyle = rgba(this.color, alpha);
       ctx.beginPath();
-      ctx.arc(this.x, this.y, size * 4, 0, Math.PI * 2);
+      ctx.arc(x2d, y2d, size, 0, Math.PI * 2);
       ctx.fill();
 
-      // Núcleo brillante
-      ctx.fillStyle = rgba({ r: 255, g: 255, b: 255 }, alpha * 0.9);
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, size * 0.4, 0, Math.PI * 2);
-      ctx.fill();
+      // Brillo adicional en partículas cercanas
+      if (this.z < 300 && musicState.treble > 0.5) {
+        ctx.fillStyle = rgba({ r: 255, g: 255, b: 255 }, alpha * 0.5);
+        ctx.beginPath();
+        ctx.arc(x2d, y2d, size * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
   }
 
-  // Inicializar partículas
+  // Inicializar sistema
   for (let i = 0; i < MAX_PARTICLES; i++) {
-    particles.push(new Firefly());
+    particles.push(new Star3D());
   }
 
-  function animateParticles() {
+  // Loop principal optimizado con requestAnimationFrame
+  let lastTime = performance.now();
+  function animateParticles(currentTime) {
     updateAudioAnalysis();
 
-    // Limpieza muy suave para rastros largos
-    pCtx.globalCompositeOperation = 'destination-out';
-    pCtx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+    // Limitar FPS si es necesario para optimización
+    const deltaTime = currentTime - lastTime;
+    if (deltaTime < 16) { // ~60 FPS
+      requestAnimationFrame(animateParticles);
+      return;
+    }
+    lastTime = currentTime;
+
+    // Limpieza completa (sin rastro para mejor rendimiento)
+    pCtx.fillStyle = 'rgba(0, 0, 0, 0.2)';
     pCtx.fillRect(0, 0, width, height);
+
+    // Batch rendering para mejor rendimiento
+    pCtx.save();
     
-    pCtx.globalCompositeOperation = 'lighter';
+    // Ordenar por profundidad (opcional, costoso pero más realista)
+    // particles.sort((a, b) => b.z - a.z);
 
     particles.forEach(p => {
       p.update();
       p.draw(pCtx);
     });
 
+    pCtx.restore();
+
     requestAnimationFrame(animateParticles);
   }
-  animateParticles();
+  animateParticles(performance.now());
 
   // Audio toggle
   audioBtn.addEventListener('click', () => {
