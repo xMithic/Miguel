@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport"
         content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>PanitaMithico | Zenith Visualizer</title>
+  <title>PanitaMithico | Dust Visualizer</title>
   <style>
     :root {
       --cursor-size: 20px;
@@ -193,21 +193,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const shine       = document.querySelector('.card-shine');
   const cursor      = document.getElementById('custom-cursor');
   const audioBtn    = document.getElementById('audio-btn');
-  const eqVisual    = document.getElementById('eq-visual');
 
   const pCanvas = document.getElementById('particle-canvas');
   const dCanvas = document.getElementById('drawing-canvas');
   const pCtx = pCanvas.getContext('2d', { alpha: true });
   const dCtx = dCanvas.getContext('2d', { alpha: true });
 
-  // Canvas oculto para muestreo de color
   const smCanvas = new OffscreenCanvas(64, 64);
   const smCtx = smCanvas.getContext('2d', { willReadFrequently: true });
 
   let width, height, centerX, centerY;
   let audioContext, analyser, dataArray, source;
 
-  const musicState = { bass: 0, mid: 0, treble: 0, level: 0, beat: 0 };
+  const musicState = { bass: 0, mid: 0, treble: 0, level: 0 };
 
   const resize = () => {
     width = window.innerWidth;
@@ -248,7 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const rotateX = (centerY - y) / 25;
     const rotateY = (x - centerX) / 25;
     cardWrapper.style.transform =
-      `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(${isClicking ? 0.98 : 1})`;
+      `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(${isClicking ? 0.985 : 1})`;
 
     shine.style.setProperty('--x', `${(x / width) * 100}%`);
     shine.style.setProperty('--y', `${(y / height) * 100}%`);
@@ -317,7 +315,6 @@ document.addEventListener('DOMContentLoaded', () => {
     dataArray = new Uint8Array(analyser.frequencyBinCount);
   }
 
-  const beatHistory = [];
   function updateAudioAnalysis() {
     if (!analyser) return;
     analyser.getByteFrequencyData(dataArray);
@@ -337,20 +334,6 @@ document.addEventListener('DOMContentLoaded', () => {
     musicState.treble += (t - musicState.treble) * 0.15;
     musicState.level   = (musicState.bass + musicState.mid + musicState.treble) / 3;
 
-    // detección simple de “beat” en graves
-    beatHistory.push(musicState.bass);
-    if (beatHistory.length > 40) beatHistory.shift();
-    const histAvg = beatHistory.reduce((a, v) => a + v, 0) / beatHistory.length;
-    const histMax = Math.max(...beatHistory);
-    const threshold = histAvg + (histMax - histAvg) * 0.6;
-
-    if (musicState.bass > threshold && musicState.bass > 0.25) {
-      musicState.beat = 1; // pequeño pulso
-    } else {
-      musicState.beat *= 0.85;
-    }
-
-    // Actualizar EQ de texto (clase playing)
     if (!mainVideo.muted && musicState.level > 0.05) {
       document.body.classList.add('playing');
     } else {
@@ -368,108 +351,105 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function sampleColorFromVideo() {
     const w = smCanvas.width, h = smCanvas.height;
-    if (!w || !h) return 'rgba(255,255,255,0.9)';
+    if (!w || !h) return { r: 255, g: 255, b: 255 };
     const x = Math.floor(Math.random() * w);
     const y = Math.floor(Math.random() * h);
     const data = smCtx.getImageData(x, y, 1, 1).data;
-    const boost = 1.2;
+    const boost = 1.1;
     const r = Math.min(255, data[0] * boost);
     const g = Math.min(255, data[1] * boost);
     const b = Math.min(255, data[2] * boost);
     return { r, g, b };
   }
 
-  function rgbaColor(c, alpha) {
-    return `rgba(${c.r},${c.g},${c.b},${alpha})`;
+  function rgba(c, a) {
+    return `rgba(${c.r},${c.g},${c.b},${a})`;
   }
 
-  // Partículas “anillo 3D”
+  // Partículas tipo polvo flotando alrededor del video
   const particles = [];
-  const MAX_PARTICLES = 320;
+  const MAX_PARTICLES = 260;
 
-  class Particle {
-    constructor() { this.init(); }
+  class DustParticle {
+    constructor() { this.init(true); }
 
-    init() {
-      const t = Math.random() * Math.PI * 2;   // ángulo orbital
-      const band = Math.random() * Math.PI;    // “latitud” del anillo
-      const baseRadius = Math.min(width, height) * 0.32;
-      const radiusJitter = Math.min(width, height) * 0.07;
-      this.radius = baseRadius + (Math.random() - 0.5) * radiusJitter;
+    init(initial = false) {
+      const ringRadius = Math.min(width, height) * 0.28;
+      const jitter = Math.min(width, height) * 0.12;
+      const angle = Math.random() * Math.PI * 2;
+      const radius = ringRadius + (Math.random() - 0.5) * jitter;
 
-      this.theta = t;
-      this.phi = band;
+      this.baseX = centerX + Math.cos(angle) * radius;
+      this.baseY = centerY + Math.sin(angle) * radius * 0.7; // un poco más aplastado
 
-      this.depth = Math.random(); // 0: lejos, 1: cerca
-      this.baseSpeed = 0.0009 + Math.random() * 0.0016;
-      this.sizeBase = 0.9 + Math.random() * 1.8;
+      this.x = this.baseX;
+      this.y = this.baseY;
+
+      this.sizeBase = 0.5 + Math.random() * 1.3; // polvo = más pequeño
+      this.size = this.sizeBase;
+
+      this.offsetSeedX = Math.random() * 1000;
+      this.offsetSeedY = Math.random() * 1000;
+
+      this.depth = 0.4 + Math.random() * 0.6; // 0.4 – 1: cercanía
       this.colorBase = sampleColorFromVideo();
-      this.rayPhase = Math.random() * Math.PI * 2;
     }
 
     update(time) {
-      const depthFactor = 0.3 + this.depth * 0.7;
-      const speed = this.baseSpeed * (0.8 + musicState.level * 1.6);
-      this.theta += speed * depthFactor * 16;  // dt ~16ms
+      const t = time * 0.0002;
+      const wobbleAmp = 14 * this.depth; // movimiento muy suave
+      const slowFactor = 0.3 + musicState.level * 0.4;
 
-      const wobble = 0.12 + musicState.mid * 0.4;
-      this.phi += Math.sin(time * 0.0003 + this.theta * 0.5) * wobble * 0.01;
+      const ox = Math.sin(this.offsetSeedX + t * slowFactor) * wobbleAmp;
+      const oy = Math.cos(this.offsetSeedY + t * slowFactor) * wobbleAmp;
 
-      const x3d = this.radius * Math.cos(this.theta) * Math.sin(this.phi);
-      const y3d = this.radius * Math.sin(this.theta) * Math.sin(this.phi);
-      const z3d = this.radius * Math.cos(this.phi);
+      // leve respiración radial con la música
+      const radialPulse = 1 + musicState.bass * 0.15;
+      const dxBase = this.baseX - centerX;
+      const dyBase = this.baseY - centerY;
+      const baseRadius = Math.sqrt(dxBase*dxBase + dyBase*dyBase) || 1;
+      const dirX = dxBase / baseRadius;
+      const dirY = dyBase / baseRadius;
 
-      const f = 1 + (z3d / (this.radius * 3)); // factor de perspectiva
-      this.screenX = centerX + x3d * f;
-      this.screenY = centerY + y3d * f * 0.6;
+      const pulsedX = centerX + dirX * baseRadius * radialPulse;
+      const pulsedY = centerY + dirY * baseRadius * radialPulse * 0.7;
 
-      const bassPulse = 1 + musicState.bass * 2.3;
-      const depthScale = 0.4 + this.depth * 0.8;
-      this.size =
-        this.sizeBase * depthScale *
-        bassPulse *
-        (0.9 + Math.sin(time * 0.002 + this.theta) * 0.15);
+      this.x = pulsedX + ox;
+      this.y = pulsedY + oy;
 
-      // refrescar color poco a poco
-      if (Math.random() < 0.015) this.colorBase = sampleColorFromVideo();
+      // tamaño: crece poquito con la canción
+      const grow = 1 + musicState.bass * 0.9 + musicState.level * 0.4;
+      this.size = this.sizeBase * grow * (0.7 + this.depth * 0.6);
+
+      // reposicionar si se va muy lejos (seguro)
+      const dx = this.x - centerX;
+      const dy = this.y - centerY;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      const maxDist = Math.min(width, height) * 0.7;
+      if (dist > maxDist) {
+        this.init(false);
+      }
+
+      // refrescar color de vez en cuando
+      if (Math.random() < 0.01) {
+        this.colorBase = sampleColorFromVideo();
+      }
     }
 
     draw(ctx) {
-      const baseAlpha = 0.35 + this.depth * 0.5;
-      const trebleGlow = 0.25 + musicState.treble * 0.5;
-      const alpha = baseAlpha * trebleGlow;
-      const color = rgbaColor(this.colorBase, alpha);
+      const alphaBase = 0.25 + this.depth * 0.4;
+      const alpha = alphaBase * (0.9 + musicState.treble * 0.4);
+      const color = rgba(this.colorBase, alpha);
 
       ctx.fillStyle = color;
       ctx.beginPath();
-      ctx.arc(this.screenX, this.screenY, this.size, 0, Math.PI * 2);
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
       ctx.fill();
-
-      // rayito sutil en beats
-      if (musicState.beat > 0.15 && this.depth > 0.6) {
-        const rayLen = this.size * 5 * musicState.beat;
-        const ang = this.theta + this.rayPhase;
-        const x2 = this.screenX + Math.cos(ang) * rayLen;
-        const y2 = this.screenY + Math.sin(ang) * rayLen;
-
-        const grad = ctx.createLinearGradient(
-          this.screenX, this.screenY, x2, y2
-        );
-        grad.addColorStop(0, rgbaColor(this.colorBase, alpha * 0.9));
-        grad.addColorStop(1, rgbaColor(this.colorBase, 0));
-
-        ctx.strokeStyle = grad;
-        ctx.lineWidth = 0.7 + musicState.treble * 1.2;
-        ctx.beginPath();
-        ctx.moveTo(this.screenX, this.screenY);
-        ctx.lineTo(x2, y2);
-        ctx.stroke();
-      }
     }
   }
 
   for (let i = 0; i < MAX_PARTICLES; i++) {
-    particles.push(new Particle());
+    particles.push(new DustParticle());
   }
 
   function animateParticles() {
