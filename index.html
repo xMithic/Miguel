@@ -3,642 +3,533 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>PanitaMithico</title>
+  <title>PanitaMithico 2.0 - Ultra Viz</title>
   <style>
     :root {
-      --cursor-size: 12px;
-      --cursor-bg: white;
-      --ui-blur: 45px;
-      --ui-bright: 0.55;
-      --btn-size: 44px;
-      --btn-pad: 16px;
-      --btn-radius: 12px;
-      --btn-bg: rgba(255,255,255,0.15);
-      --btn-bg-hover: rgba(255,255,255,0.4);
+      --cursor-size: 20px;
+      --cursor-bg: rgba(255, 255, 255, 0.8);
+      --ui-blur: 30px;
+      --btn-size: 48px;
+      --btn-radius: 50%;
+      --font-main: 'Segoe UI', system-ui, sans-serif;
     }
 
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes reveal {
-      from { opacity: 0; transform: translateY(30px) scale(0.98); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
-    }
-
+    /* --- Base --- */
     html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
+      margin: 0; padding: 0;
+      width: 100%; height: 100%;
       overflow: hidden;
-      cursor: none;
-      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      cursor: none; /* Cursor personalizado */
+      background: #050505;
+      font-family: var(--font-main);
       user-select: none;
       -webkit-user-select: none;
-      -moz-user-select: none;
-      -ms-user-select: none;
-      -webkit-touch-callout: none;
-      -webkit-tap-highlight-color: transparent;
     }
 
-    #background-video,
-    #particle-canvas,
-    #drawing-canvas {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-    }
-
-    #background-video {
-      z-index: 1;
-      filter: blur(var(--ui-blur)) brightness(var(--ui-bright));
+    /* --- Capas (Z-Index) --- */
+    #bg-video-layer {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       object-fit: cover;
-      animation: fadeIn 1.8s ease-out;
+      z-index: 1;
+      opacity: 0.25;
+      filter: blur(var(--ui-blur)) saturate(1.5);
       pointer-events: none;
+      transition: opacity 1s ease;
     }
-
+    
     #particle-canvas {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       z-index: 2;
       pointer-events: none;
+      /* mix-blend-mode: screen; Permite brillo intenso */
     }
 
-    /* Canvas de dibujo por encima, sin gestos del navegador mientras se dibuja */
     #drawing-canvas {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       z-index: 50;
-      mix-blend-mode: difference;
-      pointer-events: auto;
-      touch-action: none; /* Desactiva gestos UA durante el dibujo */
+      touch-action: none;
+      mix-blend-mode: hard-light;
     }
 
-    .perspective-wrapper {
-      display: flex; justify-content: center; align-items: center;
-      height: 100%;
-      perspective: 1500px;
-      position: relative;
-      z-index: 3;
-      pointer-events: none;
-    }
-
-    .video-container {
-      width: 680px; max-width: 95%;
-      transform-style: preserve-3d;
-      animation: reveal 1s ease-out 0.5s backwards;
-      pointer-events: none;
-      user-select: none;
-      position: relative;
-    }
-
-    #video-card {
-      background: linear-gradient(145deg, #171e26, #1d2733);
-      border-radius: 22px;
-      box-shadow: 0 30px 90px rgba(0,0,0,0.55);
-      overflow: hidden;
-      transform: translateZ(0);
-      transition: box-shadow 0.5s ease;
-      pointer-events: none;
-      user-select: none;
-      border: 2px solid #3a4a5a;
-      position: relative;
-    }
-    #video-card::after {
-      content: '';
+    /* --- Contenedor 3D Central --- */
+    .perspective-scene {
       position: absolute; inset: 0;
-      background: radial-gradient(circle at center, rgba(255,255,255,0.15) 0%, transparent 70%);
-      opacity: 0; border-radius: 22px;
-      transition: opacity 0.5s ease;
+      display: flex; justify-content: center; align-items: center;
+      perspective: 1200px;
+      z-index: 10;
       pointer-events: none;
     }
-    .video-container:hover #video-card { box-shadow: 0 50px 130px rgba(0,0,0,0.65); }
-    .video-container:hover #video-card::after { opacity: 1; }
 
-    #miVideo {
+    .video-card {
+      width: 600px; max-width: 90vw;
+      border-radius: 24px;
+      background: #000;
+      box-shadow: 0 20px 80px rgba(0,0,0,0.8);
+      transform-style: preserve-3d;
+      will-change: transform, box-shadow;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .video-card video {
       display: block; width: 100%; height: auto;
-      pointer-events: none; user-select: none;
-      filter: contrast(1.05) saturate(1.1);
+      border-radius: 24px;
+      filter: contrast(1.1) brightness(1.1);
     }
 
-    #video-title {
-      color: #f3f7fa;
-      font-weight: 900; font-size: 1.8rem; text-align: center;
-      margin-top: 32px; opacity: 0.92; letter-spacing: 2px;
-      text-shadow: 0 3px 8px rgba(0, 0, 0, 0.85);
-      pointer-events: none; user-select: none;
-      transition: transform 0.4s ease, opacity 0.4s ease;
+    .video-card::after {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(circle at var(--shine-x, 50%) var(--shine-y, 50%), 
+                  rgba(255,255,255,0.2) 0%, transparent 60%);
+      pointer-events: none;
+      mix-blend-mode: overlay;
     }
-    .video-container:hover #video-title { transform: translateY(-20px); opacity: 1; }
 
+    /* --- UI: Botón y Cursor --- */
     #custom-cursor {
-      position: fixed;
+      position: fixed; top: 0; left: 0;
       width: var(--cursor-size); height: var(--cursor-size);
-      background-color: var(--cursor-bg); border-radius: 50%;
-      top: 0; left: 0; transform: translate(-50%, -50%);
-      pointer-events: none; mix-blend-mode: difference;
+      border: 2px solid white;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
       z-index: 9999;
-      filter: drop-shadow(0 0 10px white);
-      transition: transform 0.2s ease-out, opacity 0.5s ease-out;
+      mix-blend-mode: difference;
+      transition: transform 0.1s ease, opacity 0.3s;
+      backdrop-filter: invert(1);
     }
+    #custom-cursor.clicking { transform: translate(-50%, -50%) scale(0.8); background: white; }
     #custom-cursor.hidden { opacity: 0; }
 
-    /* Botón de volumen: fijo, sobre el canvas, con desvanecimiento */
-    #audio-toggle-btn {
-      position: fixed;
-      top: var(--btn-pad); right: var(--btn-pad);
-      z-index: 10010;
-      background-color: var(--btn-bg);
-      border: none; border-radius: var(--btn-radius);
+    #audio-btn {
+      position: fixed; top: 20px; right: 20px;
       width: var(--btn-size); height: var(--btn-size);
-      display: flex; justify-content: center; align-items: center;
-      transition: background-color 0.3s ease, opacity 0.3s ease, transform 0.3s ease;
+      border-radius: var(--btn-radius);
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.2);
+      cursor: pointer;
+      z-index: 100;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       pointer-events: auto;
-      touch-action: manipulation;
-      will-change: opacity, transform;
     }
-    #audio-toggle-btn:hover { background-color: var(--btn-bg-hover); }
-    #audio-toggle-btn svg {
-      width: 24px; height: 24px; fill: white;
-      filter: drop-shadow(0 1px 2px rgba(0,0,0,0.7));
-      transition: transform 0.2s ease;
+    #audio-btn:hover { background: rgba(255,255,255,0.25); transform: scale(1.1); }
+    #audio-btn svg { width: 24px; fill: white; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+    #audio-btn.active { background: rgba(0, 255, 150, 0.2); border-color: rgba(0, 255, 150, 0.4); }
+
+    /* Overlay de "Click para iniciar" si el autoplay falla */
+    #start-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+      z-index: 200; display: flex; justify-content: center; align-items: center;
+      color: white; font-size: 1.5rem; font-weight: bold;
+      opacity: 0; pointer-events: none; transition: opacity 0.5s;
     }
-    #audio-toggle-btn.muted svg { transform: scale(0.87); opacity: 0.65; }
-    #audio-toggle-btn.vanish {
-      opacity: 0; transform: scale(0.9);
-      pointer-events: none;
-    }
+    #start-overlay.visible { opacity: 1; pointer-events: auto; cursor: pointer; }
   </style>
 </head>
 <body>
+
   <div id="custom-cursor"></div>
+  <video id="bg-video-layer" loop muted playsinline></video>
   <canvas id="particle-canvas"></canvas>
   <canvas id="drawing-canvas"></canvas>
 
-  <video id="background-video" loop muted playsinline autoplay disableRemotePlayback>
-    <source src="Laufey.mp4" type="video/mp4" />
-    Tu navegador no soporta el video.
-  </video>
-
-  <div class="perspective-wrapper" id="perspective-wrapper">
-    <div class="video-container" aria-label="Video visualizer">
-      <div id="video-card" aria-hidden="true" tabindex="-1">
-        <video id="miVideo" loop muted playsinline autoplay disableRemotePlayback>
-          <source src="Laufey.mp4" type="video/mp4" />
-        </video>
-      </div>
-      <div id="video-title">🎵</div>
+  <div class="perspective-scene" id="scene">
+    <div class="video-card" id="card">
+      <video id="main-video" loop muted playsinline autoplay>
+        <source src="Laufey.mp4" type="video/mp4" />
+      </video>
     </div>
   </div>
 
-  <!-- Botón de audio -->
-  <button id="audio-toggle-btn" aria-label="Activar o silenciar audio" title="Activar audio" class="muted">
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9zM12 4L9.91 6.09 12 8.18V4z"/>
-    </svg>
+  <button id="audio-btn" aria-label="Activar Audio">
+    <svg id="icon-mute" viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+    <svg id="icon-sound" viewBox="0 0 24 24" style="display:none"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
   </button>
 
-  <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const mainVideo = document.getElementById('miVideo');
-    const bgVideo = document.getElementById('background-video');
-    const videoContainer = document.querySelector('.video-container');
-    const cursor = document.getElementById('custom-cursor');
-    const drawingCanvas = document.getElementById('drawing-canvas');
-    const particleCanvas = document.getElementById('particle-canvas');
-    const dCtx = drawingCanvas.getContext('2d');
-    const pCtx = particleCanvas.getContext('2d');
-    const audioToggleBtn = document.getElementById('audio-toggle-btn');
+  <div id="start-overlay">Click para iniciar experiencia</div>
 
-    // Canvas de muestreo de video (baja resolución)
-    const SAMPLE_W = 192, SAMPLE_H = 108;
-    const visCanvas = (window.OffscreenCanvas)
-      ? new OffscreenCanvas(SAMPLE_W, SAMPLE_H)
-      : (() => {
-          const c = document.createElement('canvas');
-          c.width = SAMPLE_W; c.height = SAMPLE_H;
-          c.style.position = 'absolute'; c.style.opacity = '0'; c.style.pointerEvents = 'none';
-          document.body.appendChild(c);
-          return c;
-        })();
-    const visCtx = visCanvas.getContext('2d', { willReadFrequently: true });
-    let videoSampleData = null;
+<script>
+/**
+ * PanitaMithico Engine v2.0
+ * Optimizado para rendimiento y física reactiva
+ */
 
-    function fitCanvasToScreen(canvas, ctx) {
-      const dpr = Math.max(1, window.devicePixelRatio || 1);
-      const w = Math.floor(window.innerWidth);
-      const h = Math.floor(window.innerHeight);
-      canvas.style.width = w + 'px';
-      canvas.style.height = h + 'px';
-      canvas.width = Math.floor(w * dpr);
-      canvas.height = Math.floor(h * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    }
-    const resize = () => {
-      fitCanvasToScreen(drawingCanvas, dCtx);
-      fitCanvasToScreen(particleCanvas, pCtx);
-    };
-    resize();
-    window.addEventListener('resize', resize, { passive: true });
+const CONFIG = {
+  particleCount: 1500, // Equilibrado para visuales vs rendimiento
+  sampleRate: 15,      // Cuántos frames esperar para re-muestrear el video de fondo (menor = más CPU)
+  audioSmooth: 0.8,    // Suavizado del audio
+  baseGravity: 0.15,
+  friction: 0.94
+};
 
-    // Cursor y tilt
-    let cursorIdleTimer;
-    function updateCursorPosition(clientX, clientY) {
-      cursor.classList.remove('hidden');
-      clearTimeout(cursorIdleTimer);
-      cursorIdleTimer = setTimeout(() => cursor.classList.add('hidden'), 2000);
-      const { innerWidth, innerHeight } = window;
-      videoContainer.style.transform =
-        `rotateX(${(clientY / innerHeight - 0.5) * -20}deg) rotateY(${(clientX / innerWidth - 0.5) * 20}deg)`;
-      cursor.style.left = `${clientX}px`;
-      cursor.style.top = `${clientY}px`;
-    }
-    document.addEventListener('pointermove', (e) => updateCursorPosition(e.clientX, e.clientY), { passive: true });
-    document.addEventListener('pointerdown', (e) => updateCursorPosition(e.clientX, e.clientY), { passive: true });
+// --- Referencias ---
+const cursor = document.getElementById('custom-cursor');
+const mainVideo = document.getElementById('main-video');
+const bgVideo = document.getElementById('bg-video-layer');
+const card = document.getElementById('card');
+const pCanvas = document.getElementById('particle-canvas');
+const dCanvas = document.getElementById('drawing-canvas');
+const pCtx = pCanvas.getContext('2d', { alpha: true }); // Deshabilita alpha si quieres más performance pura
+const dCtx = dCanvas.getContext('2d');
+const audioBtn = document.getElementById('audio-btn');
 
-    // Sincronizar videos
-    function attachMirrorBackground() {
-      try {
-        if (typeof mainVideo.captureStream === 'function') {
-          const stream = mainVideo.captureStream();
-          bgVideo.srcObject = stream;
-          bgVideo.muted = true;
-          bgVideo.play().catch(()=>{});
-          return true;
-        }
-      } catch {}
-      return false;
-    }
-    function startDriftSync() {
-      function loop() {
-        const a = mainVideo;
-        const b = bgVideo;
-        const drift = a.currentTime - b.currentTime;
-        if (Math.abs(drift) > 0.25) {
-          b.currentTime = a.currentTime;
-        } else {
-          const k = 0.08;
-          b.playbackRate = 1 + Math.max(-0.2, Math.min(0.2, k * drift));
-        }
-        requestAnimationFrame(loop);
+// --- Estado Global ---
+let width, height;
+let mouse = { x: -1000, y: -1000, down: false };
+let audioCtx, analyser, dataArray, sourceNode;
+let audioData = { bass: 0, mid: 0, high: 0, level: 0 };
+let pixelBuffer = null; // Buffer para el color del video
+let particles = [];
+let shockwaves = []; // Ondas de choque
+
+// Canvas oculto para leer píxeles
+const vCanvas = new OffscreenCanvas(200, 150); // Baja resolución para velocidad
+const vCtx = vCanvas.getContext('2d', { willReadFrequently: true });
+
+// --- Inicialización ---
+function resize() {
+  width = window.innerWidth;
+  height = window.innerHeight;
+  pCanvas.width = width; pCanvas.height = height;
+  dCanvas.width = width; dCanvas.height = height;
+  // Ajuste de dibujo
+  dCtx.lineCap = 'round'; dCtx.lineJoin = 'round';
+}
+window.addEventListener('resize', resize);
+resize();
+
+// --- Audio System (Beat Detection Stats) ---
+let bassHistory = [];
+function updateAudio() {
+  if (!analyser) return;
+  analyser.getByteFrequencyData(dataArray);
+  
+  // Dividir bandas
+  const bLen = Math.floor(dataArray.length / 3);
+  let b = 0, m = 0, h = 0;
+  for(let i=0; i<bLen; i++) b += dataArray[i];
+  for(let i=bLen; i<bLen*2; i++) m += dataArray[i];
+  for(let i=bLen*2; i<dataArray.length; i++) h += dataArray[i];
+  
+  audioData.bass = b / bLen;
+  audioData.mid = m / bLen;
+  audioData.high = h / (dataArray.length - bLen*2);
+  audioData.level = (audioData.bass + audioData.mid + audioData.high) / 3;
+
+  // Beat Detection
+  bassHistory.push(audioData.bass);
+  if(bassHistory.length > 40) bassHistory.shift();
+  
+  // Calcular media y varianza local para detectar picos
+  const avg = bassHistory.reduce((a,v)=>a+v,0)/bassHistory.length;
+  const variance = bassHistory.reduce((a,v)=>a + Math.pow(v-avg,2),0)/bassHistory.length;
+  const threshold = avg + Math.sqrt(variance) * 1.5;
+
+  if (audioData.bass > threshold && audioData.bass > 100) {
+    createShockwave(); // ¡BOOM!
+    // Empujar un poco el "his" para que no rebote a lo loco
+    bassHistory.fill(255); 
+  }
+}
+
+// --- Física Avanzada ---
+
+class Shockwave {
+  constructor() {
+    this.x = width / 2;
+    this.y = height / 2;
+    this.r = 10;
+    this.force = 30 + Math.random() * 20;
+    this.alpha = 1;
+    this.active = true;
+  }
+  update() {
+    this.r += this.force * 0.8;
+    this.alpha -= 0.04;
+    if(this.alpha <= 0) this.active = false;
+  }
+  draw(ctx) {
+    if(!this.active) return;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.r, 0, Math.PI*2);
+    ctx.strokeStyle = `rgba(255, 255, 255, ${this.alpha * 0.5})`;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+class Particle {
+  constructor() {
+    this.reset(true);
+  }
+
+  reset(randomY = false) {
+    this.x = Math.random() * width;
+    this.y = randomY ? Math.random() * height : height + 10;
+    this.vx = (Math.random() - 0.5) * 2;
+    this.vy = -(Math.random() * 3 + 1);
+    this.ax = 0;
+    this.ay = 0;
+    this.size = Math.random() * 2 + 1;
+    this.life = 1; // 1 = vivo, 0 = muerto
+    this.decay = 0.003 + Math.random() * 0.005;
+    this.color = 'white';
+    this.mass = this.size * 0.5;
+  }
+
+  updateColors() {
+    // Optimización: Leer del buffer de baja resolución
+    if (pixelBuffer) {
+      // Mapear coordenadas de pantalla a coordenadas del buffer
+      const bx = Math.floor((this.x / width) * 200);
+      const by = Math.floor((this.y / height) * 150);
+      const i = (by * 200 + bx) * 4;
+      
+      if (i >= 0 && i < pixelBuffer.length) {
+        // Invertir colores para efecto visual
+        const r = 255 - pixelBuffer[i];
+        const g = 255 - pixelBuffer[i+1];
+        const b = 255 - pixelBuffer[i+2];
+        this.color = `rgb(${r},${g},${b})`;
       }
-      requestAnimationFrame(loop);
     }
-    Promise.allSettled([
-      new Promise(r => mainVideo.addEventListener('canplaythrough', r, { once: true })),
-      new Promise(r => bgVideo.addEventListener('canplaythrough', r, { once: true }))
-    ]).then(() => {
-      mainVideo.play().catch(()=>{});
-      const mirrored = attachMirrorBackground();
-      if (!mirrored) {
-        bgVideo.play().catch(()=>{});
-        startDriftSync();
+  }
+
+  update() {
+    // 1. Física Básica
+    this.vy += CONFIG.baseGravity * 0.1; // Gravedad leve
+    this.vx *= CONFIG.friction;
+    this.vy *= CONFIG.friction;
+
+    // 2. Reactividad al Audio
+    // El "High" da jitter/vibración
+    const jitter = (audioData.high / 255) * 0.5;
+    this.x += (Math.random() - 0.5) * jitter;
+    this.y += (Math.random() - 0.5) * jitter;
+
+    // El "Mid" afecta la turbulencia lateral
+    this.vx += Math.sin(this.y * 0.01 + performance.now()*0.001) * (audioData.mid/255) * 0.05;
+
+    // 3. Interacción con Mouse (Repulsión)
+    const dx = this.x - mouse.x;
+    const dy = this.y - mouse.y;
+    const distSq = dx*dx + dy*dy;
+    const minDist = 150 * 150;
+    if (distSq < minDist) {
+      const force = (minDist - distSq) / minDist;
+      const angle = Math.atan2(dy, dx);
+      this.vx += Math.cos(angle) * force * 1.5;
+      this.vy += Math.sin(angle) * force * 1.5;
+    }
+
+    // 4. Interacción con Ondas de Choque
+    for (let sw of shockwaves) {
+      if (!sw.active) continue;
+      const sdx = this.x - sw.x;
+      const sdy = this.y - sw.y;
+      const sDist = Math.hypot(sdx, sdy);
+      // Si la onda pasa por la partícula (grosor de la onda)
+      if (Math.abs(sDist - sw.r) < 30) {
+         const angle = Math.atan2(sdy, sdx);
+         const blast = (sw.force * 0.2) / this.mass;
+         this.vx += Math.cos(angle) * blast;
+         this.vy += Math.sin(angle) * blast;
       }
+    }
+
+    // Integrar
+    this.x += this.vx;
+    this.y += this.vy;
+    this.life -= this.decay;
+
+    // Renacer
+    if (this.life <= 0 || this.x < 0 || this.x > width || this.y > height + 50) {
+      this.reset();
+    }
+  }
+
+  draw() {
+    pCtx.globalAlpha = this.life;
+    pCtx.fillStyle = this.color;
+    pCtx.beginPath();
+    pCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    pCtx.fill();
+  }
+}
+
+// Inicializar Pool de Partículas
+for(let i=0; i<CONFIG.particleCount; i++) {
+  particles.push(new Particle());
+}
+
+function createShockwave() {
+  shockwaves.push(new Shockwave());
+  // Limitar ondas activas
+  if(shockwaves.length > 5) shockwaves.shift();
+}
+
+// --- Dibujo (Drawing) ---
+let drawing = false;
+let lastPoint = {x:0, y:0};
+let brushHue = 0;
+
+function startDraw(e) {
+  drawing = true;
+  lastPoint = { x: e.clientX, y: e.clientY };
+  cursor.classList.add('clicking');
+}
+function endDraw() {
+  drawing = false;
+  cursor.classList.remove('clicking');
+}
+function doDraw(e) {
+  // Mover Cursor Personalizado
+  mouse.x = e.clientX; 
+  mouse.y = e.clientY;
+  cursor.style.left = e.clientX + 'px';
+  cursor.style.top = e.clientY + 'px';
+  
+  // Efecto Tilt de la Tarjeta
+  const cx = width/2, cy = height/2;
+  const rx = (e.clientY - cy) / cy;
+  const ry = (e.clientX - cx) / cx;
+  card.style.transform = `rotateX(${-rx * 15}deg) rotateY(${ry * 15}deg)`;
+  card.style.setProperty('--shine-x', `${(ry + 1) * 50}%`);
+  card.style.setProperty('--shine-y', `${(rx + 1) * 50}%`);
+
+  if(!drawing) return;
+
+  dCtx.lineWidth = 3 + (audioData.bass / 255) * 10; // El grosor reacciona al bajo
+  brushHue = (brushHue + 1) % 360;
+  dCtx.strokeStyle = `hsl(${brushHue}, 100%, 60%)`;
+  dCtx.shadowColor = `hsl(${brushHue}, 100%, 60%)`;
+  dCtx.shadowBlur = 15;
+
+  dCtx.beginPath();
+  dCtx.moveTo(lastPoint.x, lastPoint.y);
+  dCtx.lineTo(e.clientX, e.clientY);
+  dCtx.stroke();
+
+  // Emitir partículas al dibujar
+  for(let i=0; i<2; i++) {
+    const p = particles[Math.floor(Math.random() * particles.length)];
+    if (p) {
+        p.x = e.clientX + (Math.random()-0.5)*10;
+        p.y = e.clientY + (Math.random()-0.5)*10;
+        p.vx = (e.clientX - lastPoint.x) * 0.1 + (Math.random()-0.5);
+        p.vy = (e.clientY - lastPoint.y) * 0.1 + (Math.random()-0.5);
+        p.life = 1;
+        p.color = dCtx.strokeStyle;
+    }
+  }
+
+  lastPoint = { x: e.clientX, y: e.clientY };
+}
+
+window.addEventListener('pointerdown', startDraw);
+window.addEventListener('pointerup', endDraw);
+window.addEventListener('pointermove', doDraw);
+
+// --- Loop Principal ---
+let frameCount = 0;
+
+function loop() {
+  requestAnimationFrame(loop);
+  
+  // 1. Audio
+  updateAudio();
+
+  // 2. Muestreo de Video (Optimizado)
+  frameCount++;
+  if (frameCount % CONFIG.sampleRate === 0 && mainVideo.readyState >= 2) {
+    vCtx.drawImage(mainVideo, 0, 0, 200, 150);
+    pixelBuffer = vCtx.getImageData(0,0,200,150).data;
+    // Actualizar colores de partículas es costoso, hacerlo escalonado
+    particles.forEach((p, i) => {
+        if (i % 2 === 0) p.updateColors(); // Solo actualizar mitad por ciclo de sampleo
     });
+  }
 
-    // Dibujo
-    dCtx.lineCap = 'round';
-    dCtx.lineJoin = 'round';
-    const brush = { hue: 200, hueShift: 0.6, baseWidth: 1.8, maxWidth: 6, minWidth: 0.6, glow: 12, lighten: true };
-    let drawingReady = true;
-    let isDrawing = false, lastX = 0, lastY = 0, lastT = 0;
+  // 3. Limpiar Particle Canvas (con trail suave)
+  pCtx.globalCompositeOperation = 'destination-out';
+  pCtx.fillStyle = 'rgba(0, 0, 0, 0.1)'; // Estela
+  pCtx.fillRect(0, 0, width, height);
+  pCtx.globalCompositeOperation = 'lighter'; // Modo de mezcla aditivo para brillo
 
-    function insideButton(x, y) {
-      const r = audioToggleBtn.getBoundingClientRect();
-      const pad = 10;
-      return x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad;
-    }
-    function beginStroke(e) {
-      if (!drawingReady) return;
-      if (insideButton(e.clientX, e.clientY)) return;
-      e.preventDefault();
-      try { drawingCanvas.setPointerCapture(e.pointerId); } catch {}
-      isDrawing = true;
-      lastX = e.clientX; lastY = e.clientY; lastT = performance.now();
-      const col = `hsl(${brush.hue}, 95%, 75%)`;
-      dCtx.save();
-      dCtx.globalCompositeOperation = brush.lighten ? 'lighter' : 'source-over';
-      dCtx.shadowBlur = brush.glow;
-      dCtx.shadowColor = col;
-      dCtx.fillStyle = col;
-      dCtx.beginPath();
-      dCtx.arc(lastX, lastY, Math.max(1, brush.baseWidth * 0.5), 0, Math.PI * 2);
-      dCtx.fill();
-      dCtx.restore();
-    }
-    function drawStroke(e) {
-      if (!drawingReady || !isDrawing) return;
-      e.preventDefault();
-      const now = performance.now();
-      const dt = Math.max(1, now - lastT);
-      const dx = e.clientX - lastX;
-      const dy = e.clientY - lastY;
-      const dist = Math.hypot(dx, dy);
-      const pressure = (typeof e.pressure === 'number' && e.pressure > 0) ? e.pressure : 0.5;
-      const speed = dist / dt;
-      const width = Math.max(brush.minWidth, Math.min(brush.maxWidth, brush.baseWidth * (0.6 + pressure * 0.8 + speed * 0.9)));
-      brush.hue = (brush.hue + brush.hueShift * dist) % 360;
-      const col = `hsl(${brush.hue}, 100%, 75%)`;
-      dCtx.save();
-      dCtx.globalCompositeOperation = brush.lighten ? 'lighter' : 'source-over';
-      dCtx.strokeStyle = col;
-      dCtx.lineWidth = width;
-      dCtx.shadowBlur = brush.glow;
-      dCtx.shadowColor = col;
-      dCtx.beginPath();
-      dCtx.moveTo(lastX, lastY);
-      dCtx.lineTo(e.clientX, e.clientY);
-      dCtx.stroke();
-      dCtx.restore();
-      lastX = e.clientX; lastY = e.clientY; lastT = now;
-    }
-    function endStroke(e) {
-      if (!drawingReady) return;
-      isDrawing = false;
-      try { drawingCanvas.releasePointerCapture(e.pointerId); } catch {}
-    }
-    drawingCanvas.addEventListener('pointerdown', beginStroke, { passive: false });
-    drawingCanvas.addEventListener('pointermove', drawStroke, { passive: false });
-    drawingCanvas.addEventListener('pointerup', endStroke);
-    drawingCanvas.addEventListener('pointercancel', endStroke);
-    drawingCanvas.addEventListener('pointerleave', endStroke);
+  // 4. Actualizar Shockwaves
+  shockwaves.forEach(sw => { sw.update(); sw.draw(pCtx); });
 
-    function fadeDrawingTrail() {
-      if (!drawingReady) return;
-      dCtx.save();
-      dCtx.globalCompositeOperation = 'destination-out';
-      dCtx.fillStyle = 'rgba(0,0,0,0.02)';
-      dCtx.fillRect(0, 0, drawingCanvas.width, drawingCanvas.height);
-      dCtx.restore();
-      requestAnimationFrame(fadeDrawingTrail);
-    }
-    fadeDrawingTrail();
-
-    // AUDIO: analizadores por banda
-    function setupAudioAnalyzers() {
-      if (!window.audioContext) {
-        window.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      const ctx = window.audioContext;
-      if (!window.mediaSource) {
-        window.mediaSource = ctx.createMediaElementSource(mainVideo);
-      }
-      const low = ctx.createBiquadFilter(); low.type = 'lowpass'; low.frequency.value = 180; low.Q.value = 0.707;
-      const mid = ctx.createBiquadFilter(); mid.type = 'bandpass'; mid.frequency.value = 1000; mid.Q.value = 0.9;
-      const high = ctx.createBiquadFilter(); high.type = 'highpass'; high.frequency.value = 4000; high.Q.value = 0.707;
-
-      function makeAnalyser(smooth = 0.7, fft = 2048, minDb = -90, maxDb = -10) {
-        const an = ctx.createAnalyser();
-        an.fftSize = fft;
-        an.smoothingTimeConstant = smooth;
-        an.minDecibels = minDb;
-        an.maxDecibels = maxDb;
-        return an;
-      }
-      const aBass = makeAnalyser(0.65, 2048);
-      const aMid  = makeAnalyser(0.75, 2048);
-      const aHigh = makeAnalyser(0.6, 2048);
-
-      window.mediaSource.connect(low);  low.connect(aBass);
-      window.mediaSource.connect(mid);  mid.connect(aMid);
-      window.mediaSource.connect(high); high.connect(aHigh);
-
-      if (!window.masterGain) {
-        window.masterGain = ctx.createGain();
-        window.masterGain.gain.value = 1;
-        window.mediaSource.connect(window.masterGain);
-        window.masterGain.connect(ctx.destination);
-      }
-
-      window.audioBands = { aBass, aMid, aHigh };
-      window._bandBuffers = {
-        bass: new Uint8Array(aBass.frequencyBinCount),
-        mid:  new Uint8Array(aMid.frequencyBinCount),
-        high: new Uint8Array(aHigh.frequencyBinCount)
-      };
-      window._bandStats = {
-        bass: { ema: 0, var: 0 },
-        mid:  { ema: 0, var: 0 },
-        high: { ema: 0, var: 0 }
-      };
-    }
-
-    audioToggleBtn.addEventListener('pointerdown', (e) => { e.stopPropagation(); });
-    audioToggleBtn.addEventListener('click', async () => {
-      if (!window.audioContext) {
-        window.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      if (window.audioContext.state === 'suspended') {
-        await window.audioContext.resume();
-      }
-      if (!window.audioBands) setupAudioAnalyzers();
-      mainVideo.muted = !mainVideo.muted;
-      audioToggleBtn.classList.toggle('muted', mainVideo.muted);
-      if (!mainVideo.muted) { audioToggleBtn.classList.add('vanish'); } else { audioToggleBtn.classList.remove('vanish'); }
-    });
-
-    // Muestreo del video a baja resolución emulando "cover"
-    function drawVideoSample() {
-      const ctx = visCtx;
-      const w = SAMPLE_W, h = SAMPLE_H;
-      ctx.clearRect(0, 0, w, h);
-      const vw = mainVideo.videoWidth || 0;
-      const vh = mainVideo.videoHeight || 0;
-      if (!vw || !vh) { videoSampleData = null; return; }
-      const vr = vw / vh;
-      const cr = w / h;
-      if (vr > cr) {
-        // video más ancho: recorta lados
-        const sh = vh;
-        const sw = Math.floor(vh * cr);
-        const sx = Math.floor((vw - sw) / 2);
-        const sy = 0;
-        ctx.drawImage(mainVideo, sx, sy, sw, sh, 0, 0, w, h);
-      } else {
-        // video más alto: recorta arriba/abajo
-        const sw = vw;
-        const sh = Math.floor(vw / cr);
-        const sx = 0;
-        const sy = Math.floor((vh - sh) / 2);
-        ctx.drawImage(mainVideo, sx, sy, sw, sh, 0, 0, w, h);
-      }
-      const img = ctx.getImageData(0, 0, w, h);
-      videoSampleData = img.data;
-    }
-
-    function sampleInvertedColor(x, y) {
-      if (!videoSampleData) return null;
-      const sx = Math.max(0, Math.min(SAMPLE_W - 1, Math.floor(x / window.innerWidth  * SAMPLE_W)));
-      const sy = Math.max(0, Math.min(SAMPLE_H - 1, Math.floor(y / window.innerHeight * SAMPLE_H)));
-      const i = (sy * SAMPLE_W + sx) * 4;
-      const r = videoSampleData[i], g = videoSampleData[i + 1], b = videoSampleData[i + 2];
-      const ri = 255 - r, gi = 255 - g, bi = 255 - b;
-      return `rgba(${ri},${gi},${bi},1)`;
-    }
-
-    // Partículas
-    pCtx.globalCompositeOperation = 'lighter';
-    const MAX_PARTICLES = 5000;
-    const particles = [];
-    const pool = [];
-
-    class Particle {
-      constructor() { this.alive = false; }
-      init(x, y, hue, speed, size, life, dir, gravity, friction, phase) {
-        this.x = x; this.y = y;
-        this.hue = hue;
-        this.speed = speed;
-        this.size = size;
-        this.life = life; this.maxLife = life;
-        this.dir = dir;
-        this.gravity = gravity;
-        this.friction = friction;
-        this.phase = phase || Math.random() * Math.PI * 2;
-        this.alive = true;
-      }
-      update(music, W, H) {
-        // Fuerzas musicales
-        this.dir += music.swirl * 0.05;
-        const jitterX = (Math.random() - 0.5) * music.jitter;
-        const jitterY = (Math.random() - 0.5) * music.jitter;
-
-        // Empuje radial por pulso (graves)
-        if (music.pulse > 0.001) {
-          const cx = W * 0.5, cy = H * 0.5;
-          const ang = Math.atan2(this.y - cy, this.x - cx);
-          this.x += Math.cos(ang) * music.pulse * 0.7;
-          this.y += Math.sin(ang) * music.pulse * 0.7;
-        }
-
-        // Movimiento base + gravedad + jitter
-        this.speed *= this.friction;
-        this.x += Math.cos(this.dir) * this.speed + jitterX;
-        this.y += Math.sin(this.dir) * this.speed + this.gravity + jitterY;
-
-        // Pequeña ondulación de “baile”
-        this.phase += 0.05 + music.energy * 0.1;
-        this.x += Math.cos(this.phase) * 0.1 * (1 + music.energy);
-        this.y += Math.sin(this.phase) * 0.1 * (1 + music.energy);
-
-        this.life -= 1;
-        this.size = Math.max(0.2, this.size * 0.995);
-        if (this.life <= 0) this.alive = false;
-      }
-      draw(alphaBoost = 1) {
-        const a = Math.max(0, (this.life / this.maxLife) * (0.5 + alphaBoost / 200));
-        pCtx.globalAlpha = a;
-        const sampled = sampleInvertedColor(this.x, this.y);
-        pCtx.fillStyle = sampled || `hsl(${this.hue}, 100%, 70%)`;
-        pCtx.beginPath();
-        pCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        pCtx.fill();
-        pCtx.globalAlpha = 1;
-      }
-    }
-    function getP() { return pool.length ? pool.pop() : new Particle(); }
-    function spawn(x, y, count, baseHue, spread = 50, energy = 1, biasDir = null) {
-      for (let i = 0; i < count; i++) {
-        if (particles.length >= MAX_PARTICLES) break;
-        const p = getP();
-        const hue = (baseHue + (Math.random() * spread - spread / 2)) % 360;
-        const speed = 1 + Math.random() * (4 + 6 * energy);
-        const size = 0.8 + Math.random() * (2.2 + 1.8 * energy);
-        const life = 60 + Math.random() * (60 + 60 * energy);
-        const dir = biasDir !== null
-          ? biasDir + (Math.random() - 0.5) * (Math.PI / 2)
-          : Math.random() * Math.PI * 2;
-        const gravity = 0.05 + 0.15 * energy;
-        const friction = 0.96 - 0.05 * Math.min(1, energy);
-        p.init(x, y, (hue + 360) % 360, speed, size, life, dir, gravity, friction, Math.random() * Math.PI * 2);
-        particles.push(p);
-      }
-    }
-    function recycleDead() {
-      for (let i = particles.length - 1; i >= 0; i--) {
-        if (!particles[i].alive) pool.push(particles.splice(i, 1)[0]);
-      }
-    }
-
-    // Estadística por banda (EMA + var)
-    function updateStats(stat, value) {
-      const alpha = 0.18;
-      const diff = value - stat.ema;
-      stat.ema += alpha * diff;
-      stat.var = (1 - alpha) * (stat.var + alpha * diff * diff);
-      const sigma = Math.sqrt(Math.max(1e-6, stat.var));
-      return { mean: stat.ema, sigma };
-    }
-    let beatCooldown = 0;
-    let pulse = 0;
-
-    function readBands() {
-      const bands = window.audioBands;
-      if (!bands) {
-        return { bass: 60, mid: 50, high: 55, hue: 200, stats: null };
-      }
-      const { aBass, aMid, aHigh } = bands;
-      const bufs = window._bandBuffers;
-      aBass.getByteFrequencyData(bufs.bass);
-      aMid.getByteFrequencyData(bufs.mid);
-      aHigh.getByteFrequencyData(bufs.high);
-      const avg = (arr) => { let s = 0; for (let i = 0; i < arr.length; i++) s += arr[i]; return s / arr.length; };
-      const bass = avg(bufs.bass), mid = avg(bufs.mid), high = avg(bufs.high);
-      const stB = updateStats(window._bandStats.bass, bass);
-      const stM = updateStats(window._bandStats.mid,  mid);
-      const stH = updateStats(window._bandStats.high, high);
-      const hueBase = (180 + (high - 80) * 1.5 + (mid - 70) * 0.6) % 360;
-      return { bass, mid, high, hue: (hueBase + 360) % 360, stats: { bass: stB, mid: stM, high: stH } };
-    }
-
-    function animateParticles() {
-      // Muestrear color del video
-      drawVideoSample();
-
-      const band = readBands();
-      const W = particleCanvas.width;
-      const H = particleCanvas.height;
-      pCtx.clearRect(0, 0, W, H);
-
-      // Música -> parámetros de danza
-      if (beatCooldown > 0) beatCooldown -= 1;
-      if (band.stats) {
-        const mu = band.stats.bass.mean, sigma = band.stats.bass.sigma;
-        const k = 1.8;
-        const isBeat = (band.bass > mu + k * sigma) && beatCooldown <= 0;
-        if (isBeat) {
-          const strength = Math.min(1.0, (band.bass - mu) / Math.max(1, 2 * sigma));
-          pulse = Math.min(4, pulse + 1.5 + strength * 2);
-          const centerX = (W * (0.25 + 0.5 * Math.random()));
-          const centerY = (H * (0.25 + 0.5 * Math.random()));
-          const burstCount = Math.floor(140 + strength * 360);
-          spawn(centerX, centerY, burstCount, band.hue, 70, 0.9 + strength * 0.9, null);
-          beatCooldown = 10;
-        }
-      }
-      pulse *= 0.92;
-
-      const energy = (band.bass * 0.6 + band.mid * 0.3 + band.high * 0.1) / 255;
-      const music = {
-        energy,
-        swirl: Math.max(0, (band.mid - 60) / 255) * 0.08,
-        jitter: Math.max(0, (band.high - 70) / 255) * 0.8,
-        pulse
-      };
-
-      // Emisión ambiente
-      const ambientCount = Math.floor(3 + energy * 12);
-      for (let i = 0; i < ambientCount; i++) {
-        const x = Math.random() * W;
-        const y = Math.random() * H;
-        const dirBias = (band.mid - 60) / 255 * Math.PI;
-        spawn(x, y, 1, band.hue, 40, energy, dirBias);
-      }
-
-      // Actualizar/dibujar
-      for (let i = particles.length - 1; i >= 0; i--) {
-        const p = particles[i];
-        p.update(music, W, H);
-        p.draw((band.high - 60) / 2);
-      }
-      recycleDead();
-      requestAnimationFrame(animateParticles);
-    }
-    animateParticles();
+  // 5. Actualizar Partículas
+  particles.forEach(p => {
+    p.update();
+    p.draw();
   });
+
+  // 6. Desvanecer dibujo
+  dCtx.globalCompositeOperation = 'destination-out';
+  dCtx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+  dCtx.fillRect(0, 0, width, height);
+  dCtx.globalCompositeOperation = 'source-over';
+}
+
+// --- Setup Audio ---
+function setupAudio() {
+  if (audioCtx) return;
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  audioCtx = new AudioContext();
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 256; // 512, 2048 para más precisión, 256 para velocidad
+  analyser.smoothingTimeConstant = CONFIG.audioSmooth;
+  
+  sourceNode = audioCtx.createMediaElementSource(mainVideo);
+  sourceNode.connect(analyser);
+  analyser.connect(audioCtx.destination);
+  
+  dataArray = new Uint8Array(analyser.frequencyBinCount);
+}
+
+// --- Video Sync Logic ---
+mainVideo.addEventListener('play', () => {
+    if(!bgVideo.srcObject) {
+        try {
+            let stream = mainVideo.captureStream();
+            bgVideo.srcObject = stream;
+            bgVideo.play();
+        } catch(e) { console.log("Capture stream not supported"); }
+    }
+});
+
+audioBtn.addEventListener('click', () => {
+  setupAudio();
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  
+  if (mainVideo.muted) {
+    mainVideo.muted = false;
+    document.getElementById('icon-mute').style.display = 'none';
+    document.getElementById('icon-sound').style.display = 'block';
+    audioBtn.classList.add('active');
+  } else {
+    mainVideo.muted = true;
+    document.getElementById('icon-mute').style.display = 'block';
+    document.getElementById('icon-sound').style.display = 'none';
+    audioBtn.classList.remove('active');
+  }
+});
+
+// Manejo de Autoplay
+document.addEventListener('click', () => {
+    document.getElementById('start-overlay').classList.remove('visible');
+    if(mainVideo.paused) mainVideo.play();
+}, {once:true});
+
+// Arrancar loop
+loop();
+
 </script>
 </body>
 </html>
