@@ -2,17 +2,17 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>PanitaMithico | Zen Visualizer</title>
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>PanitaMithico | Zenith Visualizer</title>
   <style>
     :root {
       --cursor-size: 20px;
-      --ui-blur: 28px; /* Blur más bajo que antes */
+      --ui-blur: 26px;
       --btn-size: 50px;
       --card-radius: 24px;
     }
 
-    /* Reset y Base */
     html, body {
       margin: 0; padding: 0;
       width: 100%; height: 100%;
@@ -24,7 +24,6 @@
       -webkit-user-select: none;
     }
 
-    /* Capas (Layers) */
     #background-layer {
       position: fixed; inset: -8%;
       width: 116%; height: 116%;
@@ -36,14 +35,23 @@
       transition: opacity 1.5s ease;
     }
 
-    #particle-canvas, #drawing-canvas {
+    #particle-canvas,
+    #drawing-canvas {
       position: fixed; inset: 0;
       width: 100%; height: 100%;
     }
-    #particle-canvas { z-index: 2; pointer-events: none; mix-blend-mode: screen; }
-    #drawing-canvas { z-index: 50; pointer-events: auto; touch-action: none; mix-blend-mode: overlay; }
+    #particle-canvas {
+      z-index: 2;
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+    #drawing-canvas {
+      z-index: 50;
+      pointer-events: auto;
+      touch-action: none;
+      mix-blend-mode: overlay;
+    }
 
-    /* Contenedor 3D Central */
     .perspective-container {
       position: absolute; inset: 0;
       display: flex; justify-content: center; align-items: center;
@@ -64,7 +72,7 @@
       border-radius: var(--card-radius);
       background: rgba(20, 20, 20, 0.6);
       box-shadow:
-        0 20px 50px rgba(0,0,0,0.6),
+        0 26px 60px rgba(0,0,0,0.7),
         0 0 0 1px rgba(255,255,255,0.08) inset;
       backdrop-filter: blur(18px);
       overflow: hidden;
@@ -92,7 +100,6 @@
     }
     .card-wrapper:hover .card-shine { opacity: 1; }
 
-    /* Cursor Custom */
     #custom-cursor {
       position: fixed;
       width: var(--cursor-size); height: var(--cursor-size);
@@ -113,7 +120,6 @@
     }
     #custom-cursor.hidden { opacity: 0; }
 
-    /* EQ minimalista (ya lo tienes) */
     .eq-bars {
       position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
       display: flex; gap: 4px; z-index: 90; opacity: 0; transition: opacity 0.5s;
@@ -130,7 +136,6 @@
     .eq-bar:nth-child(2) { animation-delay: 0.1s; }
     .eq-bar:nth-child(3) { animation-delay: 0.2s; }
 
-    /* Botón de Audio Minimalista */
     #audio-btn {
       position: fixed;
       bottom: 40px;
@@ -202,9 +207,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let width, height, centerX, centerY;
   let audioContext, analyser, dataArray, source;
 
-  const musicState = { bass: 0, mid: 0, treble: 0, level: 0 };
+  const musicState = { bass: 0, mid: 0, treble: 0, level: 0, beat: 0 };
 
-  // Resize
   const resize = () => {
     width = window.innerWidth;
     height = window.innerHeight;
@@ -228,7 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   mainVideo.addEventListener('play', syncBgVideo, { once: true });
 
-  // Interacción cursor + tilt
+  // Cursor + tilt
   let mouseX = centerX, mouseY = centerY;
   let cursorTimer;
 
@@ -236,7 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
     mouseX = x; mouseY = y;
 
     cursor.style.left = x + 'px';
-    cursor.style.top = y + 'px';
+    cursor.style.top  = y + 'px';
     cursor.classList.remove('hidden');
     clearTimeout(cursorTimer);
     cursorTimer = setTimeout(() => cursor.classList.add('hidden'), 2500);
@@ -261,7 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
     stopDrawing();
   });
 
-  // Dibujo fino con estela lenta
+  // Dibujo fino con estela
   let isDrawing = false;
   let lastPoint = null;
 
@@ -273,7 +277,6 @@ document.addEventListener('DOMContentLoaded', () => {
   function stopDrawing() { isDrawing = false; lastPoint = null; }
 
   function drawLoop() {
-    // Desvanecimiento muy suave para que deje marca
     dCtx.globalCompositeOperation = 'destination-out';
     dCtx.fillStyle = 'rgba(0, 0, 0, 0.02)';
     dCtx.fillRect(0, 0, width, height);
@@ -282,7 +285,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (isDrawing && lastPoint) {
       const hue = (performance.now() * 0.12) % 360;
       dCtx.strokeStyle = `hsla(${hue}, 100%, 72%, 0.85)`;
-      dCtx.lineWidth = 1;          // más finito
+      dCtx.lineWidth = 1;
       dCtx.lineCap = 'round';
       dCtx.lineJoin = 'round';
       dCtx.shadowBlur = 10;
@@ -314,6 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
     dataArray = new Uint8Array(analyser.frequencyBinCount);
   }
 
+  const beatHistory = [];
   function updateAudioAnalysis() {
     if (!analyser) return;
     analyser.getByteFrequencyData(dataArray);
@@ -328,10 +332,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const m = avg(midRange)    / 255;
     const t = avg(trebleRange) / 255;
 
-    musicState.bass   += (b - musicState.bass) * 0.2;
-    musicState.mid    += (m - musicState.mid) * 0.1;
-    musicState.treble += (t - musicState.treble) * 0.1;
+    musicState.bass   += (b - musicState.bass) * 0.25;
+    musicState.mid    += (m - musicState.mid) * 0.15;
+    musicState.treble += (t - musicState.treble) * 0.15;
     musicState.level   = (musicState.bass + musicState.mid + musicState.treble) / 3;
+
+    // detección simple de “beat” en graves
+    beatHistory.push(musicState.bass);
+    if (beatHistory.length > 40) beatHistory.shift();
+    const histAvg = beatHistory.reduce((a, v) => a + v, 0) / beatHistory.length;
+    const histMax = Math.max(...beatHistory);
+    const threshold = histAvg + (histMax - histAvg) * 0.6;
+
+    if (musicState.bass > threshold && musicState.bass > 0.25) {
+      musicState.beat = 1; // pequeño pulso
+    } else {
+      musicState.beat *= 0.85;
+    }
+
+    // Actualizar EQ de texto (clase playing)
+    if (!mainVideo.muted && musicState.level > 0.05) {
+      document.body.classList.add('playing');
+    } else {
+      document.body.classList.remove('playing');
+    }
   }
 
   // Muestreo de color del video
@@ -344,77 +368,103 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function sampleColorFromVideo() {
     const w = smCanvas.width, h = smCanvas.height;
-    if (!w || !h) return 'rgba(255,255,255,0.8)';
+    if (!w || !h) return 'rgba(255,255,255,0.9)';
     const x = Math.floor(Math.random() * w);
     const y = Math.floor(Math.random() * h);
     const data = smCtx.getImageData(x, y, 1, 1).data;
-    const boost = 1.15;
+    const boost = 1.2;
     const r = Math.min(255, data[0] * boost);
     const g = Math.min(255, data[1] * boost);
     const b = Math.min(255, data[2] * boost);
-    return `rgba(${r},${g},${b},${0.7 + musicState.treble * 0.25})`;
+    return { r, g, b };
   }
 
-  // Partículas: flotantes, estables, color del video y reactivas
+  function rgbaColor(c, alpha) {
+    return `rgba(${c.r},${c.g},${c.b},${alpha})`;
+  }
+
+  // Partículas “anillo 3D”
   const particles = [];
-  const MAX_PARTICLES = 260;
+  const MAX_PARTICLES = 320;
 
   class Particle {
-    constructor() { this.reset(true); }
+    constructor() { this.init(); }
 
-    reset(initial = false) {
-      const spread = Math.min(width, height) * 0.45;
-      const angle = Math.random() * Math.PI * 2;
-      const radius = (initial ? Math.random() * spread * 0.6 : Math.random() * spread);
-      this.baseX = centerX + Math.cos(angle) * radius;
-      this.baseY = centerY + Math.sin(angle) * radius;
+    init() {
+      const t = Math.random() * Math.PI * 2;   // ángulo orbital
+      const band = Math.random() * Math.PI;    // “latitud” del anillo
+      const baseRadius = Math.min(width, height) * 0.32;
+      const radiusJitter = Math.min(width, height) * 0.07;
+      this.radius = baseRadius + (Math.random() - 0.5) * radiusJitter;
 
-      this.x = this.baseX;
-      this.y = this.baseY;
+      this.theta = t;
+      this.phi = band;
 
-      this.sizeBase = 0.8 + Math.random() * 1.7;
-      this.size = this.sizeBase;
-
-      this.noiseSeedX = Math.random() * 1000;
-      this.noiseSeedY = Math.random() * 1000;
-
-      this.color = sampleColorFromVideo();
+      this.depth = Math.random(); // 0: lejos, 1: cerca
+      this.baseSpeed = 0.0009 + Math.random() * 0.0016;
+      this.sizeBase = 0.9 + Math.random() * 1.8;
+      this.colorBase = sampleColorFromVideo();
+      this.rayPhase = Math.random() * Math.PI * 2;
     }
 
     update(time) {
-      const speed = 0.00035;
-      const nx = this.noiseSeedX + time * speed;
-      const ny = this.noiseSeedY + time * speed;
+      const depthFactor = 0.3 + this.depth * 0.7;
+      const speed = this.baseSpeed * (0.8 + musicState.level * 1.6);
+      this.theta += speed * depthFactor * 16;  // dt ~16ms
 
-      const wobbleAmp = 22 * (0.4 + musicState.mid);
-      const offsetX = Math.sin(nx) * wobbleAmp;
-      const offsetY = Math.cos(ny) * wobbleAmp;
+      const wobble = 0.12 + musicState.mid * 0.4;
+      this.phi += Math.sin(time * 0.0003 + this.theta * 0.5) * wobble * 0.01;
 
-      this.x = this.baseX + offsetX;
-      this.y = this.baseY + offsetY;
+      const x3d = this.radius * Math.cos(this.theta) * Math.sin(this.phi);
+      const y3d = this.radius * Math.sin(this.theta) * Math.sin(this.phi);
+      const z3d = this.radius * Math.cos(this.phi);
 
-      this.size = this.sizeBase *
-        (1 + musicState.bass * 2.1) *
-        (0.85 + Math.sin(time * 0.002) * 0.15);
+      const f = 1 + (z3d / (this.radius * 3)); // factor de perspectiva
+      this.screenX = centerX + x3d * f;
+      this.screenY = centerY + y3d * f * 0.6;
 
-      const dx = this.x - centerX;
-      const dy = this.y - centerY;
-      const dist = Math.sqrt(dx*dx + dy*dy);
-      const maxDist = Math.min(width, height) * 0.75;
-      if (dist > maxDist) {
-        this.reset(false);
-      }
+      const bassPulse = 1 + musicState.bass * 2.3;
+      const depthScale = 0.4 + this.depth * 0.8;
+      this.size =
+        this.sizeBase * depthScale *
+        bassPulse *
+        (0.9 + Math.sin(time * 0.002 + this.theta) * 0.15);
 
-      if (Math.random() < 0.01) {
-        this.color = sampleColorFromVideo();
-      }
+      // refrescar color poco a poco
+      if (Math.random() < 0.015) this.colorBase = sampleColorFromVideo();
     }
 
     draw(ctx) {
-      ctx.fillStyle = this.color;
+      const baseAlpha = 0.35 + this.depth * 0.5;
+      const trebleGlow = 0.25 + musicState.treble * 0.5;
+      const alpha = baseAlpha * trebleGlow;
+      const color = rgbaColor(this.colorBase, alpha);
+
+      ctx.fillStyle = color;
       ctx.beginPath();
-      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.arc(this.screenX, this.screenY, this.size, 0, Math.PI * 2);
       ctx.fill();
+
+      // rayito sutil en beats
+      if (musicState.beat > 0.15 && this.depth > 0.6) {
+        const rayLen = this.size * 5 * musicState.beat;
+        const ang = this.theta + this.rayPhase;
+        const x2 = this.screenX + Math.cos(ang) * rayLen;
+        const y2 = this.screenY + Math.sin(ang) * rayLen;
+
+        const grad = ctx.createLinearGradient(
+          this.screenX, this.screenY, x2, y2
+        );
+        grad.addColorStop(0, rgbaColor(this.colorBase, alpha * 0.9));
+        grad.addColorStop(1, rgbaColor(this.colorBase, 0));
+
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 0.7 + musicState.treble * 1.2;
+        ctx.beginPath();
+        ctx.moveTo(this.screenX, this.screenY);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
     }
   }
 
@@ -446,7 +496,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     mainVideo.muted = !mainVideo.muted;
     audioBtn.classList.toggle('muted', mainVideo.muted);
-    document.body.classList.toggle('playing', !mainVideo.muted);
 
     const path = audioBtn.querySelector('path');
     if (mainVideo.muted) {
