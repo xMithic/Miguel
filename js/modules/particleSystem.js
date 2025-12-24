@@ -190,18 +190,22 @@ export class ParticleSystem {
             this.mouse.active = false;
         });
 
-        // TOUCH (Soporte Móvil Completo)
+        // TOUCH (Soporte Móvil Completo - CORREGIDO)
         const touchHandler = (e) => {
             const rect = this.canvas.getBoundingClientRect();
             const touch = e.touches[0];
+            
+            // Calculamos la posición relativa al canvas aunque el evento venga de window
             this.mouse.x = touch.clientX - rect.left;
             this.mouse.y = touch.clientY - rect.top;
             this.mouse.active = true;
         };
 
-        this.canvas.addEventListener('touchstart', touchHandler, { passive: true });
-        this.canvas.addEventListener('touchmove', touchHandler, { passive: true });
-        this.canvas.addEventListener('touchend', () => { this.mouse.active = false; });
+        // CORRECCIÓN: Usamos window en lugar de this.canvas para capturar eventos 
+        // a través de otras capas (como el canvas de dibujo)
+        window.addEventListener('touchstart', touchHandler, { passive: true });
+        window.addEventListener('touchmove', touchHandler, { passive: true });
+        window.addEventListener('touchend', () => { this.mouse.active = false; });
     }
 
     updateParams(count, connectionDist) {
