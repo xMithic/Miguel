@@ -1,140 +1,118 @@
 export class DrawingCanvas {
-  constructor(canvas, cursorManager, audioBtn) {
-    this.canvas = canvas;
-    this.ctx = canvas.getContext('2d', { alpha: true });
-    this.cursorManager = cursorManager;
-    this.audioBtn = audioBtn;
-    
-    this.isDrawing = false;
-    this.points = []; // Para curvas suaves
-    
-    this.setupEventListeners();
-    this.animate();
-  }
+    constructor(canvas, cursorManager, audioBtn) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d', { alpha: true });
+        this.cursorManager = cursorManager;
+        this.audioBtn = audioBtn;
 
-  setupEventListeners() {
-    window.addEventListener('pointerdown', (e) => this.startDrawing(e));
-    window.addEventListener('pointerup', () => this.stopDrawing());
-    window.addEventListener('pointermove', (e) => this.handleMove(e));
-  }
+        this.isDrawing = false;
+        this.points = [];
+        this.hue = 0; // Variable para la animación de color
+        
+        // Referencia al video de fondo (Mantenida aunque no se use para color ahora)
+        this.bgVideo = document.querySelector('video.main-video') || document.querySelector('#background-layer');
+        
+        // Canvas temporal (Mantenido por compatibilidad con tu código original)
+        this.tempCanvas = document.createElement('canvas');
+        this.tempCtx = this.tempCanvas.getContext('2d', { willReadFrequently: true });
+        this.tempCanvas.width = 1; 
+        this.tempCanvas.height = 1;
 
-  startDrawing(e) {
-    if (e.target === this.audioBtn) return;
-    this.isDrawing = true;
-    this.points = [{ x: e.clientX, y: e.clientY }];
-  }
+        // Configuración de Alta Resolución
+        this.pixelRatio = window.devicePixelRatio || 1;
+        this.resize();
 
-  handleMove(e) {
-    if (this.isDrawing) {
-      this.points.push({ x: e.clientX, y: e.clientY });
-      // Mantener solo los últimos 5 puntos para curvas suaves
-      if (this.points.length > 5) {
-        this.points.shift();
-      }
+        this.ctx.lineCap = 'round';
+        this.ctx.lineJoin = 'round';
+        
+        // Efecto visual: Superposición
+        this.ctx.globalCompositeOperation = 'screen'; 
+        
+        window.addEventListener('resize', () => this.resize());
+        this.setupEventListeners();
+        this.animate();
     }
-  }
 
-  stopDrawing() {
-    this.isDrawing = false;
-    this.points = [];
-  }
-
-  drawSmoothStroke() {
-    if (this.points.length < 2) return;
-    
-    const mousePos = this.cursorManager.getMousePosition();
-    const time = performance.now() * 0.001;
-    const hue = (performance.now() * 0.1) % 360;
-    
-    // Calcular velocidad del trazo para grosor dinámico
-    const lastPoint = this.points[this.points.length - 1];
-    const dx = mousePos.x - lastPoint.x;
-    const dy = mousePos.y - lastPoint.y;
-    const velocity = Math.sqrt(dx * dx + dy * dy);
-    const baseWidth = Math.max(1, 3 - velocity * 0.1); // Más delgado
-    
-    // Dibujar trazo principal con resplandor
-    this.ctx.lineCap = 'round';
-    this.ctx.lineJoin = 'round';
-    this.ctx.globalCompositeOperation = 'screen';
-    
-    // Capa de resplandor exterior
-    this.ctx.strokeStyle = `hsla(${hue}, 100%, 60%, 0.3)`;
-    this.ctx.lineWidth = baseWidth * 2.5;
-    this.ctx.shadowBlur = 15;
-    this.ctx.shadowColor = `hsla(${hue}, 100%, 50%, 0.5)`;
-    this.drawCurve(mousePos);
-    
-    // Capa intermedia
-    this.ctx.strokeStyle = `hsla(${hue}, 100%, 70%, 0.6)`;
-    this.ctx.lineWidth = baseWidth * 1.5;
-    this.ctx.shadowBlur = 10;
-    this.ctx.shadowColor = `hsla(${hue}, 100%, 60%, 0.7)`;
-    this.drawCurve(mousePos);
-    
-    // Núcleo brillante
-    this.ctx.globalCompositeOperation = 'lighter';
-    this.ctx.strokeStyle = `hsla(${hue}, 100%, 85%, 0.9)`;
-    this.ctx.lineWidth = baseWidth;
-    this.ctx.shadowBlur = 6;
-    this.ctx.shadowColor = `hsla(${hue}, 100%, 70%, 1)`;
-    this.drawCurve(mousePos);
-    
-    // Línea central ultra brillante
-    this.ctx.strokeStyle = `hsla(${hue + 30}, 100%, 95%, 0.8)`;
-    this.ctx.lineWidth = baseWidth * 0.3;
-    this.ctx.shadowBlur = 12;
-    this.ctx.shadowColor = 'white';
-    this.drawCurve(mousePos);
-    
-    this.ctx.shadowBlur = 0;
-    this.ctx.globalCompositeOperation = 'source-over';
-  }
-
-  drawCurve(mousePos) {
-    this.ctx.beginPath();
-    
-    if (this.points.length >= 3) {
-      // Empezar desde el primer punto
-      this.ctx.moveTo(this.points[0].x, this.points[0].y);
-      
-      // Dibujar curvas cuadráticas suaves entre puntos
-      for (let i = 1; i < this.points.length - 1; i++) {
-        const xc = (this.points[i].x + this.points[i + 1].x) / 2;
-        const yc = (this.points[i].y + this.points[i + 1].y) / 2;
-        this.ctx.quadraticCurveTo(this.points[i].x, this.points[i].y, xc, yc);
-      }
-      
-      // Curva final hasta el mouse
-      const lastIdx = this.points.length - 1;
-      this.ctx.quadraticCurveTo(
-        this.points[lastIdx].x,
-        this.points[lastIdx].y,
-        mousePos.x,
-        mousePos.y
-      );
-    } else {
-      // Línea simple si solo hay 2 puntos
-      this.ctx.moveTo(this.points[0].x, this.points[0].y);
-      this.ctx.lineTo(mousePos.x, mousePos.y);
+    resize() {
+        const parent = this.canvas.parentElement || document.body;
+        this.width = parent.clientWidth;
+        this.height = parent.clientHeight;
+        
+        this.canvas.width = this.width * this.pixelRatio;
+        this.canvas.height = this.height * this.pixelRatio;
+        this.canvas.style.width = `${this.width}px`;
+        this.canvas.style.height = `${this.height}px`;
+        
+        this.ctx.scale(this.pixelRatio, this.pixelRatio);
     }
-    
-    this.ctx.stroke();
-  }
 
-  animate() {
-    // Efecto de rastro - fillRect con transparencia
-    this.ctx.globalCompositeOperation = 'destination-out';
-    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.03)'; // Rastro más duradero
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    
-    this.ctx.globalCompositeOperation = 'source-over';
+    setupEventListeners() {
+        window.addEventListener('pointerdown', (e) => {
+            if (e.target && (e.target === this.audioBtn || e.target.closest('#audio-btn'))) return;
+            this.isDrawing = true;
+            this.points = [];
+            this.addPoint(e.clientX, e.clientY);
+        });
 
-    // Dibujar trazo si está dibujando
-    if (this.isDrawing && this.points.length > 0) {
-      this.drawSmoothStroke();
+        window.addEventListener('pointermove', (e) => {
+            if (this.isDrawing) this.addPoint(e.clientX, e.clientY);
+        });
+
+        window.addEventListener('pointerup', () => {
+            this.isDrawing = false;
+            this.points = [];
+        });
     }
-    
-    requestAnimationFrame(() => this.animate());
-  }
+
+    // ELIMINADO: getNeonColor (ya no se usa, el color es animado)
+
+    addPoint(x, y) {
+        this.points.push({ x, y, time: Date.now() });
+        this.drawCurve(x, y);
+    }
+
+    drawCurve(currentX, currentY) {
+        if (this.points.length < 2) return;
+
+        const p1 = this.points[this.points.length - 2];
+        const p2 = this.points[this.points.length - 1];
+
+        // --- CAMBIO ÚNICO AQUÍ: COLOR ANIMADO ---
+        // Incrementamos el matiz (Hue) en cada segmento dibujado
+        this.hue = (this.hue + 2) % 360; 
+        const animatedColor = `hsl(${this.hue}, 100%, 60%)`;
+
+        // 2. GROSOR MÍNIMO (MANTENIDO EXACTO)
+        const dist = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+        const velocity = dist / (p2.time - p1.time || 1);
+        const targetWidth = Math.max(0.8, 3 - velocity * 0.4);
+
+        this.ctx.beginPath();
+        this.ctx.lineWidth = targetWidth;
+        
+        // 3. EFECTO GLOW (COLOR MULTICOLOR)
+        this.ctx.strokeStyle = animatedColor;
+        this.ctx.shadowBlur = 3; // Un poco más de brillo para que el color destaque
+        this.ctx.shadowColor = animatedColor;
+
+        // Dibujo (MANTENIDO EXACTO)
+        this.ctx.moveTo(p1.x, p1.y);
+        const midX = (p1.x + p2.x) / 2;
+        const midY = (p1.y + p2.y) / 2;
+        this.ctx.quadraticCurveTo(p1.x, p1.y, midX, midY);
+        this.ctx.lineTo(p2.x, p2.y);
+        
+        this.ctx.stroke();
+    }
+
+    animate() {
+        // Borrado suave (MANTENIDO EXACTO)
+        this.ctx.save();
+        this.ctx.globalCompositeOperation = 'destination-out';
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.02)'; 
+        this.ctx.fillRect(0, 0, this.width, this.height);
+        this.ctx.restore();
+
+        requestAnimationFrame(() => this.animate());
+    }
 }
