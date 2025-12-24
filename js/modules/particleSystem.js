@@ -145,13 +145,13 @@ export class ParticleSystem {
         this.audioAnalyzer = audioAnalyzer;
         this.particles = [];
         this.MAX_PARTICLES = 200;
-        this.CONNECTION_DISTANCE = 120;
+        this.CONNECTION_DISTANCE = 80;
         this.MAX_CONNECTIONS_PER_PARTICLE = 3;
 
         // -- INTERACTIVIDAD --
         this.mouse = { x: null, y: null, active: false };
         // AJUSTE: 180px para que se note la conexión pero sea "menos" que 300
-        this.MOUSE_DISTANCE = 120;
+        this.MOUSE_DISTANCE = 180;
 
         this.initInputListeners();
         this.initParticles();
