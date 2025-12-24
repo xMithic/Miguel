@@ -11,35 +11,36 @@ html, body {
   overflow: hidden;
   background-color: #050505;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  cursor: none;
+  cursor: none; /* Oculta cursor nativo globalmente */
   user-select: none;
   -webkit-user-select: none;
 }
 
-/* VIDEO DE FONDO - Se encarga del ambiente */
+/* VIDEO DE FONDO - Optimizado */
 #background-layer {
   position: fixed; inset: -8%;
   width: 116%; height: 116%;
   z-index: 1;
   pointer-events: none;
   opacity: 0.65;
-  filter: blur(var(--ui-blur)) saturate(1.2) brightness(0.5);
+  transform: translateZ(0);
+  will-change: opacity, filter;
   object-fit: cover;
   transition: opacity 1.5s ease;
+  contain: paint layout;
 }
 
 #particle-canvas,
 #drawing-canvas {
   position: fixed; inset: 0;
   width: 100%; height: 100%;
+  contain: strict;
 }
 
-/* CAMBIO CRÍTICO AQUÍ: */
 #particle-canvas {
   z-index: 2;
   pointer-events: none;
-  /* mix-blend-mode: screen;  <-- ESTO OCULTABA EL NEGRO */
-  mix-blend-mode: normal;  /* <-- ESTO PERMITE VER EL EFECTO NEGATIVO */
+  mix-blend-mode: normal;
 }
 
 #drawing-canvas {
@@ -68,19 +69,21 @@ html, body {
   position: relative;
   border-radius: var(--card-radius);
   background: rgba(20, 20, 20, 0.6);
-  box-shadow:
-    0 26px 60px rgba(0,0,0,0.7),
-    0 0 0 1px rgba(255,255,255,0.08) inset;
+  box-shadow: 0 26px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.08) inset;
   backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   overflow: hidden;
   transform: translateZ(0);
   transition: box-shadow 0.3s ease;
+  contain: paint layout;
 }
 
 video.main-video {
   display: block; width: 100%; height: auto;
   border-radius: var(--card-radius);
   mask-image: -webkit-radial-gradient(white, black);
+  -webkit-mask-image: -webkit-radial-gradient(white, black);
+  transform: translateZ(0);
 }
 
 .card-shine {
@@ -94,6 +97,7 @@ video.main-video {
   mix-blend-mode: overlay;
   opacity: 0;
   transition: opacity 0.3s;
+  will-change: opacity;
 }
 
 .card-wrapper:hover .card-shine { opacity: 1; }
@@ -104,17 +108,18 @@ video.main-video {
   border: 2px solid rgba(255,255,255,0.9);
   border-radius: 50%;
   top: 0; left: 0;
-  transform: translate(-50%, -50%);
+  will-change: transform;
+  transform: translate(-50%, -50%) translateZ(0);
   pointer-events: none;
   z-index: 9999;
   mix-blend-mode: difference;
   transition: transform 0.1s ease-out, opacity 0.3s ease;
-  will-change: transform, top, left;
   box-shadow: 0 0 10px rgba(255,255,255,0.5);
+  backface-visibility: hidden;
 }
 
 #custom-cursor.active {
-  transform: translate(-50%, -50%) scale(2.2);
+  transform: translate(-50%, -50%) scale(2.2) translateZ(0);
   background: rgba(255,255,255,0.2);
   border-color: transparent;
 }
@@ -124,39 +129,127 @@ video.main-video {
 .eq-bars {
   position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
   display: flex; gap: 4px; z-index: 90; opacity: 0; transition: opacity 0.5s;
+  pointer-events: none;
 }
 
 .eq-bar {
-  width: 3px; height: 10px;
+  width: 3px;
+  height: 10px;
   background: white;
   border-radius: 2px;
   animation: eqBounce 1s infinite ease-in-out;
+  transform-origin: bottom;
+  will-change: transform;
 }
 
 .playing .eq-bars { opacity: 0.7; }
 
-@keyframes eqBounce { 0%, 100% { height: 6px; } 50% { height: 18px; } }
+@keyframes eqBounce {
+  0%, 100% { transform: scaleY(0.6); }
+  50% { transform: scaleY(1.8); }
+}
 
 .eq-bar:nth-child(1) { animation-delay: 0s; }
 .eq-bar:nth-child(2) { animation-delay: 0.1s; }
 .eq-bar:nth-child(3) { animation-delay: 0.2s; }
 
+/* ----------------------------------------------------------- */
+/* BOTÓN ESTILO "JAMSHID ELMI" (RGB GLOWING) - INTEGRADO       */
+/* ----------------------------------------------------------- */
+
 #audio-btn {
+  /* POSICIONAMIENTO FIJO (Para que no se mueva de su sitio) */
   position: fixed;
   bottom: 40px;
-  left: 50%; transform: translateX(-50%);
-  width: var(--btn-size); height: var(--btn-size);
-  border-radius: 50%;
-  background: rgba(255,255,255,0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.2);
-  cursor: none;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 100;
-  display: flex; justify-content: center; align-items: center;
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  pointer-events: auto;
+
+  /* ESTILO VISUAL DEL TUTORIAL */
+  padding: 15px 30px; 
+  border: none;
+  outline: none;
+  color: #FFF;
+  cursor: pointer;
+  background: transparent; /* El color de fondo lo maneja ::after */
+  border-radius: 12px;
+  
+  /* Layout para el icono */
+  display: flex; 
+  justify-content: center; 
+  align-items: center;
+  
+  /* Transición para el cambio de color de texto/icono */
+  transition: color 0.3s ease-in-out;
+  pointer-events: auto; /* Necesario porque el body tiene pointer-events: none en algunas zonas */
 }
 
-#audio-btn svg { width: 20px; fill: white; opacity: 0.8; transition: transform 0.3s; }
-#audio-btn:hover { background: rgba(255,255,255,0.25); transform: translateX(-50%) scale(1.1); }
-#audio-btn.muted svg { opacity: 0.5; transform: scale(0.9); }
+/* CAPA 1: FONDO OSCURO (Visible por defecto) */
+#audio-btn::after {
+  content: "";
+  z-index: -1;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background-color: #333333bb; /* Gris oscuro original del tutorial */
+  left: 0;
+  top: 0;
+  border-radius: 12px;
+  transition: background-color 0.3s ease-in-out;
+}
+
+/* CAPA 2: BRILLO RGB (Invisible hasta hover) */
+#audio-btn::before {
+  content: "";
+  background: linear-gradient(
+    45deg,
+    #FF0000, #FF7300, #FFFB00, #48FF00,
+    #00FFD5, #002BFF, #FF00C8, #FF0000
+  );
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  background-size: 800%;
+  z-index: -5; /* Detrás del fondo gris */
+  width: calc(100% + 4px);
+  height: calc(100% + 4px);
+  filter: blur(8px);
+  animation: glowing 20s linear infinite;
+  transition: opacity .3s ease-in-out;
+  border-radius: 12px;
+  opacity: 0;
+}
+
+@keyframes glowing {
+  0% { background-position: 0 0; }
+  50% { background-position: 400% 0; }
+  100% { background-position: 0 0; }
+}
+
+/* ESTADO HOVER: Mostrar el brillo RGB */
+#audio-btn:hover::before {
+  opacity: 1;
+}
+
+/* ESTADO ACTIVE (CLICK): Fondo transparente y texto negro */
+#audio-btn:active {
+  color: #000000;
+}
+
+#audio-btn:active::after {
+  background: transparent;
+}
+
+/* ESTILO DEL ICONO SVG */
+#audio-btn svg {
+  width: 24px;       
+  fill: currentColor; /* Hereda el color (#FFF o #000) */
+  opacity: 1;
+  transition: transform 0.3s;
+  position: relative;
+  z-index: 2;
+}
+
+#audio-btn.muted svg {
+  opacity: 0.5;
+}
