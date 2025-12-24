@@ -1,4 +1,4 @@
-import { ColorSampler } from '../utils/colorSampler.js';
+deimport { ColorSampler } from '../utils/colorSampler.js';
 
 // ==========================================
 // 1. CLASE NEURAL PARTICLE
@@ -145,13 +145,13 @@ export class ParticleSystem {
         this.audioAnalyzer = audioAnalyzer;
         this.particles = [];
         this.MAX_PARTICLES = 200;
-        this.CONNECTION_DISTANCE = 230;
+        this.CONNECTION_DISTANCE = 120;
         this.MAX_CONNECTIONS_PER_PARTICLE = 3;
 
         // -- INTERACTIVIDAD --
         this.mouse = { x: null, y: null, active: false };
         // AJUSTE: 180px para que se note la conexión pero sea "menos" que 300
-        this.MOUSE_DISTANCE = 100;
+        this.MOUSE_DISTANCE = 120;
 
         this.initInputListeners();
         this.initParticles();
