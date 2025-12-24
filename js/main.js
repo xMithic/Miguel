@@ -4,6 +4,7 @@ import { ParticleSystem } from './modules/particleSystem.js';
 import { CursorManager } from './modules/cursorManager.js';
 import { DrawingCanvas } from './modules/drawingCanvas.js';
 import { VideoController } from './modules/videoController.js';
+import { SurpriseSystem } from './modules/surpriseSystem.js'; // Asegúrate de importar esto
 
 document.addEventListener('DOMContentLoaded', () => {
   // Elementos del DOM
@@ -16,7 +17,58 @@ document.addEventListener('DOMContentLoaded', () => {
   const pCanvas = document.getElementById('particle-canvas');
   const dCanvas = document.getElementById('drawing-canvas');
 
-  // Resize handler
+  // Inicializar módulos
+  const colorSampler = new ColorSampler(mainVideo);
+  const audioAnalyzer = new AudioAnalyzer(mainVideo);
+  const cursorManager = new CursorManager(cursor, cardWrapper, shine);
+  const drawingCanvas = new DrawingCanvas(dCanvas, cursorManager, audioBtn);
+  const particleSystem = new ParticleSystem(pCanvas, colorSampler, audioAnalyzer);
+  
+  // Instancia de Sorpresa
+  const surpriseSystem = new SurpriseSystem();
+
+  // Inicializar VideoController (Maneja el audio normal)
+  const videoController = new VideoController(mainVideo, bgVideo, audioBtn, audioAnalyzer);
+
+  /* ----------------------------------------------------
+     LÓGICA DEL BOTÓN (Pulsación Larga vs Click Normal)
+     ---------------------------------------------------- */
+  let pressTimer;
+  let isLongPress = false;
+
+  const startPress = (e) => {
+      if (e.type === 'mousedown' && e.button !== 0) return; // Ignorar clic derecho
+      
+      isLongPress = false;
+      
+      // Esperar 2 segundos
+      pressTimer = setTimeout(() => {
+          isLongPress = true;
+          
+          // 1. Disparar sorpresa
+          surpriseSystem.trigger(); 
+          
+          // 2. IMPORTANTE: Evitar que el botón corte la música
+          // Hack temporal: Le quitamos el evento de clic al VideoController un momento
+          audioBtn.style.pointerEvents = "none"; 
+          setTimeout(() => { audioBtn.style.pointerEvents = "auto"; }, 500);
+
+      }, 2000); 
+  };
+
+  const cancelPress = (e) => {
+      clearTimeout(pressTimer);
+  };
+
+  // Asignar eventos
+  audioBtn.addEventListener('mousedown', startPress);
+  audioBtn.addEventListener('touchstart', startPress, { passive: true });
+  
+  audioBtn.addEventListener('mouseup', cancelPress);
+  audioBtn.addEventListener('mouseleave', cancelPress);
+  audioBtn.addEventListener('touchend', cancelPress);
+
+  // Resize handler básico
   const resize = () => {
     pCanvas.width = window.innerWidth;
     pCanvas.height = window.innerHeight;
@@ -26,18 +78,10 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('resize', resize);
   resize();
 
-  // Inicializar módulos
-  const colorSampler = new ColorSampler(mainVideo);
-  const audioAnalyzer = new AudioAnalyzer(mainVideo);
-  const cursorManager = new CursorManager(cursor, cardWrapper, shine);
-  const drawingCanvas = new DrawingCanvas(dCanvas, cursorManager, audioBtn);
-  const videoController = new VideoController(mainVideo, bgVideo, audioBtn, audioAnalyzer);
-  const particleSystem = new ParticleSystem(pCanvas, colorSampler, audioAnalyzer);
-
   // Iniciar sistema de partículas
   particleSystem.start();
 
-  // Loop de actualización de audio
+  // Loop de audio
   function audioLoop() {
     audioAnalyzer.update();
     requestAnimationFrame(audioLoop);
