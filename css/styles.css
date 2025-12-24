@@ -5,18 +5,31 @@
   --card-radius: 24px;
 }
 
+/* 1. RESET GLOBAL Y FONDO NEGRO (Evita el flash blanco) */
 html, body {
   margin: 0; padding: 0;
   width: 100%; height: 100%;
   overflow: hidden;
-  background-color: #050505;
+  
+  /* IMPORTANTE: Fondo negro forzado desde el inicio */
+  background-color: #000000; 
+  color: #fff; /* Texto blanco por defecto */
+  
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  cursor: none; /* Oculta cursor nativo globalmente */
+  cursor: none; /* Cursor personalizado */
   user-select: none;
   -webkit-user-select: none;
+  
+  /* Suaviza la aparición de la página */
+  animation: fadeInPage 0.5s ease-out forwards;
 }
 
-/* VIDEO DE FONDO - Optimizado */
+@keyframes fadeInPage {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 2. VIDEO DE FONDO (Con Blur) */
 #background-layer {
   position: fixed; inset: -8%;
   width: 116%; height: 116%;
@@ -24,36 +37,26 @@ html, body {
   pointer-events: none;
   opacity: 0.65;
   
-  /* Filtro de desenfoque */
+  /* Filtro de desenfoque y ajustes visuales */
   filter: blur(var(--ui-blur)) saturate(1.2) brightness(0.8);
   
   transform: translateZ(0);
   will-change: opacity, filter;
   object-fit: cover;
   transition: opacity 1.5s ease;
-  contain: paint layout;
+  background-color: #000; /* Fondo de seguridad si el video tarda */
 }
 
+/* 3. LIENZOS */
 #particle-canvas,
 #drawing-canvas {
   position: fixed; inset: 0;
   width: 100%; height: 100%;
-  contain: strict;
 }
+#particle-canvas { z-index: 2; pointer-events: none; }
+#drawing-canvas { z-index: 50; pointer-events: auto; mix-blend-mode: screen; }
 
-#particle-canvas {
-  z-index: 2;
-  pointer-events: none;
-  mix-blend-mode: normal;
-}
-
-#drawing-canvas {
-  z-index: 50;
-  pointer-events: auto;
-  touch-action: none;
-  mix-blend-mode: screen;
-}
-
+/* 4. TARJETA CENTRAL */
 .perspective-container {
   position: absolute; inset: 0;
   display: flex; justify-content: center; align-items: center;
@@ -79,7 +82,7 @@ html, body {
   overflow: hidden;
   transform: translateZ(0);
   transition: box-shadow 0.3s ease;
-  contain: paint layout;
+  background-color: #000; /* Fondo negro mientras carga el video */
 }
 
 video.main-video {
@@ -92,173 +95,146 @@ video.main-video {
 
 .card-shine {
   position: absolute; inset: 0;
-  background: radial-gradient(
-    circle at var(--x, 50%) var(--y, 50%),
-    rgba(255,255,255,0.18),
-    transparent 60%
-  );
+  background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(255,255,255,0.18), transparent 60%);
   pointer-events: none;
   mix-blend-mode: overlay;
   opacity: 0;
   transition: opacity 0.3s;
-  will-change: opacity;
 }
-
 .card-wrapper:hover .card-shine { opacity: 1; }
 
-#custom-cursor {
-  position: fixed;
-  width: var(--cursor-size); height: var(--cursor-size);
-  border: 2px solid rgba(255,255,255,0.9);
-  border-radius: 50%;
-  top: 0; left: 0;
-  will-change: transform;
-  transform: translate(-50%, -50%) translateZ(0);
-  pointer-events: none;
-  z-index: 9999;
-  mix-blend-mode: difference;
-  transition: transform 0.1s ease-out, opacity 0.3s ease;
-  box-shadow: 0 0 10px rgba(255,255,255,0.5);
-  backface-visibility: hidden;
-}
-
-#custom-cursor.active {
-  transform: translate(-50%, -50%) scale(2.2) translateZ(0);
-  background: rgba(255,255,255,0.2);
-  border-color: transparent;
-}
-
-#custom-cursor.hidden { opacity: 0; }
-
+/* 5. ECUALIZADOR */
 .eq-bars {
   position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
   display: flex; gap: 4px; z-index: 90; opacity: 0; transition: opacity 0.5s;
   pointer-events: none;
 }
-
 .eq-bar {
-  width: 3px;
-  height: 10px;
-  background: white;
-  border-radius: 2px;
-  animation: eqBounce 1s infinite ease-in-out;
-  transform-origin: bottom;
-  will-change: transform;
+  width: 3px; height: 10px; background: white; border-radius: 2px;
+  animation: eqBounce 1s infinite ease-in-out; transform-origin: bottom;
 }
-
 .playing .eq-bars { opacity: 0.7; }
-
-@keyframes eqBounce {
-  0%, 100% { transform: scaleY(0.6); }
-  50% { transform: scaleY(1.8); }
-}
-
+@keyframes eqBounce { 0%, 100% { transform: scaleY(0.6); } 50% { transform: scaleY(1.8); } }
 .eq-bar:nth-child(1) { animation-delay: 0s; }
 .eq-bar:nth-child(2) { animation-delay: 0.1s; }
 .eq-bar:nth-child(3) { animation-delay: 0.2s; }
 
-/* ----------------------------------------------------------- */
-/* BOTÓN ESTILO "JAMSHID ELMI" (RGB GLOWING) - INTEGRADO       */
-/* ----------------------------------------------------------- */
-
-#audio-btn {
-  /* POSICIONAMIENTO FIJO */
-  position: fixed;
-  bottom: 40px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 100;
-
-  /* ESTILO VISUAL DEL TUTORIAL */
-  padding: 15px 30px; 
-  border: none;
-  outline: none; /* Quita borde de foco del navegador */
-  color: #FFF;
-  cursor: pointer;
-  background: transparent; 
-  border-radius: 12px;
-  
-  /* Layout para el icono */
-  display: flex; 
-  justify-content: center; 
-  align-items: center;
-  
-  /* Transición para el cambio de color de texto/icono */
-  transition: color 0.3s ease-in-out;
-  pointer-events: auto;
-
-  /* --- SOLUCIÓN PARA CELULAR (Quita el recuadro azul/gris) --- */
-  -webkit-tap-highlight-color: transparent;
-  -webkit-touch-callout: none; /* Evita menú contextual al mantener presionado */
-  user-select: none;
+/* 6. CURSOR */
+#custom-cursor {
+  position: fixed; width: var(--cursor-size); height: var(--cursor-size);
+  border: 2px solid rgba(255,255,255,0.9); border-radius: 50%;
+  top: 0; left: 0; pointer-events: none; z-index: 10000;
+  mix-blend-mode: difference;
+  transition: transform 0.1s ease-out, opacity 0.3s ease;
+  transform: translate(-50%, -50%) translateZ(0);
+}
+#custom-cursor.active {
+  transform: translate(-50%, -50%) scale(2.2) translateZ(0);
+  background: rgba(255,255,255,0.2); border-color: transparent;
 }
 
-/* CAPA 1: FONDO OSCURO (Visible por defecto) */
+/* 7. BOTÓN ESTILO "RGB GLOW" (Jamshid Elmi) */
+#audio-btn {
+  position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
+  z-index: 100;
+  padding: 15px 30px; 
+  border: none; outline: none;
+  color: #FFF; cursor: pointer; background: transparent; border-radius: 12px;
+  display: flex; justify-content: center; align-items: center;
+  transition: color 0.3s ease-in-out;
+  pointer-events: auto;
+  /* Celular Fixes */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
 #audio-btn::after {
-  content: "";
-  z-index: -1;
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  background-color: #333333bb;
-  left: 0;
-  top: 0;
-  border-radius: 12px;
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  background-color: #333333bb; border-radius: 12px;
   transition: background-color 0.3s ease-in-out;
 }
 
-/* CAPA 2: BRILLO RGB (Invisible hasta hover) */
 #audio-btn::before {
-  content: "";
-  background: linear-gradient(
-    45deg,
-    #FF0000, #FF7300, #FFFB00, #48FF00,
-    #00FFD5, #002BFF, #FF00C8, #FF0000
-  );
-  position: absolute;
-  top: -2px;
-  left: -2px;
-  background-size: 800%;
-  z-index: -5; 
-  width: calc(100% + 4px);
-  height: calc(100% + 4px);
-  filter: blur(8px);
-  animation: glowing 20s linear infinite;
-  transition: opacity .3s ease-in-out;
-  border-radius: 12px;
-  opacity: 0;
+  content: ""; position: absolute; top: -2px; left: -2px;
+  width: calc(100% + 4px); height: calc(100% + 4px);
+  background: linear-gradient(45deg, #FF0000, #FF7300, #FFFB00, #48FF00, #00FFD5, #002BFF, #FF00C8, #FF0000);
+  background-size: 800%; z-index: -5; filter: blur(8px);
+  animation: glowing 20s linear infinite; opacity: 0;
+  transition: opacity .3s ease-in-out; border-radius: 12px;
 }
+@keyframes glowing { 0% { background-position: 0 0; } 50% { background-position: 400% 0; } 100% { background-position: 0 0; } }
 
-@keyframes glowing {
-  0% { background-position: 0 0; }
-  50% { background-position: 400% 0; }
-  100% { background-position: 0 0; }
-}
+#audio-btn:hover::before { opacity: 1; }
+#audio-btn:active { color: #000; }
+#audio-btn:active::after { background: transparent; }
 
-/* ESTADO HOVER: Mostrar el brillo RGB */
-#audio-btn:hover::before {
-  opacity: 1;
-}
-
-/* ESTADO ACTIVE (CLICK): Fondo transparente y texto negro */
-#audio-btn:active {
-  color: #000000;
-}
-
-#audio-btn:active::after {
-  background: transparent;
-}
-
-/* ESTILO DEL ICONO SVG */
 #audio-btn svg {
-  width: 24px;       
-  fill: currentColor; 
-  opacity: 1;
-  transition: transform 0.3s;
-  position: relative;
-  z-index: 2;
+  width: 24px; fill: currentColor; opacity: 1;
+  transition: transform 0.3s; position: relative; z-index: 2;
+}
+#audio-btn.muted svg { opacity: 0.5; }
+
+/* 8. ESTILOS SORPRESA (Fuegos Artificiales & Mensaje) */
+/* Asegúrate de que esto esté así en tu CSS */
+/* 8. ESTILOS SORPRESA (Fuegos Artificiales & Mensaje) */
+
+#fireworks-canvas {
+  position: fixed; 
+  top: 0; 
+  left: 0; 
+  width: 100%; 
+  height: 100%;
+  
+  /* CAMBIO CLAVE: Z-Index más alto que el overlay */
+  z-index: 9002;  /* Antes era 9000 */
+  
+  pointer-events: none; 
+  opacity: 0; 
+  transition: opacity 1s ease;
 }
 
-#audio-btn.muted svg {
-  opacity: 0.5;
+#surprise-overlay {
+  position: fixed; 
+  inset: 0; 
+  
+  /* CAMBIO CLAVE: Z-Index menor que el canvas */
+  z-index: 9001; 
+  
+  display: flex; 
+  justify-content: center; 
+  align-items: center;
+  pointer-events: none; 
+  opacity: 0; 
+  transition: opacity 1.5s ease;
+  backdrop-filter: blur(0px);
+}
+
+
+
+#surprise-overlay {
+  position: fixed; inset: 0; z-index: 9001;
+  display: flex; justify-content: center; align-items: center;
+  pointer-events: none; opacity: 0; transition: opacity 1.5s ease;
+  backdrop-filter: blur(0px);
+}
+
+body.show-surprise #fireworks-canvas { opacity: 1; }
+body.show-surprise #surprise-overlay {
+  opacity: 1; pointer-events: auto;
+  backdrop-filter: blur(8px); background: rgba(0, 0, 0, 0.4);
+}
+
+.message-content {
+  text-align: center; transform: translateY(20px);
+  transition: transform 1.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+body.show-surprise .message-content { transform: translateY(0); }
+
+.glow-text {
+  font-size: 3.5rem; font-weight: 300; color: #fff; margin: 0;
+  letter-spacing: 4px; text-shadow: 0 0 20px rgba(122, 252, 255, 0.6);
+}
+.sub-text {
+  font-size: 1.2rem; color: rgba(255, 255, 255, 0.8);
+  margin-top: 10px; font-weight: 300; letter-spacing: 2px; text-transform: uppercase;
 }
