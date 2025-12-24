@@ -85,14 +85,14 @@ export class DrawingCanvas {
         // 2. GROSOR MÍNIMO (MANTENIDO EXACTO)
         const dist = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
         const velocity = dist / (p2.time - p1.time || 1);
-        const targetWidth = Math.max(0.8, 3 - velocity * 0.4);
+        const targetWidth = Math.max(0.8, 3 - velocity * 0.1);
 
         this.ctx.beginPath();
         this.ctx.lineWidth = targetWidth;
         
         // 3. EFECTO GLOW (COLOR MULTICOLOR)
         this.ctx.strokeStyle = animatedColor;
-        this.ctx.shadowBlur = 3; // Un poco más de brillo para que el color destaque
+        this.ctx.shadowBlur = 0.1; // Un poco más de brillo para que el color destaque
         this.ctx.shadowColor = animatedColor;
 
         // Dibujo (MANTENIDO EXACTO)
