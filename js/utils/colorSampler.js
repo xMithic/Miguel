@@ -1,47 +1,59 @@
-import { ColorSampler } from '../utils/colorSampler.js';
-
 // ==========================================
-// 1. CLASE COLOR SAMPLER (Sin cambios mayores, funciona bien)
+// 1. CLASE COLOR SAMPLER (VERSIÓN COMPATIBLE)
 // ==========================================
 export class ColorSampler {
   constructor(videoElement) {
     this.videoElement = videoElement;
     this.width = 0;
     this.height = 0;
-    this.smCanvas = new OffscreenCanvas(1, 1);
+    
+    // CAMBIO IMPORTANTE: Usamos canvas estándar para evitar crashes
+    this.smCanvas = document.createElement('canvas'); 
     this.smCtx = this.smCanvas.getContext('2d', { willReadFrequently: true });
+    
     this.lastSrcW = 0;
     this.lastSrcH = 0;
   }
 
   getPixelData() {
     const video = this.videoElement;
-    if (!video || video.readyState < 2) return null;
+    
+    // Si el video no existe o no se reproduce, retornamos null sin romper nada
+    if (!video || video.readyState < 2 || video.paused) return null;
 
     const vW = video.videoWidth;
     const vH = video.videoHeight;
 
+    // Ajuste dinámico de tamaño si cambia el video
     if (vW !== this.lastSrcW || vH !== this.lastSrcH) {
         this.lastSrcW = vW;
         this.lastSrcH = vH;
-        // Escala del 20% es suficiente para precisión de color
+        // Escala 20% (suficiente para precisión sin lag)
         const scale = 0.20; 
         this.width = Math.floor(vW * scale);
         this.height = Math.floor(vH * scale);
-        this.smCanvas.width = this.width;
-        this.smCanvas.height = this.height;
+        
+        if (this.width > 0 && this.height > 0) {
+            this.smCanvas.width = this.width;
+            this.smCanvas.height = this.height;
+        }
     }
 
     if (this.width > 0 && this.height > 0) {
-        this.smCtx.drawImage(video, 0, 0, this.width, this.height);
-        return this.smCtx.getImageData(0, 0, this.width, this.height).data;
+        try {
+            this.smCtx.drawImage(video, 0, 0, this.width, this.height);
+            return this.smCtx.getImageData(0, 0, this.width, this.height).data;
+        } catch (e) {
+            return null; // Evita crash por errores de seguridad (CORS)
+        }
     }
+    
     return null;
   }
 }
 
 // ==========================================
-// 2. NEURAL PARTICLE (CORREGIDA PARA FONDO NEGRO)
+// 2. NEURAL PARTICLE (SINCRONIZADA)
 // ==========================================
 class NeuralParticle {
   constructor(width, height) {
@@ -49,10 +61,12 @@ class NeuralParticle {
     this.height = height;
     this.history = []; 
     this.MAX_HISTORY = 10;
-    // INICIO: Empiezan en negro para no dar "falso flash" blanco al cargar
+    // Iniciamos en negro pero la lógica de dibujo manejará la transparencia
     this.color = { r: 0, g: 0, b: 0 };
+    
     this.x2d = 0;
     this.y2d = 0;
+    
     this.reset(true);
   }
 
@@ -60,6 +74,7 @@ class NeuralParticle {
     const fov = 400;
     this.z = isInitial ? Math.random() * 1200 : 800 + Math.random() * 400;
     const scale = fov / (fov + this.z);
+    
     this.x = (Math.random() - 0.5) * (this.width / scale);
     this.y = (Math.random() - 0.5) * (this.height / scale);
     
@@ -74,7 +89,7 @@ class NeuralParticle {
   lerp(start, end, amt) { return (1 - amt) * start + amt * end; }
 
   update(musicState, pixelData, bufferW, bufferH, canvasW, canvasH) {
-    // --- Física (Movimiento) ---
+    // --- Física ---
     const bass = musicState?.bass || 0;
     const mid = musicState?.mid || 0;
     this.z -= this.speed * (1 + bass * 3);
@@ -91,7 +106,7 @@ class NeuralParticle {
     const screenX = this.x * scale + canvasW / 2;
     const screenY = this.y * scale + canvasH / 2;
 
-    // --- LÓGICA DE COLOR SINCRONIZADA ---
+    // --- COLOR EXACTO ---
     if (pixelData && bufferW > 0) {
         if(screenX >= 0 && screenX < canvasW && screenY >= 0 && screenY < canvasH) {
             
@@ -108,25 +123,19 @@ class NeuralParticle {
                 const tg = pixelData[index + 1];
                 const tb = pixelData[index + 2];
 
-                // CORRECCIÓN 1: No sumar un "suelo" fijo.
-                // Si el pixel es negro (0,0,0), el target debe ser (0,0,0).
-                // Solo aumentamos la saturación/brillo relativo (multiplicador).
+                // Boost moderado para que brillen, pero respetando el negro (0*boost = 0)
                 const boost = 1.3; 
-                
                 const finalR = Math.min(255, tr * boost);
                 const finalG = Math.min(255, tg * boost);
                 const finalB = Math.min(255, tb * boost);
 
-                // CORRECCIÓN 2: Detección de oscuridad
-                // Si el color destino es muy oscuro (casi negro), reaccionar INSTANTÁNEAMENTE
-                // Esto evita el "fantasma" blanco mientras se apaga.
-                const isDark = (finalR + finalG + finalB) < 20;
-
-                // CORRECCIÓN 3: Velocidad de reacción
-                // Si es un corte de cámara (diferencia grande) o hay oscuridad: 0.6 (Muy rápido)
-                // Si es movimiento suave: 0.3 (Sincronizado pero fluido)
+                // Detección de cambios bruscos (Cortes de cámara)
                 const diff = Math.abs(finalR - this.color.r) + Math.abs(finalG - this.color.g) + Math.abs(finalB - this.color.b);
-                const reactionSpeed = (isDark || diff > 50) ? 0.6 : 0.3;
+                const isCut = diff > 50;
+                
+                // Si es un corte o el color es muy oscuro, reaccionar INSTANTÁNEO (0.6)
+                // Si es suave, reaccionar fluido (0.2)
+                const reactionSpeed = isCut ? 0.6 : 0.25;
 
                 this.color.r = this.lerp(this.color.r, finalR, reactionSpeed);
                 this.color.g = this.lerp(this.color.g, finalG, reactionSpeed);
@@ -135,6 +144,7 @@ class NeuralParticle {
         }
     }
 
+    // Historial
     if (this.x2d && this.y2d) {
         this.history.push({ x: this.x2d, y: this.y2d });
         if (this.history.length > this.MAX_HISTORY) this.history.shift();
@@ -148,6 +158,7 @@ class NeuralParticle {
   draw(ctx, centerX, centerY, musicState) {
     const fov = 400;
     const scale = fov / (fov + this.z);
+    
     this.x2d = this.x * scale + centerX;
     this.y2d = this.y * scale + centerY;
     
@@ -157,19 +168,18 @@ class NeuralParticle {
     const r = Math.floor(this.color.r);
     const g = Math.floor(this.color.g);
     const b = Math.floor(this.color.b);
-    
-    // CORRECCIÓN 4: Fade to Black
-    // Si la partícula es negra, reducimos también su Alpha para que no se vea como un "agujero"
-    // sino que desaparezca suavemente.
+
+    // --- FADE TO BLACK --- 
+    // Si la partícula es negra, la hacemos transparente.
+    // Esto es clave: (0,0,0) -> alpha 0.
     const brightness = (r + g + b) / 3;
-    const darkFade = Math.min(1, brightness / 30); // Si brillo < 30, alpha baja
-    
+    const darkFade = Math.min(1, brightness / 20); // Fade suave si brillo < 20
+
     const alpha = depthAlpha * (0.6 + (musicState?.level||0)*0.4) * darkFade;
 
-    // Si es invisible, no dibujar nada (ahorra recursos)
-    if (alpha < 0.01) return false;
+    if (alpha < 0.02) return false; // No dibujar si es invisible
 
-    // Dibujar Estela
+    // Estela
     if (this.history.length > 2) {
         ctx.beginPath();
         ctx.moveTo(this.history[0].x, this.history[0].y);
@@ -183,28 +193,18 @@ class NeuralParticle {
 
     const size = Math.max(0.5, this.baseSize * scale * (1 + (musicState?.bass || 0)));
     
-    // El Glow solo aparece si hay brillo real (no en negro)
-    if ((musicState?.level || 0) > 0.2 && brightness > 20) {
-      const glowSize = size * 3;
-      const gradient = ctx.createRadialGradient(this.x2d, this.y2d, 0, this.x2d, this.y2d, glowSize);
-      gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${alpha})`);
-      gradient.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = gradient;
-      ctx.beginPath();
-      ctx.arc(this.x2d, this.y2d, glowSize, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
+    // Núcleo
     ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
     ctx.beginPath();
     ctx.arc(this.x2d, this.y2d, size, 0, Math.PI * 2);
     ctx.fill();
+    
     return true;
   }
 }
 
 // ==========================================
-// 3. PARTICLE SYSTEM (Sin cambios mayores)
+// 3. PARTICLE SYSTEM
 // ==========================================
 export class ParticleSystem {
   constructor(canvas, colorSampler, audioAnalyzer) {
@@ -221,6 +221,8 @@ export class ParticleSystem {
     for (let i = 0; i < this.MAX_PARTICLES; i++) {
       this.particles.push(new NeuralParticle(this.canvas.width, this.canvas.height));
     }
+    
+    // Bind para asegurar el 'this' correcto en la animación
     this.animate = this.animate.bind(this);
   }
 
@@ -234,16 +236,17 @@ export class ParticleSystem {
       for(let i = 0; i < this.particles.length; i++){
           const p1 = this.particles[i]; 
           if(!p1.x2d) continue;
-          
-          // Si la partícula es negra/oscura, no conectar líneas (se ve mal una línea negra cruzando)
+
+          // No conectar si la partícula es invisible/oscura
           const b1 = (p1.color.r + p1.color.g + p1.color.b);
-          if (b1 < 20) continue; 
+          if (b1 < 20) continue;
 
           let candidates = [];
+          
           for(let j = i + 1; j < this.particles.length; j++){
               const p2 = this.particles[j];
               if(!p2.x2d) continue;
-              
+
               const b2 = (p2.color.r + p2.color.g + p2.color.b);
               if (b2 < 20) continue;
 
@@ -257,6 +260,7 @@ export class ParticleSystem {
               }
           }
 
+          // Ordenar para estabilidad visual
           candidates.sort((a, b) => a.dist - b.dist);
           const count = Math.min(candidates.length, this.MAX_CONNECTIONS_PER_PARTICLE);
 
@@ -264,6 +268,8 @@ export class ParticleSystem {
               const target = candidates[k];
               const p2 = target.particle;
               const dist = target.dist;
+              
+              // Alpha basado en distancia y brillo
               const alpha = (1 - dist/reach) * level * 0.8;
               
               if(alpha > 0.05) {
@@ -290,17 +296,22 @@ export class ParticleSystem {
     let bufferW = 0; 
     let bufferH = 0;
 
+    // Bloque TRY-CATCH seguro para el muestreo
     try {
         if (this.colorSampler) {
             pixelData = this.colorSampler.getPixelData();
             bufferW = this.colorSampler.width;
             bufferH = this.colorSampler.height;
         }
-    } catch(e) {}
+    } catch(e) {
+        // Si falla el sampler, seguimos animando (pantalla negra pero sin crash)
+    }
 
+    // LIMPIAR CANVAS (Esencial para ver el video de fondo)
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.ctx.globalCompositeOperation = 'source-over'; 
     
+    // Actualizar partículas
     this.particles.forEach(p => p.update(
         musicState, 
         pixelData, 
@@ -310,6 +321,7 @@ export class ParticleSystem {
         this.canvas.height
     ));
     
+    // Dibujar
     this.drawConnections(musicState);
     
     const sortedParticles = [...this.particles].sort((a, b) => b.z - a.z);
