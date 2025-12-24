@@ -151,7 +151,7 @@ export class ParticleSystem {
         // -- INTERACTIVIDAD --
         this.mouse = { x: null, y: null, active: false };
         // AJUSTE: 180px para que se note la conexión pero sea "menos" que 300
-        this.MOUSE_DISTANCE = 180;
+        this.MOUSE_DISTANCE = 200;
 
         this.initInputListeners();
         this.initParticles();
