@@ -1,14 +1,12 @@
-import { ColorSampler } from '../utils/colorSampler.js';
-
 // ==========================================
-// 1. CLASE COLOR SAMPLER (Segura para evitar bugs)
+// 1. CLASE COLOR SAMPLER (INTEGRADA)
 // ==========================================
 export class ColorSampler {
   constructor(videoElement) {
     this.videoElement = videoElement;
     this.width = 0;
     this.height = 0;
-    // Usamos canvas normal para máxima compatibilidad
+    // Canvas estándar para máxima compatibilidad
     this.smCanvas = document.createElement('canvas'); 
     this.smCtx = this.smCanvas.getContext('2d', { willReadFrequently: true });
     this.lastSrcW = 0;
@@ -163,7 +161,6 @@ class NeuralParticle {
     const g = Math.floor(this.color.g);
     const b = Math.floor(this.color.b);
 
-    // Ajustamos alpha según brillo (las oscuras se ven menos transparentes pero presentes)
     const alpha = depthAlpha * (0.6 + (musicState?.level||0)*0.4);
 
     if (this.history.length > 2) {
