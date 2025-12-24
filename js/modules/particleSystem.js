@@ -144,7 +144,7 @@ export class ParticleSystem {
         this.colorSampler = colorSampler;
         this.audioAnalyzer = audioAnalyzer;
         this.particles = [];
-        this.MAX_PARTICLES = 200;
+        this.MAX_PARTICLES = 140;
         this.CONNECTION_DISTANCE = 80;
         this.MAX_CONNECTIONS_PER_PARTICLE = 3;
 
