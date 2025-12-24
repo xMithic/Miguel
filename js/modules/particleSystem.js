@@ -1,21 +1,18 @@
 import { ColorSampler } from '../utils/colorSampler.js';
 
+// ==========================================
+// 1. CLASE NEURAL PARTICLE (Lógica interna)
+// ==========================================
 class NeuralParticle {
   constructor(width, height) {
     this.width = width;
     this.height = height;
     this.history = []; 
     this.MAX_HISTORY = 10;
-    // Iniciamos con colores aleatorios para que no se vean todas blancas al inicio
-    this.color = { 
-        r: Math.random() * 255, 
-        g: Math.random() * 255, 
-        b: Math.random() * 255 
-    };
-    
+    // Inician en negro para evitar flashes blancos
+    this.color = { r: 0, g: 0, b: 0 };
     this.x2d = 0;
     this.y2d = 0;
-    
     this.reset(true);
   }
 
@@ -35,11 +32,10 @@ class NeuralParticle {
     this.history = [];
   }
 
-  // Función lerp estándar
   lerp(start, end, amt) { return (1 - amt) * start + amt * end; }
 
   update(musicState, pixelData, bufferWidth, bufferHeight, canvasWidth, canvasHeight) {
-    // 1. Movimiento físico (sin cambios)
+    // --- 1. Física y Movimiento ---
     const bass = musicState?.bass || 0;
     const mid = musicState?.mid || 0;
 
@@ -58,60 +54,63 @@ class NeuralParticle {
     const screenX = this.x * scale + canvasWidth / 2;
     const screenY = this.y * scale + canvasHeight / 2;
 
-    // 2. Muestreo de Color "Spatial" (MEJORADO PARA VELOCIDAD)
-    if (pixelData && screenX >= 0 && screenX < canvasWidth && screenY >= 0 && screenY < canvasHeight) {
-        
-        // Mapeo directo de coordenadas pantalla -> buffer
-        // Usamos Math.floor para obtener el píxel entero más cercano rápidamente
-        const xPct = screenX / canvasWidth;
-        const yPct = screenY / canvasHeight;
-        
-        const bufferX = Math.floor(xPct * bufferWidth);
-        const bufferY = Math.floor(yPct * bufferHeight);
-        
-        // Cálculo del índice en el array Uint8ClampedArray (RGBA = 4 valores)
-        const index = (bufferY * bufferWidth + bufferX) * 4;
+    // --- 2. Lógica de Color (Efecto Negativo) ---
+    if (pixelData && bufferWidth > 0) {
+        if (screenX >= 0 && screenX < canvasWidth && screenY >= 0 && screenY < canvasHeight) {
+            
+            const pctX = screenX / canvasWidth;
+            const pctY = screenY / canvasHeight;
+            
+            const bufferX = Math.floor(pctX * bufferWidth);
+            const bufferY = Math.floor(pctY * bufferHeight);
+            
+            const index = (bufferY * bufferWidth + bufferX) * 4;
 
-        if (index >= 0 && index < pixelData.length) {
-            let targetR = pixelData[index];
-            let targetG = pixelData[index + 1];
-            let targetB = pixelData[index + 2];
+            if (index >= 0 && index < pixelData.length) {
+                let targetR = pixelData[index];
+                let targetG = pixelData[index + 1];
+                let targetB = pixelData[index + 2];
 
-            // Brightness Boost ajustado: Más sensible al color original
-            const minBrightness = 20; // Reducido para permitir colores oscuros si el video es oscuro
-            const boost = 1.3;        // Aumentado ligeramente para vividez
+                // Calculamos brillo promedio (0-255)
+                const brightness = (targetR + targetG + targetB) / 3;
+                
+                let finalR, finalG, finalB;
 
-            targetR = Math.min(255, targetR * boost + minBrightness);
-            targetG = Math.min(255, targetG * boost + minBrightness);
-            targetB = Math.min(255, targetB * boost + minBrightness);
+                // === REGLA DE NEGATIVO ===
+                // Si el fondo es blanco/claro (>180), la partícula se vuelve NEGRA
+                if (brightness > 180) {
+                    finalR = 0;
+                    finalG = 0;
+                    finalB = 0;
+                } else {
+                    // Si el fondo es oscuro o de color, la partícula brilla
+                    const boost = 1.3; 
+                    finalR = Math.min(255, targetR * boost);
+                    finalG = Math.min(255, targetG * boost);
+                    finalB = Math.min(255, targetB * boost);
+                }
 
-            // --- CAMBIO CLAVE AQUÍ ---
-            // Velocidad de reacción: 
-            // 0.05 = muy lento (suave)
-            // 0.2  = medio
-            // 0.8  = muy rápido (casi instantáneo)
-            // Usamos 0.5 para un equilibrio entre rapidez y evitar "ruido" excesivo
-            const reactionSpeed = 0.5; 
-
-            this.color.r = this.lerp(this.color.r, targetR, reactionSpeed);
-            this.color.g = this.lerp(this.color.g, targetG, reactionSpeed);
-            this.color.b = this.lerp(this.color.b, targetB, reactionSpeed);
+                // Interpolación rápida (0.4) para que reaccione al instante
+                this.color.r = this.lerp(this.color.r, finalR, 0.4);
+                this.color.g = this.lerp(this.color.g, finalG, 0.4);
+                this.color.b = this.lerp(this.color.b, finalB, 0.4);
+            }
         }
     }
 
-    // Historial y Reset (sin cambios mayores)
+    // Historial
     if (this.x2d && this.y2d) {
         this.history.push({ x: this.x2d, y: this.y2d });
         if (this.history.length > this.MAX_HISTORY) this.history.shift();
     }
 
+    // Reset si sale de límites
     if (this.z < 10 || Math.abs(this.x) > (this.width/2)/scale * 1.2) {
         this.reset();
     }
   }
 
   draw(ctx, centerX, centerY, musicState) {
-    // ... (El resto de tu método draw está bien, no requiere cambios para el color)
     const fov = 400;
     const scale = fov / (fov + this.z);
     
@@ -121,12 +120,14 @@ class NeuralParticle {
     const depthAlpha = Math.pow(Math.max(0, 1 - this.z / 1200), 1.5); 
     if (depthAlpha < 0.01) return false;
 
-    // Usamos Math.round para dibujar, es ligeramente más rápido que floor en algunos motores
-    const r = Math.round(this.color.r);
-    const g = Math.round(this.color.g);
-    const b = Math.round(this.color.b);
-    const alpha = depthAlpha * (0.6 + (musicState?.level||0)*0.4);
+    const r = Math.floor(this.color.r);
+    const g = Math.floor(this.color.g);
+    const b = Math.floor(this.color.b);
+    
+    // Alpha base + reactividad al audio
+    const alpha = depthAlpha * (0.8 + (musicState?.level||0)*0.2);
 
+    // Dibujar Estela
     if (this.history.length > 2) {
         ctx.beginPath();
         ctx.moveTo(this.history[0].x, this.history[0].y);
@@ -134,13 +135,13 @@ class NeuralParticle {
         ctx.lineTo(this.x2d, this.y2d);
         ctx.lineCap = 'round';
         ctx.lineWidth = this.baseSize * scale * 0.8;
-        // La estela hereda el color actual rápidamente
-        ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha * 0.5})`;
+        ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha * 0.6})`;
         ctx.stroke();
     }
 
     const size = Math.max(0.5, this.baseSize * scale * (1 + (musicState?.bass || 0)));
     
+    // Dibujar Núcleo
     ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
     ctx.beginPath();
     ctx.arc(this.x2d, this.y2d, size, 0, Math.PI * 2);
@@ -150,34 +151,32 @@ class NeuralParticle {
   }
 }
 
+// ==========================================
+// 2. CLASE PARTICLE SYSTEM
+// ==========================================
 export class ParticleSystem {
   constructor(canvas, colorSampler, audioAnalyzer) {
     this.canvas = canvas;
+    // IMPORTANTE: alpha true para ver el video de fondo a través del canvas
     this.ctx = canvas.getContext('2d', { alpha: true });
     this.colorSampler = colorSampler;
     this.audioAnalyzer = audioAnalyzer;
     this.particles = [];
     
-    this.MAX_PARTICLES = 100; // Puedes aumentar esto ligeramente si quieres más densidad
+    this.MAX_PARTICLES = 80; // Cantidad de partículas
     this.CONNECTION_DISTANCE = 130;
     this.MAX_CONNECTIONS_PER_PARTICLE = 3; 
 
-    // Aumentamos resolución del buffer para mayor precisión de color
-    // 64x64 es muy poco, los colores se mezclan mucho. 
-    // 128x128 o 200x200 da mejor detalle individual.
-    this.bufferCanvas = document.createElement('canvas');
-    this.bufferCanvas.width = 150;  
-    this.bufferCanvas.height = 150;
-    this.bufferCtx = this.bufferCanvas.getContext('2d', { willReadFrequently: true });
-
+    // Inicializamos las partículas
     for (let i = 0; i < this.MAX_PARTICLES; i++) {
       this.particles.push(new NeuralParticle(this.canvas.width, this.canvas.height));
     }
+    
+    // Bind para animaciones
     this.animate = this.animate.bind(this);
   }
 
   drawConnections(musicState) {
-      // ... (Tu lógica de conexiones está perfecta, mantenla igual)
       const level = musicState?.level || 0;
       if (level < 0.1) return;
 
@@ -188,11 +187,18 @@ export class ParticleSystem {
           const p1 = this.particles[i]; 
           if(!p1.x2d) continue;
 
+          // NO CONECTAR SI ES NEGRO (Evita líneas negras cruzando zonas blancas)
+          // Suma RGB < 30 es prácticamente negro
+          if ((p1.color.r + p1.color.g + p1.color.b) < 30) continue;
+
           let candidates = [];
           
           for(let j = i + 1; j < this.particles.length; j++){
               const p2 = this.particles[j];
               if(!p2.x2d) continue;
+              
+              // Tampoco conectar con partículas negras
+              if ((p2.color.r + p2.color.g + p2.color.b) < 30) continue;
 
               const dx = p1.x2d - p2.x2d;
               const dy = p1.y2d - p2.y2d;
@@ -205,6 +211,7 @@ export class ParticleSystem {
               }
           }
 
+          // Ordenar por distancia
           candidates.sort((a, b) => a.dist - b.dist);
 
           const connectionsToDraw = Math.min(candidates.length, this.MAX_CONNECTIONS_PER_PARTICLE);
@@ -219,7 +226,6 @@ export class ParticleSystem {
               if(alpha > 0.05) {
                   this.ctx.lineWidth = (0.5 + (musicState?.bass||0)) * (1 - dist/reach);
                   
-                  // Gradiente entre las dos partículas para conexiones suaves
                   const grad = this.ctx.createLinearGradient(p1.x2d, p1.y2d, p2.x2d, p2.y2d);
                   grad.addColorStop(0, `rgba(${Math.floor(p1.color.r)}, ${Math.floor(p1.color.g)}, ${Math.floor(p1.color.b)}, ${alpha})`);
                   grad.addColorStop(1, `rgba(${Math.floor(p2.color.r)}, ${Math.floor(p2.color.g)}, ${Math.floor(p2.color.b)}, ${alpha})`);
@@ -239,27 +245,28 @@ export class ParticleSystem {
     try { if (this.audioAnalyzer) musicState = this.audioAnalyzer.getState(); } catch(e) {}
     
     let pixelData = null;
-    try {
-        const videoSource = this.colorSampler.video || 
-                            this.colorSampler.source || 
-                            this.colorSampler.element || 
-                            document.querySelector('video');
+    let bufferW = 0; 
+    let bufferH = 0;
 
-        if (videoSource && videoSource.readyState >= 2) {
-            this.bufferCtx.drawImage(videoSource, 0, 0, this.bufferCanvas.width, this.bufferCanvas.height);
-            const imageData = this.bufferCtx.getImageData(0, 0, this.bufferCanvas.width, this.bufferCanvas.height);
-            pixelData = imageData.data;
+    try {
+        if (this.colorSampler) {
+            // Obtenemos los datos del ColorSampler externo
+            pixelData = this.colorSampler.getPixelData();
+            bufferW = this.colorSampler.width;
+            bufferH = this.colorSampler.height;
         }
     } catch(e) {}
 
+    // IMPORTANTE: Limpiamos el canvas para que sea transparente
+    // Esto permite que se vea el <video id="background-layer"> que pusiste en el HTML
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.ctx.globalCompositeOperation = 'source-over'; 
     
     this.particles.forEach(p => p.update(
         musicState, 
         pixelData, 
-        this.bufferCanvas.width, 
-        this.bufferCanvas.height, 
+        bufferW, 
+        bufferH, 
         this.canvas.width, 
         this.canvas.height
     ));
