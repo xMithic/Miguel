@@ -9,13 +9,10 @@ class NeuralParticle {
         this.height = height;
         this.history = [];
         this.MAX_HISTORY = 10;
-        
         // Color por defecto (Lavanda suave)
         this.color = { r: 220, g: 202, b: 255 };
-        
         this.x2d = 0;
         this.y2d = 0;
-        
         this.reset(true);
     }
 
@@ -23,16 +20,13 @@ class NeuralParticle {
         const fov = 400;
         this.z = isInitial ? Math.random() * 1200 : 800 + Math.random() * 400;
         const scale = fov / (fov + this.z);
-        
         this.x = (Math.random() - 0.5) * (this.width / scale);
         this.y = (Math.random() - 0.5) * (this.height / scale);
-        
         this.speed = 0.5 + Math.random() * 1.5;
         this.angle = Math.random() * Math.PI * 2;
         this.vx = Math.cos(this.angle) * 0.5;
         this.vy = Math.sin(this.angle) * 0.5;
         this.baseSize = 0.6 + Math.random() * 1.4;
-        
         this.history = [];
     }
 
@@ -49,13 +43,13 @@ class NeuralParticle {
         
         const turnSpeed = (Math.random() - 0.5) * 0.1 * (1 + mid);
         const moveSpeed = 0.5 * (1 + mid * 2);
-
+        
         this.vx = Math.cos(this.angle + turnSpeed) * moveSpeed;
         this.vy = Math.sin(this.angle + turnSpeed) * moveSpeed;
-
+        
         this.x += this.vx;
         this.y += this.vy;
-
+        
         const fov = 400;
         const scale = fov / (fov + this.z);
         const screenX = this.x * scale + canvasWidth / 2;
@@ -74,7 +68,7 @@ class NeuralParticle {
                     let targetR = pixelData[index];
                     let targetG = pixelData[index + 1];
                     let targetB = pixelData[index + 2];
-
+                    
                     const brightness = (targetR + targetG + targetB) / 3;
                     let finalR, finalG, finalB;
 
@@ -108,7 +102,6 @@ class NeuralParticle {
     draw(ctx, centerX, centerY, musicState) {
         const fov = 400;
         const scale = fov / (fov + this.z);
-
         this.x2d = this.x * scale + centerX;
         this.y2d = this.y * scale + centerY;
 
@@ -118,7 +111,6 @@ class NeuralParticle {
         const r = Math.floor(this.color.r);
         const g = Math.floor(this.color.g);
         const b = Math.floor(this.color.b);
-        
         const alpha = depthAlpha * (0.8 + (musicState?.level||0)*0.2);
 
         if (this.history.length > 2) {
@@ -126,7 +118,6 @@ class NeuralParticle {
             ctx.moveTo(this.history[0].x, this.history[0].y);
             for (let i = 1; i < this.history.length; i++) ctx.lineTo(this.history[i].x, this.history[i].y);
             ctx.lineTo(this.x2d, this.y2d);
-
             ctx.lineCap = 'round';
             ctx.lineWidth = this.baseSize * scale * 0.8;
             ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha * 0.6})`;
@@ -134,12 +125,11 @@ class NeuralParticle {
         }
 
         const size = Math.max(0.5, this.baseSize * scale * (1 + (musicState?.bass || 0)));
-
+        
         ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
         ctx.beginPath();
         ctx.arc(this.x2d, this.y2d, size, 0, Math.PI * 2);
         ctx.fill();
-
         return true;
     }
 }
@@ -147,23 +137,21 @@ class NeuralParticle {
 // ==========================================
 // 2. CLASE PARTICLE SYSTEM
 // ==========================================
-
 export class ParticleSystem {
     constructor(canvas, colorSampler, audioAnalyzer) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d', { alpha: true });
         this.colorSampler = colorSampler;
         this.audioAnalyzer = audioAnalyzer;
-
         this.particles = [];
-        this.MAX_PARTICLES = 200; 
+        this.MAX_PARTICLES = 200;
         this.CONNECTION_DISTANCE = 100;
         this.MAX_CONNECTIONS_PER_PARTICLE = 3;
 
         // -- INTERACTIVIDAD --
         this.mouse = { x: null, y: null, active: false };
         // AJUSTE: 180px para que se note la conexión pero sea "menos" que 300
-        this.MOUSE_DISTANCE = 180; 
+        this.MOUSE_DISTANCE = 180;
 
         this.initInputListeners();
         this.initParticles();
@@ -185,24 +173,20 @@ export class ParticleSystem {
             this.mouse.y = e.clientY - rect.top;
             this.mouse.active = true;
         });
-        
+
         window.addEventListener('mouseleave', () => {
             this.mouse.active = false;
         });
 
-        // TOUCH (Soporte Móvil Completo - CORREGIDO)
+        // TOUCH (Soporte Móvil Completo)
         const touchHandler = (e) => {
             const rect = this.canvas.getBoundingClientRect();
             const touch = e.touches[0];
-            
-            // Calculamos la posición relativa al canvas aunque el evento venga de window
             this.mouse.x = touch.clientX - rect.left;
             this.mouse.y = touch.clientY - rect.top;
             this.mouse.active = true;
         };
 
-        // CORRECCIÓN: Usamos window en lugar de this.canvas para capturar eventos 
-        // a través de otras capas (como el canvas de dibujo)
         window.addEventListener('touchstart', touchHandler, { passive: true });
         window.addEventListener('touchmove', touchHandler, { passive: true });
         window.addEventListener('touchend', () => { this.mouse.active = false; });
@@ -218,29 +202,29 @@ export class ParticleSystem {
         }
     }
 
+    // --- FUNCIÓN OPTIMIZADA PARA ELIMINAR LAG ---
     drawConnections(musicState) {
         const level = musicState?.level || 0;
-        const reach = this.CONNECTION_DISTANCE * (1 + (musicState?.bass||0)*1.8);
+        // Limitamos el multiplicador del bajo para que 'reach' no se vuelva gigante
+        const bassMulti = Math.min(musicState?.bass || 0, 1.5);
+        const reach = this.CONNECTION_DISTANCE * (1 + bassMulti * 1.5);
+        const reachSq = reach * reach; // Distancia al cuadrado (más rápido)
 
         this.ctx.lineCap = 'round';
 
-        for(let i = 0; i < this.particles.length; i++){
+        for (let i = 0; i < this.particles.length; i++) {
             const p1 = this.particles[i];
-            if(!p1.x2d) continue;
-            
+            if (!p1.x2d) continue;
+
             // --- 1. MODO GRAB (CONEXIÓN CON EL MOUSE) ---
-            // IMPORTANTE: Esto va ANTES del filtro de color para que funcione siempre
             if (this.mouse.active && this.mouse.x !== null) {
                 const dxm = p1.x2d - this.mouse.x;
                 const dym = p1.y2d - this.mouse.y;
-                // Calculamos distancia sin raíz cuadrada primero para optimizar
-                const distSq = dxm*dxm + dym*dym;
-                
+                const distSq = dxm * dxm + dym * dym;
+
                 if (distSq < this.MOUSE_DISTANCE * this.MOUSE_DISTANCE) {
                     const distMouse = Math.sqrt(distSq);
                     const alphaMouse = (1 - distMouse / this.MOUSE_DISTANCE);
-                    
-                    // La línea usa el color de la partícula (aunque sea negra)
                     this.ctx.strokeStyle = `rgba(${Math.floor(p1.color.r)}, ${Math.floor(p1.color.g)}, ${Math.floor(p1.color.b)}, ${alphaMouse})`;
                     this.ctx.lineWidth = 1;
                     this.ctx.beginPath();
@@ -251,45 +235,48 @@ export class ParticleSystem {
             }
 
             // --- 2. CONEXIONES ENTRE PARTÍCULAS (RED) ---
-            // Aquí sí aplicamos el filtro para no ensuciar el video con redes negras
+            // Filtro de brillo mínimo
             if ((p1.color.r + p1.color.g + p1.color.b) < 30) continue;
 
-            let candidates = [];
-            for(let j = i + 1; j < this.particles.length; j++){
+            let connectionsCount = 0;
+
+            for (let j = i + 1; j < this.particles.length; j++) {
+                // Optimización: Límite duro de conexiones
+                if (connectionsCount >= this.MAX_CONNECTIONS_PER_PARTICLE) break;
+
                 const p2 = this.particles[j];
-                if(!p2.x2d) continue;
+                if (!p2.x2d) continue;
                 if ((p2.color.r + p2.color.g + p2.color.b) < 30) continue;
 
                 const dx = p1.x2d - p2.x2d;
                 const dy = p1.y2d - p2.y2d;
-                if(Math.abs(dx) > reach || Math.abs(dy) > reach) continue;
-                const dist = Math.sqrt(dx*dx + dy*dy);
+                
+                // Optimización: Bounding box check
+                if (dx > reach || dx < -reach || dy > reach || dy < -reach) continue;
 
-                if(dist < reach){
-                    candidates.push({ particle: p2, dist: dist });
-                }
-            }
+                const distSq = dx * dx + dy * dy;
 
-            candidates.sort((a, b) => a.dist - b.dist);
-            const connectionsToDraw = Math.min(candidates.length, this.MAX_CONNECTIONS_PER_PARTICLE);
+                if (distSq < reachSq) {
+                    const dist = Math.sqrt(distSq);
+                    const alpha = (1 - dist / reach) * level * 0.8;
 
-            for(let k = 0; k < connectionsToDraw; k++){
-                const target = candidates[k];
-                const p2 = target.particle;
-                const dist = target.dist;
-                const alpha = (1 - dist/reach) * level * 0.8;
-
-                if(alpha > 0.05) {
-                    this.ctx.lineWidth = (0.5 + (musicState?.bass||0)) * (1 - dist/reach);
-                    const grad = this.ctx.createLinearGradient(p1.x2d, p1.y2d, p2.x2d, p2.y2d);
-                    grad.addColorStop(0, `rgba(${Math.floor(p1.color.r)}, ${Math.floor(p1.color.g)}, ${Math.floor(p1.color.b)}, ${alpha})`);
-                    grad.addColorStop(1, `rgba(${Math.floor(p2.color.r)}, ${Math.floor(p2.color.g)}, ${Math.floor(p2.color.b)}, ${alpha})`);
-
-                    this.ctx.strokeStyle = grad;
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(p1.x2d, p1.y2d);
-                    this.ctx.lineTo(p2.x2d, p2.y2d);
-                    this.ctx.stroke();
+                    if (alpha > 0.05) {
+                        this.ctx.lineWidth = (0.5 + bassMulti) * (1 - dist / reach);
+                        
+                        // Optimización: Color promedio sólido en vez de gradiente
+                        const r = Math.floor((p1.color.r + p2.color.r) / 2);
+                        const g = Math.floor((p1.color.g + p2.color.g) / 2);
+                        const b = Math.floor((p1.color.b + p2.color.b) / 2);
+                        
+                        this.ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+                        
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(p1.x2d, p1.y2d);
+                        this.ctx.lineTo(p2.x2d, p2.y2d);
+                        this.ctx.stroke();
+                        
+                        connectionsCount++;
+                    }
                 }
             }
         }
@@ -332,6 +319,7 @@ export class ParticleSystem {
     }
 
     start() { this.animate(); }
+
     setConnectionDistance(d) { this.CONNECTION_DISTANCE = d; }
 
     resize(width, height) {
