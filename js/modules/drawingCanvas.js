@@ -4,18 +4,18 @@ export class DrawingCanvas {
         this.ctx = canvas.getContext('2d', { alpha: true });
         this.cursorManager = cursorManager;
         this.audioBtn = audioBtn;
+
         this.isDrawing = false;
         this.points = [];
-        this.hue = 0; // Variable para la animación de color
-
-        // Referencia al video de fondo
+        this.hue = 0;
         this.bgVideo = document.querySelector('video.main-video') || document.querySelector('#background-layer');
-
-        // Configuración de Alta Resolución
         this.pixelRatio = window.devicePixelRatio || 1;
+
+        // --- CORRECCIÓN 1: Evitar gestos de navegador en el canvas ---
+        this.canvas.style.touchAction = 'none';
+
         this.resize();
 
-        // Configuración inicial de estilo
         this.ctx.lineCap = 'round';
         this.ctx.lineJoin = 'round';
 
@@ -33,84 +33,102 @@ export class DrawingCanvas {
         this.canvas.style.width = `${this.width}px`;
         this.canvas.style.height = `${this.height}px`;
         this.ctx.scale(this.pixelRatio, this.pixelRatio);
-        
-        // Restauramos estilos tras el resize
         this.ctx.lineCap = 'round';
         this.ctx.lineJoin = 'round';
     }
 
     setupEventListeners() {
-        window.addEventListener('pointerdown', (e) => {
-            if (e.target && (e.target === this.audioBtn || e.target.closest('#audio-btn'))) return;
+        // --- CORRECCIÓN 2: Eventos Unificados y Bloqueo de Scroll ---
+        
+        // Usamos el canvas directamente para 'start' para evitar conflictos con botones externos
+        this.canvas.addEventListener('pointerdown', (e) => {
+            // Permitir solo botón izquierdo o toque principal
+            if (!e.isPrimary && e.button !== 0) return;
+
             this.isDrawing = true;
             this.points = [];
+            
+            // Captura el puntero para que si te sales del canvas, sigas dibujando
+            this.canvas.setPointerCapture(e.pointerId);
+            
             this.addPoint(e.clientX, e.clientY);
+            
+            // IMPORTANTE: Evita que el navegador intente hacer scroll o zoom
+            e.preventDefault(); 
         });
 
+        // 'move' en window para fluidez, pero comprobando isDrawing
         window.addEventListener('pointermove', (e) => {
-            if (this.isDrawing) this.addPoint(e.clientX, e.clientY);
+            if (this.isDrawing) {
+                // Prevenir scroll si estamos dibujando
+                if (e.cancelable) e.preventDefault(); 
+                this.addPoint(e.clientX, e.clientY);
+            }
         });
 
-        window.addEventListener('pointerup', () => {
-            this.isDrawing = false;
-            this.points = [];
-        });
+        const stopDrawing = (e) => {
+            if (this.isDrawing) {
+                this.isDrawing = false;
+                this.points = [];
+                // Liberar captura si existe
+                if (e.pointerId && this.canvas.hasPointerCapture(e.pointerId)) {
+                    this.canvas.releasePointerCapture(e.pointerId);
+                }
+            }
+        };
+
+        window.addEventListener('pointerup', stopDrawing);
+        window.addEventListener('pointercancel', stopDrawing);
     }
 
     addPoint(x, y) {
+        // Aseguramos coordenadas relativas correctas si el canvas tuviera offset (opcional pero seguro)
+        // Como es full screen, clientX/Y suelen estar bien, pero esto es más robusto:
+        // const rect = this.canvas.getBoundingClientRect();
+        // const relX = x - rect.left;
+        // const relY = y - rect.top;
+        // this.points.push({ x: relX, y: relY, time: Date.now() });
+        // this.drawCurve(relX, relY);
+
+        // Usamos clientX directo como en tu original ya que parece ser pantalla completa
         this.points.push({ x, y, time: Date.now() });
         this.drawCurve(x, y);
     }
 
     drawCurve(currentX, currentY) {
         if (this.points.length < 2) return;
-
+        
         const p1 = this.points[this.points.length - 2];
         const p2 = this.points[this.points.length - 1];
 
-        // --- CORRECCIÓN CLAVE: Asegurar modo de pintura ---
-        // Esto evita que se quede en modo "borrar" del animate()
         this.ctx.globalCompositeOperation = 'source-over';
-
-        // Incrementamos el matiz (Hue)
-        this.hue = (this.hue + 5) % 360; // +5 para que cambie de color más rápido
+        
+        this.hue = (this.hue + 5) % 360;
         const animatedColor = `hsl(${this.hue}, 100%, 60%)`;
 
-        // Cálculo de grosor basado en velocidad
         const dist = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
         const velocity = dist / (p2.time - p1.time || 1);
-        const targetWidth = Math.max(0.5, 2 - velocity * 0.2); // Grosor ajustado
+        const targetWidth = Math.max(0.5, 2 - velocity * 0.2);
 
         this.ctx.beginPath();
         this.ctx.lineWidth = targetWidth;
-        
-        // --- SIN BLUR PARA EVITAR RASTRO SUCIO ---
-        this.ctx.shadowBlur = 0; 
+        this.ctx.shadowBlur = 0;
         this.ctx.strokeStyle = animatedColor;
 
-        // Dibujo curva cuadrática para suavidad
         this.ctx.moveTo(p1.x, p1.y);
         const midX = (p1.x + p2.x) / 2;
         const midY = (p1.y + p2.y) / 2;
         this.ctx.quadraticCurveTo(p1.x, p1.y, midX, midY);
         this.ctx.lineTo(p2.x, p2.y);
-        
         this.ctx.stroke();
     }
 
     animate() {
         this.ctx.save();
-        
-        // --- BORRADO LIMPIO Y RÁPIDO ---
         this.ctx.globalCompositeOperation = 'destination-out';
-        
-        // 0.25 hace que desaparezca en ~0.3 segundos (muy rápido y sin rastro)
-        // Si lo quieres UN PELÍN más lento, usa 0.15
-        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.25)'; 
-        
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
         this.ctx.fillRect(0, 0, this.width, this.height);
         this.ctx.restore();
-
         requestAnimationFrame(() => this.animate());
     }
 }
