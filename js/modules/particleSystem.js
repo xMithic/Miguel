@@ -1,4 +1,4 @@
-deimport { ColorSampler } from '../utils/colorSampler.js';
+import { ColorSampler } from '../utils/colorSampler.js';
 
 // ==========================================
 // 1. CLASE NEURAL PARTICLE
