@@ -4,30 +4,21 @@ export class DrawingCanvas {
         this.ctx = canvas.getContext('2d', { alpha: true });
         this.cursorManager = cursorManager;
         this.audioBtn = audioBtn;
-
         this.isDrawing = false;
         this.points = [];
         this.hue = 0; // Variable para la animación de color
-        
-        // Referencia al video de fondo (Mantenida aunque no se use para color ahora)
+
+        // Referencia al video de fondo
         this.bgVideo = document.querySelector('video.main-video') || document.querySelector('#background-layer');
-        
-        // Canvas temporal (Mantenido por compatibilidad con tu código original)
-        this.tempCanvas = document.createElement('canvas');
-        this.tempCtx = this.tempCanvas.getContext('2d', { willReadFrequently: true });
-        this.tempCanvas.width = 1; 
-        this.tempCanvas.height = 1;
 
         // Configuración de Alta Resolución
         this.pixelRatio = window.devicePixelRatio || 1;
         this.resize();
 
+        // Configuración inicial de estilo
         this.ctx.lineCap = 'round';
         this.ctx.lineJoin = 'round';
-        
-        // Efecto visual: Superposición
-        this.ctx.globalCompositeOperation = 'screen'; 
-        
+
         window.addEventListener('resize', () => this.resize());
         this.setupEventListeners();
         this.animate();
@@ -37,13 +28,15 @@ export class DrawingCanvas {
         const parent = this.canvas.parentElement || document.body;
         this.width = parent.clientWidth;
         this.height = parent.clientHeight;
-        
         this.canvas.width = this.width * this.pixelRatio;
         this.canvas.height = this.height * this.pixelRatio;
         this.canvas.style.width = `${this.width}px`;
         this.canvas.style.height = `${this.height}px`;
-        
         this.ctx.scale(this.pixelRatio, this.pixelRatio);
+        
+        // Restauramos estilos tras el resize
+        this.ctx.lineCap = 'round';
+        this.ctx.lineJoin = 'round';
     }
 
     setupEventListeners() {
@@ -64,8 +57,6 @@ export class DrawingCanvas {
         });
     }
 
-    // ELIMINADO: getNeonColor (ya no se usa, el color es animado)
-
     addPoint(x, y) {
         this.points.push({ x, y, time: Date.now() });
         this.drawCurve(x, y);
@@ -77,25 +68,27 @@ export class DrawingCanvas {
         const p1 = this.points[this.points.length - 2];
         const p2 = this.points[this.points.length - 1];
 
-        // --- CAMBIO ÚNICO AQUÍ: COLOR ANIMADO ---
-        // Incrementamos el matiz (Hue) en cada segmento dibujado
-        this.hue = (this.hue + 2) % 360; 
+        // --- CORRECCIÓN CLAVE: Asegurar modo de pintura ---
+        // Esto evita que se quede en modo "borrar" del animate()
+        this.ctx.globalCompositeOperation = 'source-over';
+
+        // Incrementamos el matiz (Hue)
+        this.hue = (this.hue + 5) % 360; // +5 para que cambie de color más rápido
         const animatedColor = `hsl(${this.hue}, 100%, 60%)`;
 
-        // 2. GROSOR MÍNIMO (MANTENIDO EXACTO)
+        // Cálculo de grosor basado en velocidad
         const dist = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
         const velocity = dist / (p2.time - p1.time || 1);
-        const targetWidth = Math.max(0.8, 3 - velocity * 0.1);
+        const targetWidth = Math.max(0.5, 2 - velocity * 0.2); // Grosor ajustado
 
         this.ctx.beginPath();
         this.ctx.lineWidth = targetWidth;
         
-        // 3. EFECTO GLOW (COLOR MULTICOLOR)
+        // --- SIN BLUR PARA EVITAR RASTRO SUCIO ---
+        this.ctx.shadowBlur = 0; 
         this.ctx.strokeStyle = animatedColor;
-        this.ctx.shadowBlur = 0.1; // Un poco más de brillo para que el color destaque
-        this.ctx.shadowColor = animatedColor;
 
-        // Dibujo (MANTENIDO EXACTO)
+        // Dibujo curva cuadrática para suavidad
         this.ctx.moveTo(p1.x, p1.y);
         const midX = (p1.x + p2.x) / 2;
         const midY = (p1.y + p2.y) / 2;
@@ -106,10 +99,15 @@ export class DrawingCanvas {
     }
 
     animate() {
-        // Borrado suave (MANTENIDO EXACTO)
         this.ctx.save();
+        
+        // --- BORRADO LIMPIO Y RÁPIDO ---
         this.ctx.globalCompositeOperation = 'destination-out';
-        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.02)'; 
+        
+        // 0.25 hace que desaparezca en ~0.3 segundos (muy rápido y sin rastro)
+        // Si lo quieres UN PELÍN más lento, usa 0.15
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.25)'; 
+        
         this.ctx.fillRect(0, 0, this.width, this.height);
         this.ctx.restore();
 
