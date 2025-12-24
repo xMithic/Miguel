@@ -1,13 +1,14 @@
+import { ColorSampler } from '../utils/colorSampler.js';
+
 // ==========================================
-// 1. CLASE COLOR SAMPLER (Dinámica y Ajustada)
+// 1. CLASE COLOR SAMPLER (Sin cambios mayores, funciona bien)
 // ==========================================
 export class ColorSampler {
   constructor(videoElement) {
     this.videoElement = videoElement;
-    // Iniciamos con valores base, pero se ajustarán al video real
     this.width = 0;
     this.height = 0;
-    this.smCanvas = new OffscreenCanvas(1, 1); // Se redimensionará solo
+    this.smCanvas = new OffscreenCanvas(1, 1);
     this.smCtx = this.smCanvas.getContext('2d', { willReadFrequently: true });
     this.lastSrcW = 0;
     this.lastSrcH = 0;
@@ -15,43 +16,32 @@ export class ColorSampler {
 
   getPixelData() {
     const video = this.videoElement;
-    
-    // Verificación de seguridad
     if (!video || video.readyState < 2) return null;
 
-    // Detectar cambios en la resolución del video o inicialización
     const vW = video.videoWidth;
     const vH = video.videoHeight;
 
     if (vW !== this.lastSrcW || vH !== this.lastSrcH) {
         this.lastSrcW = vW;
         this.lastSrcH = vH;
-        
-        // CALIDAD DINÁMICA:
-        // Usamos una escala del 20-25% del video original. 
-        // Para un video 1080p, esto crea un mapa de ~250px.
-        // Es suficiente para precisión perfecta de partículas sin matar la CPU.
-        const scale = 0.25; 
-        
+        // Escala del 20% es suficiente para precisión de color
+        const scale = 0.20; 
         this.width = Math.floor(vW * scale);
         this.height = Math.floor(vH * scale);
-        
         this.smCanvas.width = this.width;
         this.smCanvas.height = this.height;
     }
 
     if (this.width > 0 && this.height > 0) {
-        // Dibujamos el video escalado (mantiene aspect ratio correcto)
         this.smCtx.drawImage(video, 0, 0, this.width, this.height);
         return this.smCtx.getImageData(0, 0, this.width, this.height).data;
     }
-    
     return null;
   }
 }
 
 // ==========================================
-// 2. NEURAL PARTICLE (Reacción Inteligente)
+// 2. NEURAL PARTICLE (CORREGIDA PARA FONDO NEGRO)
 // ==========================================
 class NeuralParticle {
   constructor(width, height) {
@@ -59,7 +49,8 @@ class NeuralParticle {
     this.height = height;
     this.history = []; 
     this.MAX_HISTORY = 10;
-    this.color = { r: 255, g: 255, b: 255 };
+    // INICIO: Empiezan en negro para no dar "falso flash" blanco al cargar
+    this.color = { r: 0, g: 0, b: 0 };
     this.x2d = 0;
     this.y2d = 0;
     this.reset(true);
@@ -83,7 +74,7 @@ class NeuralParticle {
   lerp(start, end, amt) { return (1 - amt) * start + amt * end; }
 
   update(musicState, pixelData, bufferW, bufferH, canvasW, canvasH) {
-    // --- Física ---
+    // --- Física (Movimiento) ---
     const bass = musicState?.bass || 0;
     const mid = musicState?.mid || 0;
     this.z -= this.speed * (1 + bass * 3);
@@ -97,16 +88,13 @@ class NeuralParticle {
     const fov = 400;
     const scale = fov / (fov + this.z);
     
-    // Coordenadas exactas en pantalla
     const screenX = this.x * scale + canvasW / 2;
     const screenY = this.y * scale + canvasH / 2;
 
-    // --- COLOR INTELIGENTE ---
+    // --- LÓGICA DE COLOR SINCRONIZADA ---
     if (pixelData && bufferW > 0) {
-        // Verificar límites
         if(screenX >= 0 && screenX < canvasW && screenY >= 0 && screenY < canvasH) {
             
-            // Mapeo preciso: Pantalla -> Buffer de video
             const pctX = screenX / canvasW;
             const pctY = screenY / canvasH;
             
@@ -120,23 +108,25 @@ class NeuralParticle {
                 const tg = pixelData[index + 1];
                 const tb = pixelData[index + 2];
 
-                // ALGORITMO DE RESPUESTA ADAPTATIVA
-                // Calculamos cuánto difiere el nuevo color del actual
-                const diff = Math.abs(tr - this.color.r) + Math.abs(tg - this.color.g) + Math.abs(tb - this.color.b);
+                // CORRECCIÓN 1: No sumar un "suelo" fijo.
+                // Si el pixel es negro (0,0,0), el target debe ser (0,0,0).
+                // Solo aumentamos la saturación/brillo relativo (multiplicador).
+                const boost = 1.3; 
                 
-                // Si la diferencia es grande (>60), es un corte de escena: Reaccionar RÁPIDO (0.4)
-                // Si la diferencia es pequeña, es movimiento suave: Reaccionar LENTO (0.1)
-                // Esto da la sensación de respuesta instantánea sin "temblequeo"
-                const reactionSpeed = diff > 60 ? 0.4 : 0.12;
+                const finalR = Math.min(255, tr * boost);
+                const finalG = Math.min(255, tg * boost);
+                const finalB = Math.min(255, tb * boost);
 
-                // Brightness Boost (Solo si es muy oscuro)
-                // Mantiene el color fiel pero visible
-                const boost = 1.1; 
-                const floor = 30;
-                
-                const finalR = Math.min(255, tr * boost + floor);
-                const finalG = Math.min(255, tg * boost + floor);
-                const finalB = Math.min(255, tb * boost + floor);
+                // CORRECCIÓN 2: Detección de oscuridad
+                // Si el color destino es muy oscuro (casi negro), reaccionar INSTANTÁNEAMENTE
+                // Esto evita el "fantasma" blanco mientras se apaga.
+                const isDark = (finalR + finalG + finalB) < 20;
+
+                // CORRECCIÓN 3: Velocidad de reacción
+                // Si es un corte de cámara (diferencia grande) o hay oscuridad: 0.6 (Muy rápido)
+                // Si es movimiento suave: 0.3 (Sincronizado pero fluido)
+                const diff = Math.abs(finalR - this.color.r) + Math.abs(finalG - this.color.g) + Math.abs(finalB - this.color.b);
+                const reactionSpeed = (isDark || diff > 50) ? 0.6 : 0.3;
 
                 this.color.r = this.lerp(this.color.r, finalR, reactionSpeed);
                 this.color.g = this.lerp(this.color.g, finalG, reactionSpeed);
@@ -167,8 +157,19 @@ class NeuralParticle {
     const r = Math.floor(this.color.r);
     const g = Math.floor(this.color.g);
     const b = Math.floor(this.color.b);
-    const alpha = depthAlpha * (0.6 + (musicState?.level||0)*0.4);
+    
+    // CORRECCIÓN 4: Fade to Black
+    // Si la partícula es negra, reducimos también su Alpha para que no se vea como un "agujero"
+    // sino que desaparezca suavemente.
+    const brightness = (r + g + b) / 3;
+    const darkFade = Math.min(1, brightness / 30); // Si brillo < 30, alpha baja
+    
+    const alpha = depthAlpha * (0.6 + (musicState?.level||0)*0.4) * darkFade;
 
+    // Si es invisible, no dibujar nada (ahorra recursos)
+    if (alpha < 0.01) return false;
+
+    // Dibujar Estela
     if (this.history.length > 2) {
         ctx.beginPath();
         ctx.moveTo(this.history[0].x, this.history[0].y);
@@ -182,7 +183,8 @@ class NeuralParticle {
 
     const size = Math.max(0.5, this.baseSize * scale * (1 + (musicState?.bass || 0)));
     
-    if ((musicState?.level || 0) > 0.2) {
+    // El Glow solo aparece si hay brillo real (no en negro)
+    if ((musicState?.level || 0) > 0.2 && brightness > 20) {
       const glowSize = size * 3;
       const gradient = ctx.createRadialGradient(this.x2d, this.y2d, 0, this.x2d, this.y2d, glowSize);
       gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${alpha})`);
@@ -202,7 +204,7 @@ class NeuralParticle {
 }
 
 // ==========================================
-// 3. PARTICLE SYSTEM
+// 3. PARTICLE SYSTEM (Sin cambios mayores)
 // ==========================================
 export class ParticleSystem {
   constructor(canvas, colorSampler, audioAnalyzer) {
@@ -232,11 +234,18 @@ export class ParticleSystem {
       for(let i = 0; i < this.particles.length; i++){
           const p1 = this.particles[i]; 
           if(!p1.x2d) continue;
+          
+          // Si la partícula es negra/oscura, no conectar líneas (se ve mal una línea negra cruzando)
+          const b1 = (p1.color.r + p1.color.g + p1.color.b);
+          if (b1 < 20) continue; 
 
           let candidates = [];
           for(let j = i + 1; j < this.particles.length; j++){
               const p2 = this.particles[j];
               if(!p2.x2d) continue;
+              
+              const b2 = (p2.color.r + p2.color.g + p2.color.b);
+              if (b2 < 20) continue;
 
               const dx = p1.x2d - p2.x2d;
               const dy = p1.y2d - p2.y2d;
@@ -248,7 +257,6 @@ export class ParticleSystem {
               }
           }
 
-          // Ordenar por distancia (Crucial para evitar parpadeo de líneas)
           candidates.sort((a, b) => a.dist - b.dist);
           const count = Math.min(candidates.length, this.MAX_CONNECTIONS_PER_PARTICLE);
 
@@ -260,7 +268,6 @@ export class ParticleSystem {
               
               if(alpha > 0.05) {
                   this.ctx.lineWidth = (0.5 + (musicState?.bass||0)) * (1 - dist/reach);
-                  // Gradiente hermoso entre dos colores distintos
                   const grad = this.ctx.createLinearGradient(p1.x2d, p1.y2d, p2.x2d, p2.y2d);
                   grad.addColorStop(0, `rgba(${p1.color.r},${p1.color.g},${p1.color.b},${alpha})`);
                   grad.addColorStop(1, `rgba(${p2.color.r},${p2.color.g},${p2.color.b},${alpha})`);
@@ -279,7 +286,6 @@ export class ParticleSystem {
     let musicState = { bass: 0, mid: 0, treble: 0, level: 0 };
     try { if (this.audioAnalyzer) musicState = this.audioAnalyzer.getState(); } catch(e) {}
     
-    // Obtener datos del frame actual
     let pixelData = null;
     let bufferW = 0; 
     let bufferH = 0;
@@ -287,7 +293,6 @@ export class ParticleSystem {
     try {
         if (this.colorSampler) {
             pixelData = this.colorSampler.getPixelData();
-            // Leemos las dimensiones reales generadas por el Sampler
             bufferW = this.colorSampler.width;
             bufferH = this.colorSampler.height;
         }
