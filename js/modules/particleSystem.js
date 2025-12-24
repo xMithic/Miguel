@@ -1,5 +1,8 @@
 import { ColorSampler } from '../utils/colorSampler.js';
 
+// ==========================================
+// CLASE 1: LA PARTÍCULA (El Actor)
+// ==========================================
 class NeuralParticle {
   constructor(width, height) {
     this.width = width;
@@ -7,21 +10,18 @@ class NeuralParticle {
     this.history = []; 
     this.MAX_HISTORY = 10;
     this.color = { r: 255, g: 255, b: 255 };
-    
-    // Coordenadas 2D proyectadas
     this.x2d = 0;
     this.y2d = 0;
-    
     this.reset(true);
   }
 
   reset(isInitial = false) {
     const fov = 400;
-    // Z distribuidas para profundidad
+    // Distribuimos las partículas en profundidad (Z)
     this.z = isInitial ? Math.random() * 1200 : 800 + Math.random() * 400;
     const scale = fov / (fov + this.z);
     
-    // Posición expandida
+    // Posición expandida para llenar pantallas grandes
     this.x = (Math.random() - 0.5) * (this.width / scale);
     this.y = (Math.random() - 0.5) * (this.height / scale);
     
@@ -35,67 +35,77 @@ class NeuralParticle {
 
   lerp(start, end, amt) { return (1 - amt) * start + amt * end; }
 
-  update(musicState, pixelData, bufferWidth, bufferHeight, canvasWidth, canvasHeight) {
-    // 1. Movimiento físico
+  update(musicState, pixelData, bufferW, bufferH, canvasW, canvasH) {
+    // --- EFECTO "BULLET TIME" (BRUTAL) ---
     const bass = musicState?.bass || 0;
-    const mid = musicState?.mid || 0;
-
-    this.z -= this.speed * (1 + bass * 3);
+    const level = musicState?.level || 0;
     
-    const turnSpeed = (Math.random() - 0.5) * 0.1 * (1 + mid);
-    const moveSpeed = 0.5 * (1 + mid * 2);
-    this.vx = Math.cos(this.angle + turnSpeed) * moveSpeed;
-    this.vy = Math.sin(this.angle + turnSpeed) * moveSpeed;
-    this.x += this.vx; 
-    this.y += this.vy;
+    // Si la música está tranquila, el tiempo se congela (0.2x)
+    // Si explota el bajo, el tiempo acelera (hasta 3.0x)
+    const timeScale = level < 0.1 ? 0.2 : 1 + bass * 2.0;
 
+    // Aplicamos el timeScale a TODO el movimiento
+    this.z -= this.speed * timeScale;
+    
+    const turnSpeed = (Math.random() - 0.5) * 0.1 * (1 + (musicState?.mid||0));
+    this.vx = Math.cos(this.angle + turnSpeed) * 0.5; // Base speed fija
+    this.vy = Math.sin(this.angle + turnSpeed) * 0.5;
+    
+    this.x += this.vx * timeScale; 
+    this.y += this.vy * timeScale;
+
+    // --- PROYECCIÓN 3D A 2D ---
     const fov = 400;
     const scale = fov / (fov + this.z);
+    const screenX = this.x * scale + canvasW / 2;
+    const screenY = this.y * scale + canvasH / 2;
 
-    // Calculamos la posición 2D temporal para saber qué color le toca
-    const screenX = this.x * scale + canvasWidth / 2;
-    const screenY = this.y * scale + canvasHeight / 2;
+    // --- COLOR INTELIGENTE Y RÁPIDO ---
+    if (pixelData && bufferW > 0) {
+        if(screenX >= 0 && screenX < canvasW && screenY >= 0 && screenY < canvasH) {
+            
+            // Mapeo coordenadas pantalla -> coordenadas video
+            const pctX = screenX / canvasW;
+            const pctY = screenY / canvasH;
+            const bufX = Math.floor(pctX * bufferW);
+            const bufY = Math.floor(pctY * bufferH);
+            const index = (bufY * bufferW + bufX) * 4;
 
-    // 2. Muestreo de Color "Spatial" (Espacial)
-    // Si tenemos datos del mini-canvas (buffer), buscamos el color exacto en esa posición
-    if (pixelData && screenX >= 0 && screenX < canvasWidth && screenY >= 0 && screenY < canvasHeight) {
-        // Mapear coordenada de pantalla (ej 1920x1080) a buffer (ej 64x64)
-        const xPct = screenX / canvasWidth;
-        const yPct = screenY / canvasHeight;
-        
-        const bufferX = Math.floor(xPct * bufferWidth);
-        const bufferY = Math.floor(yPct * bufferHeight);
-        
-        const index = (bufferY * bufferWidth + bufferX) * 4;
+            if (index >= 0 && index < pixelData.length) {
+                const tr = pixelData[index];
+                const tg = pixelData[index + 1];
+                const tb = pixelData[index + 2];
 
-        if (index >= 0 && index < pixelData.length) {
-            let targetR = pixelData[index];
-            let targetG = pixelData[index + 1];
-            let targetB = pixelData[index + 2];
+                // Detectamos cambios bruscos (Cortes de cámara)
+                const diff = Math.abs(tr - this.color.r) + Math.abs(tg - this.color.g) + Math.abs(tb - this.color.b);
+                
+                // Velocidad de reacción variable
+                let reactionSpeed = 0.1;
+                if (diff > 50) reactionSpeed = 0.6;      // Corte de cámara -> Instantáneo
+                else if (diff > 15) reactionSpeed = 0.25; // Movimiento -> Rápido
+                else reactionSpeed = 0.08;                // Ruido -> Suave
 
-            // Brightness Boost: Asegura que no se pierdan en fondos negros
-            // (Si el fondo es negro puro, las sube a un gris oscuro visible)
-            const minBrightness = 40;
-            const boost = 1.2;
+                // Boost de color para que no se vea apagado
+                const boost = 1.2; 
+                const floor = 25;
+                const finalR = Math.min(255, tr * boost + floor);
+                const finalG = Math.min(255, tg * boost + floor);
+                const finalB = Math.min(255, tb * boost + floor);
 
-            targetR = Math.min(255, targetR * boost + minBrightness);
-            targetG = Math.min(255, targetG * boost + minBrightness);
-            targetB = Math.min(255, targetB * boost + minBrightness);
-
-            // Interpolación rápida para respuesta inmediata (0.2)
-            this.color.r = this.lerp(this.color.r, targetR, 0.2);
-            this.color.g = this.lerp(this.color.g, targetG, 0.2);
-            this.color.b = this.lerp(this.color.b, targetB, 0.2);
+                this.color.r = this.lerp(this.color.r, finalR, reactionSpeed);
+                this.color.g = this.lerp(this.color.g, finalG, reactionSpeed);
+                this.color.b = this.lerp(this.color.b, finalB, reactionSpeed);
+            }
         }
     }
 
-    // Historial
+    // Historial para estelas
     if (this.x2d && this.y2d) {
         this.history.push({ x: this.x2d, y: this.y2d });
         if (this.history.length > this.MAX_HISTORY) this.history.shift();
     }
 
-    // Reset si sale de límites
+    // Reset si se sale o pasa detrás de la cámara
     if (this.z < 10 || Math.abs(this.x) > (this.width/2)/scale * 1.2) {
         this.reset();
     }
@@ -104,17 +114,17 @@ class NeuralParticle {
   draw(ctx, centerX, centerY, musicState) {
     const fov = 400;
     const scale = fov / (fov + this.z);
-    
     this.x2d = this.x * scale + centerX;
     this.y2d = this.y * scale + centerY;
     
+    // Profundidad de campo (desaparece si está muy lejos)
     const depthAlpha = Math.pow(Math.max(0, 1 - this.z / 1200), 1.5); 
     if (depthAlpha < 0.01) return false;
 
     const r = Math.floor(this.color.r);
     const g = Math.floor(this.color.g);
     const b = Math.floor(this.color.b);
-    const alpha = depthAlpha * (0.6 + (musicState?.level||0)*0.4);
+    const alpha = depthAlpha * (0.8 + (musicState?.level||0)*0.2);
 
     // Dibujar Estela
     if (this.history.length > 2) {
@@ -124,22 +134,36 @@ class NeuralParticle {
         ctx.lineTo(this.x2d, this.y2d);
         ctx.lineCap = 'round';
         ctx.lineWidth = this.baseSize * scale * 0.8;
-        ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha * 0.5})`;
+        ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha * 0.4})`; // Estela más sutil
         ctx.stroke();
     }
 
-    const size = Math.max(0.5, this.baseSize * scale * (1 + (musicState?.bass || 0)));
+    // Tamaño reactivo al bajo
+    const size = Math.max(0.5, this.baseSize * scale * (1 + (musicState?.bass || 0) * 1.5));
     
-    // Dibujar Núcleo
+    // Glow (Resplandor)
+    if ((musicState?.level || 0) > 0.1) {
+      const glowSize = size * 3;
+      const gradient = ctx.createRadialGradient(this.x2d, this.y2d, 0, this.x2d, this.y2d, glowSize);
+      gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${alpha})`);
+      gradient.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(this.x2d, this.y2d, glowSize, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
     ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
     ctx.beginPath();
     ctx.arc(this.x2d, this.y2d, size, 0, Math.PI * 2);
     ctx.fill();
-    
     return true;
   }
 }
 
+// ==========================================
+// CLASE 2: EL SISTEMA (El Director)
+// ==========================================
 export class ParticleSystem {
   constructor(canvas, colorSampler, audioAnalyzer) {
     this.canvas = canvas;
@@ -148,17 +172,10 @@ export class ParticleSystem {
     this.audioAnalyzer = audioAnalyzer;
     this.particles = [];
     
-    // Configuración
-    this.MAX_PARTICLES = 80;
-    this.CONNECTION_DISTANCE = 130;
-    this.MAX_CONNECTIONS_PER_PARTICLE = 3; // Límite estricto solicitado
-
-    // SISTEMA DE CAPTURA DE COLOR INTERNO
-    // Creamos un canvas pequeño invisible para procesar el video rápido
-    this.bufferCanvas = document.createElement('canvas');
-    this.bufferCanvas.width = 64;  // Baja resolución es suficiente para color ambiental
-    this.bufferCanvas.height = 64;
-    this.bufferCtx = this.bufferCanvas.getContext('2d', { willReadFrequently: true }); // Optimización clave
+    // Configuración Minimalista
+    this.MAX_PARTICLES = 80;        // Cantidad justa, no saturada
+    this.CONNECTION_DISTANCE = 140; // Distancia media
+    this.MAX_CONNECTIONS_PER_PARTICLE = 3; // Pocas líneas para limpieza visual
 
     for (let i = 0; i < this.MAX_PARTICLES; i++) {
       this.particles.push(new NeuralParticle(this.canvas.width, this.canvas.height));
@@ -166,66 +183,73 @@ export class ParticleSystem {
     this.animate = this.animate.bind(this);
   }
 
-  // MÉTODO NUEVO: Dibuja conexiones estables sin parpadeo
   drawConnections(musicState) {
       const level = musicState?.level || 0;
-      if (level < 0.1) return;
+      if (level < 0.05) return; // Si no hay música, no hay líneas (minimalismo extremo)
 
-      const reach = this.CONNECTION_DISTANCE * (1 + (musicState?.bass||0)*1.8);
+      const bass = musicState?.bass || 0;
+      // Las líneas se estiran con el bajo
+      const reach = this.CONNECTION_DISTANCE * (1 + bass * 1.5);
       this.ctx.lineCap = 'round';
 
-      // Para evitar parpadeos, en lugar de conectar "al primero que encuentre",
-      // buscamos los vecinos CERCANOS y elegimos los 3 mejores.
-      // Esto evita que las líneas salten aleatoriamente.
-      
-      // Nota: Iteramos sobre todas, pero solo dibujamos desde p1 hacia adelante
-      // para evitar duplicar líneas y mantener rendimiento.
-      
       for(let i = 0; i < this.particles.length; i++){
           const p1 = this.particles[i]; 
           if(!p1.x2d) continue;
 
-          // 1. Encontrar candidatos válidos
+          // Búsqueda de vecinos
           let candidates = [];
-          
           for(let j = i + 1; j < this.particles.length; j++){
               const p2 = this.particles[j];
               if(!p2.x2d) continue;
-
               const dx = p1.x2d - p2.x2d;
               const dy = p1.y2d - p2.y2d;
-              
-              // Filtro rápido de caja
               if(Math.abs(dx) > reach || Math.abs(dy) > reach) continue;
-
               const dist = Math.sqrt(dx*dx + dy*dy);
               if(dist < reach){
                   candidates.push({ particle: p2, dist: dist });
               }
           }
 
-          // 2. Ordenar por cercanía (ESTO SOLUCIONA EL PARPADEO)
-          // Al ordenar, siempre conectamos con los más cercanos primero.
+          // Ordenar para estabilidad (anti-parpadeo)
           candidates.sort((a, b) => a.dist - b.dist);
+          const count = Math.min(candidates.length, this.MAX_CONNECTIONS_PER_PARTICLE);
 
-          // 3. Dibujar solo las 3 mejores conexiones
-          const connectionsToDraw = Math.min(candidates.length, this.MAX_CONNECTIONS_PER_PARTICLE);
-
-          for(let k = 0; k < connectionsToDraw; k++){
+          for(let k = 0; k < count; k++){
               const target = candidates[k];
               const p2 = target.particle;
               const dist = target.dist;
-              
-              const alpha = (1 - dist/reach) * level * 0.8;
+              const alpha = (1 - dist/reach) * level * 0.7;
               
               if(alpha > 0.05) {
-                  this.ctx.lineWidth = (0.5 + (musicState?.bass||0)) * (1 - dist/reach);
+                  const lineWidth = (0.5 + bass) * (1 - dist/reach);
+                  this.ctx.lineWidth = lineWidth;
+
+                  // --- EFECTO ABERRACIÓN CROMÁTICA (GLITCH) ---
+                  // Solo ocurre si el bajo golpea fuerte (> 0.4)
+                  if (bass > 0.4) {
+                      const offset = bass * 4; // Desplazamiento
+                      
+                      // Canal ROJO desplazado
+                      this.ctx.strokeStyle = `rgba(255, 50, 50, ${alpha * 0.6})`;
+                      this.ctx.beginPath();
+                      this.ctx.moveTo(p1.x2d - offset, p1.y2d - offset);
+                      this.ctx.lineTo(p2.x2d - offset, p2.y2d - offset);
+                      this.ctx.stroke();
+
+                      // Canal CYAN desplazado
+                      this.ctx.strokeStyle = `rgba(50, 255, 255, ${alpha * 0.6})`;
+                      this.ctx.beginPath();
+                      this.ctx.moveTo(p1.x2d + offset, p1.y2d + offset);
+                      this.ctx.lineTo(p2.x2d + offset, p2.y2d + offset);
+                      this.ctx.stroke();
+                  }
+
+                  // Línea Principal (Color Real)
+                  const grad = this.ctx.createLinearGradient(p1.x2d, p1.y2d, p2.x2d, p2.y2d);
+                  grad.addColorStop(0, `rgba(${p1.color.r},${p1.color.g},${p1.color.b},${alpha})`);
+                  grad.addColorStop(1, `rgba(${p2.color.r},${p2.color.g},${p2.color.b},${alpha})`);
                   
-                  const r = Math.floor((p1.color.r + p2.color.r) / 2);
-                  const g = Math.floor((p1.color.g + p2.color.g) / 2);
-                  const b = Math.floor((p1.color.b + p2.color.b) / 2);
-                  
-                  this.ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+                  this.ctx.strokeStyle = grad;
                   this.ctx.beginPath();
                   this.ctx.moveTo(p1.x2d, p1.y2d);
                   this.ctx.lineTo(p2.x2d, p2.y2d);
@@ -239,65 +263,48 @@ export class ParticleSystem {
     let musicState = { bass: 0, mid: 0, treble: 0, level: 0 };
     try { if (this.audioAnalyzer) musicState = this.audioAnalyzer.getState(); } catch(e) {}
     
-    // --- LÓGICA ROBUSTA DE COLOR ---
+    // Obtener datos visuales
     let pixelData = null;
+    let bufferW = 0; 
+    let bufferH = 0;
+
     try {
-        // Intentamos encontrar el video fuente automáticamente
-        const videoSource = this.colorSampler.video || 
-                            this.colorSampler.source || 
-                            this.colorSampler.element || 
-                            document.querySelector('video'); // Fallback final
-
-        if (videoSource && videoSource.readyState >= 2) {
-            // Dibujamos el video en nuestro mini-canvas interno
-            this.bufferCtx.drawImage(videoSource, 0, 0, this.bufferCanvas.width, this.bufferCanvas.height);
-            // Extraemos los datos de color
-            const imageData = this.bufferCtx.getImageData(0, 0, this.bufferCanvas.width, this.bufferCanvas.height);
-            pixelData = imageData.data;
+        if (this.colorSampler) {
+            pixelData = this.colorSampler.getPixelData();
+            bufferW = this.colorSampler.width;
+            bufferH = this.colorSampler.height;
         }
-    } catch(e) {
-        // Si falla (ej. CORS), las partículas seguirán funcionando en blanco/gris
-        // console.warn("No se pudo muestrear video", e);
-    }
+    } catch(e) {}
 
+    // Limpiar canvas
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.ctx.globalCompositeOperation = 'source-over'; 
     
-    // Pasamos los datos del buffer interno a las partículas
+    // 1. Actualizar (Física + Color)
     this.particles.forEach(p => p.update(
         musicState, 
         pixelData, 
-        this.bufferCanvas.width, 
-        this.bufferCanvas.height, 
+        bufferW, 
+        bufferH, 
         this.canvas.width, 
         this.canvas.height
     ));
     
-    // IMPORTANTE: Primero calculamos posiciones (update), luego dibujamos conexiones, luego partículas
-    // Sin sortear antes de las conexiones para evitar saltos raros en la iteración de conexiones
-    
-    // 1. Dibujar conexiones (Fondo)
+    // 2. Dibujar Conexiones (Fondo)
     this.drawConnections(musicState);
     
-    // 2. Ordenar partículas por profundidad (Z) para que las cercanas tapen a las lejanas
-    // Hacemos una copia o reordenamos solo para el dibujo de puntos
+    // 3. Dibujar Partículas (Frente, ordenadas por Z)
     const sortedParticles = [...this.particles].sort((a, b) => b.z - a.z);
-    
-    // 3. Dibujar partículas (Frente)
     sortedParticles.forEach(p => p.draw(this.ctx, this.canvas.width/2, this.canvas.height/2, musicState));
     
     requestAnimationFrame(this.animate);
   }
 
   start() { this.animate(); }
-  setConnectionDistance(d) { this.CONNECTION_DISTANCE = d; }
   
   resize(width, height) {
       this.canvas.width = width;
       this.canvas.height = height;
-      this.particles.forEach(p => {
-          p.width = width;
-          p.height = height;
-      });
+      this.particles.forEach(p => { p.width = width; p.height = height; });
   }
 }
