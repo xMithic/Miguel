@@ -158,8 +158,8 @@ export class ParticleSystem {
         this.colorSampler = colorSampler;
         this.audioAnalyzer = audioAnalyzer;
         this.particles = [];
-        this.MAX_PARTICLES = 20;
-        this.CONNECTION_DISTANCE = 120;
+        this.MAX_PARTICLES = 80;
+        this.CONNECTION_DISTANCE = 30;
         this.mouse = { x: -1000, y: -1000, active: false };
 
         this.canvas.width = window.innerWidth;
