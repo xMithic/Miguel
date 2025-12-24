@@ -23,6 +23,10 @@ html, body {
   z-index: 1;
   pointer-events: none;
   opacity: 0.65;
+  
+  /* Filtro de desenfoque */
+  filter: blur(var(--ui-blur)) saturate(1.2) brightness(0.8);
+  
   transform: translateZ(0);
   will-change: opacity, filter;
   object-fit: cover;
@@ -158,7 +162,7 @@ video.main-video {
 /* ----------------------------------------------------------- */
 
 #audio-btn {
-  /* POSICIONAMIENTO FIJO (Para que no se mueva de su sitio) */
+  /* POSICIONAMIENTO FIJO */
   position: fixed;
   bottom: 40px;
   left: 50%;
@@ -168,10 +172,10 @@ video.main-video {
   /* ESTILO VISUAL DEL TUTORIAL */
   padding: 15px 30px; 
   border: none;
-  outline: none;
+  outline: none; /* Quita borde de foco del navegador */
   color: #FFF;
   cursor: pointer;
-  background: transparent; /* El color de fondo lo maneja ::after */
+  background: transparent; 
   border-radius: 12px;
   
   /* Layout para el icono */
@@ -181,7 +185,12 @@ video.main-video {
   
   /* Transición para el cambio de color de texto/icono */
   transition: color 0.3s ease-in-out;
-  pointer-events: auto; /* Necesario porque el body tiene pointer-events: none en algunas zonas */
+  pointer-events: auto;
+
+  /* --- SOLUCIÓN PARA CELULAR (Quita el recuadro azul/gris) --- */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none; /* Evita menú contextual al mantener presionado */
+  user-select: none;
 }
 
 /* CAPA 1: FONDO OSCURO (Visible por defecto) */
@@ -191,7 +200,7 @@ video.main-video {
   position: absolute;
   width: 100%;
   height: 100%;
-  background-color: #333333bb; /* Gris oscuro original del tutorial */
+  background-color: #333333bb;
   left: 0;
   top: 0;
   border-radius: 12px;
@@ -210,7 +219,7 @@ video.main-video {
   top: -2px;
   left: -2px;
   background-size: 800%;
-  z-index: -5; /* Detrás del fondo gris */
+  z-index: -5; 
   width: calc(100% + 4px);
   height: calc(100% + 4px);
   filter: blur(8px);
@@ -243,7 +252,7 @@ video.main-video {
 /* ESTILO DEL ICONO SVG */
 #audio-btn svg {
   width: 24px;       
-  fill: currentColor; /* Hereda el color (#FFF o #000) */
+  fill: currentColor; 
   opacity: 1;
   transition: transform 0.3s;
   position: relative;
