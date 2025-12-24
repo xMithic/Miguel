@@ -1,15 +1,15 @@
 import { ColorSampler } from '../utils/colorSampler.js';
 
 /* ==========================================
-   CLASE NEURAL PARTICLE (Corregida y Optimizada)
+   CLASE NEURAL PARTICLE (Con Spawn en Esquinas y Centro)
    ========================================== */
 class NeuralParticle {
     constructor(width, height) {
         this.width = width;
         this.height = height;
         this.history = [];
-        this.MAX_HISTORY = 8; // Reducido para mejor rendimiento
-        this.color = { r: 220, g: 202, b: 255 }; // Color base seguro
+        this.MAX_HISTORY = 8; 
+        this.color = { r: 220, g: 202, b: 255 }; 
         this.x2d = 0;
         this.y2d = 0;
         this.reset(true);
@@ -23,11 +23,44 @@ class NeuralParticle {
         // Evitamos división por cero asegurando que (fov + z) nunca sea 0
         const scale = fov / Math.max(0.1, (fov + this.z));
         
-        // Esparcir por TODA la pantalla (multiplicador 1.5 para cubrir bordes)
-        this.x = (Math.random() - 0.5) * (this.width / scale) * 1.5;
-        this.y = (Math.random() - 0.5) * (this.height / scale) * 1.5;
+        // --- NUEVA LÓGICA: SPAWN EN ESQUINAS Y CENTRO ---
+        // Calculamos los límites del mundo 3D en este nivel de profundidad Z
+        const worldWidth = this.width / scale;
+        const worldHeight = this.height / scale;
 
+        // Elegimos una zona de nacimiento (0: Centro, 1-4: Esquinas)
+        const spawnRegion = Math.floor(Math.random() * 5);
+        
+        // Dispersión para que no salgan en líneas rectas perfectas (efecto orgánico)
+        const spread = 150 + Math.random() * 150; 
+
+        switch(spawnRegion) {
+            case 0: // Centro
+                this.x = (Math.random() - 0.5) * spread;
+                this.y = (Math.random() - 0.5) * spread;
+                break;
+            case 1: // Arriba-Izquierda
+                this.x = (-worldWidth / 2) + (Math.random() * spread);
+                this.y = (-worldHeight / 2) + (Math.random() * spread);
+                break;
+            case 2: // Arriba-Derecha
+                this.x = (worldWidth / 2) - (Math.random() * spread);
+                this.y = (-worldHeight / 2) + (Math.random() * spread);
+                break;
+            case 3: // Abajo-Izquierda
+                this.x = (-worldWidth / 2) + (Math.random() * spread);
+                this.y = (worldHeight / 2) - (Math.random() * spread);
+                break;
+            case 4: // Abajo-Derecha
+                this.x = (worldWidth / 2) - (Math.random() * spread);
+                this.y = (worldHeight / 2) - (Math.random() * spread);
+                break;
+        }
+
+        // --- Resto de la física ---
         this.speed = 0.5 + Math.random() * 1.0;
+        
+        // Ángulo aleatorio para que se muevan en todas direcciones desde su origen
         this.angle = Math.random() * Math.PI * 2;
         this.vx = Math.cos(this.angle) * this.speed;
         this.vy = Math.sin(this.angle) * this.speed;
@@ -41,6 +74,10 @@ class NeuralParticle {
     }
 
     update(musicState, pixelData, bufferWidth, bufferHeight, canvasWidth, canvasHeight) {
+        // Actualizamos las dimensiones por si la pantalla cambió de tamaño
+        this.width = canvasWidth;
+        this.height = canvasHeight;
+
         // --- 1. Física Segura ---
         const bass = musicState?.bass || 0;
         
@@ -53,7 +90,8 @@ class NeuralParticle {
 
         // Proyección 3D a 2D
         const fov = 400;
-        // Protección crítica: si Z es muy negativo, resetear antes de calcular escala
+        
+        // Protección crítica: si Z es muy negativo (pasó la cámara), resetear
         if (this.z <= -fov + 10) { 
             this.reset(); 
             return; 
@@ -77,15 +115,11 @@ class NeuralParticle {
                     const g = pixelData[index + 1];
                     const b = pixelData[index + 2];
                     
-                    // Solo actualizar si los valores son números válidos
                     if (!isNaN(r)) {
                         const brightness = (r + g + b) / 3;
-                        
-                        // Lógica de color: Si es muy brillante, oscurecer (efecto negativo), si no, potenciar
                         let targetR = r, targetG = g, targetB = b;
                         
                         if (brightness > 200) { 
-                             // Evitar negro absoluto para no "borrar" la partícula
                              targetR = 50; targetG = 50; targetB = 50; 
                         } else {
                              targetR = Math.min(255, r * 1.5);
@@ -108,9 +142,9 @@ class NeuralParticle {
         if (this.history.length > this.MAX_HISTORY) this.history.shift();
 
         // --- Reinicio Infinito ---
-        // Si sale de la pantalla o pasa la cámara
-        const boundX = canvasWidth * 2; // Margen amplio
-        if (this.z < 10 || Math.abs(screenX - canvasWidth/2) > boundX) {
+        // Si sale demasiado de los lados
+        const boundX = canvasWidth * 2; 
+        if (Math.abs(screenX - canvasWidth/2) > boundX) {
             this.reset();
             this.z = 1500; // Mandar al fondo
         }
@@ -129,7 +163,7 @@ class NeuralParticle {
         const r = Math.floor(this.color.r);
         const g = Math.floor(this.color.g);
         const b = Math.floor(this.color.b);
-        const a = depthAlpha; // Alpha base
+        const a = depthAlpha; 
 
         // Dibujar Rastro (Cola)
         if (this.history.length > 2) {
@@ -164,7 +198,7 @@ export class ParticleSystem {
         this.audioAnalyzer = audioAnalyzer;
         
         this.particles = [];
-        this.MAX_PARTICLES = 200;
+        this.MAX_PARTICLES = 120;
         this.CONNECTION_DISTANCE = 150;
         
         // Mouse
@@ -182,19 +216,53 @@ export class ParticleSystem {
         }
     }
 
-    initInput() {
-        const updateMouse = (x, y) => {
-            const rect = this.canvas.getBoundingClientRect();
-            this.mouse.x = x - rect.left;
-            this.mouse.y = y - rect.top;
-            this.mouse.active = true;
-        };
+/* Copia y pega esto reemplazando el método initInput() existente en particleSystem.js */
 
-        window.addEventListener('mousemove', e => updateMouse(e.clientX, e.clientY));
-        window.addEventListener('touchstart', e => updateMouse(e.touches[0].clientX, e.touches[0].clientY), {passive: true});
-        window.addEventListener('touchmove', e => updateMouse(e.touches[0].clientX, e.touches[0].clientY), {passive: true});
-        window.addEventListener('touchend', () => { this.mouse.active = false; });
-    }
+initInput() {
+    // Bloquear gestos también aquí para consistencia
+    this.canvas.style.touchAction = 'none';
+
+    const updateMouse = (e) => {
+        // Solo actualizamos si es el puntero principal (evita errores multitouch)
+        if (!e.isPrimary) return;
+
+        const rect = this.canvas.getBoundingClientRect();
+        this.mouse.x = e.clientX - rect.left;
+        this.mouse.y = e.clientY - rect.top;
+        this.mouse.active = true;
+    };
+
+    // --- ESCUCHAS UNIFICADAS (POINTER EVENTS) ---
+    
+    // Detectar movimiento (funciona para mouse y touch arrastrando)
+    window.addEventListener('pointermove', (e) => {
+        updateMouse(e);
+    });
+
+    // Detectar inicio de interacción (necesario para touch instantáneo)
+    window.addEventListener('pointerdown', (e) => {
+        updateMouse(e);
+        this.mouse.active = true;
+    });
+
+    // Manejar el final de la interacción
+    const endInteraction = (e) => {
+        // En dispositivos táctiles, queremos que deje de interactuar al levantar el dedo.
+        // En PC (mouse), a veces preferimos que siga activo o no, según tu gusto.
+        // Aquí replicamos tu lógica original: Touchend desactivaba, Mouse se quedaba.
+        
+        if (e.pointerType === 'touch' || e.pointerType === 'pen') {
+            this.mouse.active = false;
+            // Opcional: Mover fuera de pantalla para que no se queden pegadas en el último punto
+            this.mouse.x = -1000;
+            this.mouse.y = -1000;
+        }
+    };
+
+    window.addEventListener('pointerup', endInteraction);
+    window.addEventListener('pointercancel', endInteraction);
+    window.addEventListener('pointerleave', endInteraction);
+}
 
     drawConnections(bassFactor) {
         // Conexiones neuronales
@@ -243,7 +311,7 @@ export class ParticleSystem {
     }
 
     animate() {
-        // 1. LIMPIEZA DEL CANVAS (CRÍTICO PARA VER EL VIDEO DE FONDO)
+        // 1. LIMPIEZA DEL CANVAS
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
         // Datos externos
@@ -259,11 +327,10 @@ export class ParticleSystem {
                 bufferH = this.colorSampler.height;
             }
         } catch (e) {
-            // Ignorar errores de módulos externos para no detener la animación
+            // Ignorar errores de módulos externos
         }
 
-        // Actualizar y Dibujar
-        // Ordenamos por Z para que las lejanas se dibujen primero (Depth sorting correcto)
+        // Actualizar y Dibujar (Ordenado por Z)
         this.particles.sort((a, b) => b.z - a.z);
 
         this.particles.forEach(p => {
