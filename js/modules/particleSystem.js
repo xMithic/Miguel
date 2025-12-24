@@ -145,7 +145,7 @@ export class ParticleSystem {
         this.audioAnalyzer = audioAnalyzer;
         this.particles = [];
         this.MAX_PARTICLES = 200;
-        this.CONNECTION_DISTANCE = 170;
+        this.CONNECTION_DISTANCE = 230;
         this.MAX_CONNECTIONS_PER_PARTICLE = 3;
 
         // -- INTERACTIVIDAD --
