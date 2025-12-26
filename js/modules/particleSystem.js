@@ -1,365 +1,317 @@
-import { ColorSampler } from '../utils/colorSampler.js';
+export class SurpriseSystem {
+    constructor() {
+        this.canvas = document.getElementById('fireworks-canvas');
+        this.ctx = this.canvas ? this.canvas.getContext('2d') : null;
+        this.width = window.innerWidth;
+        this.height = window.innerHeight;
+        this.isRunning = false;
 
-/* ==========================================
-   CLASE NEURAL PARTICLE
-========================================== */
+        // Colecciones de objetos
+        this.rockets = [];
+        this.particles = [];
+        this.sparkles = []; 
 
-class NeuralParticle {
-    constructor(width, height) {
-        this.width = width;
-        this.height = height;
-        this.history = [];
-        this.MAX_HISTORY = 3;
-        this.color = { r: 220, g: 220, b: 255 };
-        this.x2d = 0;
-        this.y2d = 0;
-        this.reset(true);
+        // Configuración visual
+        this.config = {
+            rocketSpawnChance: 0.05, 
+            particleCount: 100,      
+            gravity: 0.12,
+            friction: 0.96,
+            colors: [
+                ['#ff0040', '#ff0080', '#ff8000'], // Hot Pink
+                ['#00ffed', '#00b8ff', '#0040ff'], // Cyan Electric
+                ['#ffea00', '#ffaa00', '#ffea80'], // Gold
+                ['#ccff00', '#55ff00', '#aaffaa'], // Lime
+                ['#d600ff', '#9900ff', '#ff00cc']  // Purple Neon
+            ]
+        };
+
+        this.resizeHandler = () => {
+            if (!this.canvas) return;
+            this.width = window.innerWidth;
+            this.height = window.innerHeight;
+            this.canvas.width = this.width;
+            this.canvas.height = this.height;
+        };
+
+        window.addEventListener('resize', this.resizeHandler);
+        if (this.canvas) this.resizeHandler();
     }
 
-    reset(isInitial = false) {
-        this.x = Math.random() * this.width;
-        this.y = Math.random() * this.height;
-        const angle = Math.random() * Math.PI * 2;
-        this.baseSpeed = 0.5 + Math.random() * 1.0;
-        this.vx = Math.cos(angle) * this.baseSpeed;
-        this.vy = Math.sin(angle) * this.baseSpeed;
-        this.baseSize = 1.0 + Math.random() * 1.0;
-        this.history = [];
+    trigger() {
+        if (!this.canvas) return;
+        this.isRunning = true;
+        document.body.classList.add('show-surprise');
+        
+        // Lanzamiento inicial inmediato
+        this.launchRocket();
+        this.loop();
+
+        // Auto-cierre inteligente
+        setTimeout(() => {
+            const closeHandler = () => {
+                this.stop();
+                document.removeEventListener('click', closeHandler);
+            };
+            setTimeout(() => {
+                document.addEventListener('click', closeHandler, { once: true });
+            }, 1000);
+        }, 1000);
     }
 
-    lerp(start, end, amt) {
-        return (1 - amt) * start + amt * end;
+    stop() {
+        this.isRunning = false;
+        document.body.classList.remove('show-surprise');
+        if (this.ctx) this.ctx.clearRect(0, 0, this.width, this.height);
+        this.rockets = [];
+        this.particles = [];
+        this.sparkles = [];
     }
 
-    update(musicState, pixelData, bufferWidth, bufferHeight, canvasWidth, canvasHeight, mouse) {
-        this.width = canvasWidth;
-        this.height = canvasHeight;
-        const bass = musicState?.bass || 0;
+    loop() {
+        if (!this.isRunning) return;
+        requestAnimationFrame(() => this.loop());
 
-        // --- REPULSIÓN DEL CURSOR ---
-        let applyFriction = false;
-        if (mouse.active) {
-            const dx = this.x - mouse.x;
-            const dy = this.y - mouse.y;
-            const distSq = dx * dx + dy * dy;
-            const repelRadius = 150;
-            const repelRadiusSq = repelRadius * repelRadius;
+        if (!this.ctx) return;
 
-            if (distSq < repelRadiusSq && distSq > 0) {
-                const distance = Math.sqrt(distSq);
-                const forceDirectionX = dx / distance;
-                const forceDirectionY = dy / distance;
-                const forceMagnitude = (1 - distance / repelRadius) * 3.0;
-                
-                this.vx += forceDirectionX * forceMagnitude;
-                this.vy += forceDirectionY * forceMagnitude;
-                applyFriction = true;
+        // 1. Fondo con efecto "Motion Blur"
+        this.ctx.globalCompositeOperation = 'destination-out';
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+        this.ctx.fillRect(0, 0, this.width, this.height);
+
+        // 2. Modo de mezcla aditiva
+        this.ctx.globalCompositeOperation = 'lighter';
+
+        // 3. Lógica de Cohetes
+        if (this.rockets.length < 5 && Math.random() < this.config.rocketSpawnChance) {
+            this.launchRocket();
+        }
+
+        // Actualizar Cohetes
+        for (let i = this.rockets.length - 1; i >= 0; i--) {
+            let r = this.rockets[i];
+            r.update();
+            r.draw(this.ctx);
+
+            if (Math.random() > 0.5) {
+                this.sparkles.push(new Sparkle(r.x, r.y, r.color));
+            }
+
+            if (r.exploded) {
+                this.createExplosion(r);
+                this.rockets.splice(i, 1);
             }
         }
 
-        // Aplicar fricción SOLO cuando hay repulsión activa
-        if (applyFriction) {
-            this.vx *= 0.95;
-            this.vy *= 0.95;
-
-            // Limitar velocidad máxima para mantener control
-            const maxSpeed = 8.0;
-            const currentSpeed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
-            if (currentSpeed > maxSpeed) {
-                this.vx = (this.vx / currentSpeed) * maxSpeed;
-                this.vy = (this.vy / currentSpeed) * maxSpeed;
+        // 4. Actualizar Partículas
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            let p = this.particles[i];
+            p.update();
+            p.draw(this.ctx);
+            if (p.life <= 0 || p.alpha <= 0.01) {
+                this.particles.splice(i, 1);
             }
-        } else {
-            // NUEVO: Interpolación suave hacia la velocidad base
-            const currentSpeed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+        }
+
+        // 5. Actualizar Chispas
+        for (let i = this.sparkles.length - 1; i >= 0; i--) {
+            let s = this.sparkles[i];
+            s.update();
+            s.draw(this.ctx);
+            if (s.life <= 0) {
+                this.sparkles.splice(i, 1);
+            }
+        }
+    }
+
+    launchRocket() {
+        const x = Math.random() * (this.width * 0.8) + (this.width * 0.1);
+        const targetY = Math.random() * (this.height * 0.4) + (this.height * 0.1);
+        const palette = this.config.colors[Math.floor(Math.random() * this.config.colors.length)];
+        const type = Math.floor(Math.random() * 4); 
+        this.rockets.push(new Rocket(x, this.height, targetY, palette, type));
+    }
+
+    createExplosion(rocket) {
+        if (Math.random() > 0.7) {
+            this.ctx.save();
+            this.ctx.globalCompositeOperation = 'screen';
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+            this.ctx.fillRect(0, 0, this.width, this.height);
+            this.ctx.restore();
+        }
+
+        const count = this.config.particleCount;
+        
+        for (let i = 0; i < count; i++) {
+            const p = new Particle(rocket.x, rocket.y, rocket.palette);
             
-            if (currentSpeed > 0.1) {
-                // Calcular velocidad objetivo normalizada
-                const targetVx = (this.vx / currentSpeed) * this.baseSpeed;
-                const targetVy = (this.vy / currentSpeed) * this.baseSpeed;
+            if (rocket.type === 1) { // Corazón
+                const angle = (Math.PI * 2 * i) / count;
+                const r = Math.random() * 2 + 10; 
+                const xDir = 16 * Math.pow(Math.sin(angle), 3);
+                const yDir = -(13 * Math.cos(angle) - 5 * Math.cos(2 * angle) - 2 * Math.cos(3 * angle) - Math.cos(4 * angle));
                 
-                // Interpolar suavemente hacia la velocidad objetivo (0.08 = velocidad de interpolación)
-                this.vx = this.lerp(this.vx, targetVx, 0.08);
-                this.vy = this.lerp(this.vy, targetVy, 0.08);
+                p.vx = (xDir / 10) * (Math.random() * 0.5 + 0.5);
+                p.vy = (yDir / 10) * (Math.random() * 0.5 + 0.5);
+                p.friction = 0.94; 
+                p.gravity = 0.05;  
+                p.life = 120; 
+            } else if (rocket.type === 2) { // Saturno
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 1 + 8; 
+                p.vx = Math.cos(angle) * speed;
+                p.vy = Math.sin(angle) * speed;
+                p.friction = 0.92;
+            } else if (rocket.type === 3) { // Sauce
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 10 + 2;
+                p.vx = Math.cos(angle) * speed;
+                p.vy = Math.sin(angle) * speed;
+                p.friction = 0.90; 
+                p.gravity = 0.08;  
+                p.willow = true;   
+                p.life = 150;
+            } else { // Esfera
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 12;
+                p.vx = Math.cos(angle) * speed;
+                p.vy = Math.sin(angle) * speed;
             }
+            this.particles.push(p);
         }
-
-        this.x += this.vx * (1 + bass * 0.5);
-        this.y += this.vy * (1 + bass * 0.5);
-
-        if (this.x < 0 || this.x > canvasWidth) {
-            this.vx *= -1;
-            this.x = Math.max(0, Math.min(canvasWidth, this.x));
-        }
-
-        if (this.y < 0 || this.y > canvasHeight) {
-            this.vy *= -1;
-            this.y = Math.max(0, Math.min(canvasHeight, this.y));
-        }
-
-        this.x2d = this.x;
-        this.y2d = this.y;
-
-        // --- SINCRONIZACIÓN COLOR PRECISA ---
-        if (pixelData && bufferWidth > 0 &&
-            this.x2d >= 0 && this.x2d < canvasWidth &&
-            this.y2d >= 0 && this.y2d < canvasHeight) {
-            
-            const bufferX = (this.x2d / canvasWidth * bufferWidth) | 0;
-            const bufferY = (this.y2d / canvasHeight * bufferHeight) | 0;
-
-            let totalR = 0, totalG = 0, totalB = 0;
-            let samples = 0;
-
-            for (let dy = -1; dy <= 1; dy++) {
-                for (let dx = -1; dx <= 1; dx++) {
-                    const sampleX = bufferX + dx;
-                    const sampleY = bufferY + dy;
-
-                    if (sampleX >= 0 && sampleX < bufferWidth && 
-                        sampleY >= 0 && sampleY < bufferHeight) {
-                        const index = (sampleY * bufferWidth + sampleX) << 2;
-
-                        if (index >= 0 && index < pixelData.length - 4) {
-                            totalR += pixelData[index];
-                            totalG += pixelData[index + 1];
-                            totalB += pixelData[index + 2];
-                            samples++;
-                        }
-                    }
-                }
-            }
-
-            if (samples > 0) {
-                const r = totalR / samples;
-                const g = totalG / samples;
-                const b = totalB / samples;
-                const luminosity = (r * 0.299 + g * 0.587 + b * 0.114);
-
-                const boostFactor = luminosity < 128
-                    ? 1.5 + (128 - luminosity) / 128 * 0.8
-                    : 1.2 + (128 - luminosity) / 128 * 0.3;
-
-                const targetR = Math.min(255, r * boostFactor);
-                const targetG = Math.min(255, g * boostFactor);
-                const targetB = Math.min(255, b * boostFactor);
-
-                const lerpSpeed = 0.5;
-                this.color.r = this.lerp(this.color.r, targetR, lerpSpeed);
-                this.color.g = this.lerp(this.color.g, targetG, lerpSpeed);
-                this.color.b = this.lerp(this.color.b, targetB, lerpSpeed);
-            }
-        }
-
-        this.history.push({ x: this.x2d, y: this.y2d });
-        if (this.history.length > this.MAX_HISTORY) this.history.shift();
-    }
-
-    draw(ctx, centerX, centerY, musicState) {
-        const r = this.color.r | 0;
-        const g = this.color.g | 0;
-        const b = this.color.b | 0;
-
-        // Rastro más sutil
-        if (this.history.length > 1) {
-            ctx.beginPath();
-            ctx.moveTo(this.history[0].x, this.history[0].y);
-            for (let i = 1; i < this.history.length; i++) {
-                ctx.lineTo(this.history[i].x, this.history[i].y);
-            }
-            ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.3)`;
-            ctx.lineWidth = 0.5;
-            ctx.stroke();
-        }
-
-        ctx.globalCompositeOperation = 'lighter';
-        const size = Math.max(0.3, this.baseSize * (1 + (musicState?.bass || 0) * 0.3));
-
-        // Núcleo más definido y pequeño
-        const rCore = Math.min(255, r + 15);
-        const gCore = Math.min(255, g + 15);
-        const bCore = Math.min(255, b + 15);
-
-        ctx.fillStyle = `rgba(${rCore}, ${gCore}, ${bCore}, 0.95)`;
-        ctx.beginPath();
-        ctx.arc(this.x2d, this.y2d, size, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.globalCompositeOperation = 'source-over';
     }
 }
 
-/* ==========================================
-   SISTEMA DE PARTÍCULAS PRINCIPAL
-========================================== */
+/* =========================================
+   CLASES AUXILIARES (Física y Render)
+   ========================================= */
 
-export class ParticleSystem {
-    constructor(canvas, colorSampler, audioAnalyzer) {
-        this.canvas = canvas;
-        this.ctx = canvas.getContext('2d', { alpha: true });
-        this.colorSampler = colorSampler;
-        this.audioAnalyzer = audioAnalyzer;
-        this.particles = [];
-        this.MAX_PARTICLES = 68;
-        this.CONNECTION_DISTANCE = 65;
-        this.mouse = { x: -1000, y: -1000, active: false };
-
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
-
-        this.initParticles();
-        this.initInput();
-        this.animate = this.animate.bind(this);
+class Rocket {
+    constructor(x, y, targetY, palette, type) {
+        this.x = x;
+        this.y = y;
+        this.targetY = targetY;
+        this.palette = palette;
+        this.color = palette[1]; 
+        this.type = type;
+        this.speed = Math.random() * 3 + 12;
+        this.angle = -Math.PI / 2 + (Math.random() * 0.2 - 0.1); 
+        this.vx = Math.cos(this.angle) * this.speed;
+        this.vy = Math.sin(this.angle) * this.speed;
+        this.exploded = false;
+        this.history = []; 
     }
 
-    initParticles() {
-        this.particles = [];
-        for (let i = 0; i < this.MAX_PARTICLES; i++) {
-            this.particles.push(new NeuralParticle(this.canvas.width, this.canvas.height));
+    update() {
+        this.history.push({x: this.x, y: this.y});
+        if (this.history.length > 5) this.history.shift();
+
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vy += 0.15; 
+        this.vx *= 0.99; 
+
+        if (this.vy >= -1 || this.y <= this.targetY) {
+            this.exploded = true;
         }
-    }
+    } // <--- FALTABA ESTA LLAVE DE CIERRE
 
-    initInput() {
-        this.canvas.style.touchAction = 'none';
-
-        const updateMouse = (e) => {
-            if (!e.isPrimary) return;
-            const rect = this.canvas.getBoundingClientRect();
-            this.mouse.x = e.clientX - rect.left;
-            this.mouse.y = e.clientY - rect.top;
-            this.mouse.active = true;
-        };
-
-        window.addEventListener('pointermove', updateMouse);
-        window.addEventListener('pointerdown', (e) => {
-            updateMouse(e);
-            this.mouse.active = true;
-        });
-
-        const endInteraction = (e) => {
-            if (e.pointerType === 'touch' || e.pointerType === 'pen') {
-                this.mouse.active = false;
-                this.mouse.x = -1000;
-                this.mouse.y = -1000;
-            }
-        };
-
-        window.addEventListener('pointerup', endInteraction);
-        window.addEventListener('pointercancel', endInteraction);
-        window.addEventListener('pointerleave', (e) => {
-            this.mouse.active = false;
-            this.mouse.x = -1000;
-            this.mouse.y = -1000;
-        });
-    }
-
-    drawConnections(bassFactor) {
-        this.ctx.lineWidth = 1.0;
-        const reach = this.CONNECTION_DISTANCE * (1 + bassFactor);
-        const reachSq = reach * reach;
-
-        this.ctx.globalCompositeOperation = 'lighter';
-
-        for (let i = 0; i < this.particles.length; i++) {
-            const p1 = this.particles[i];
-
-            for (let j = i + 1; j < this.particles.length; j++) {
-                const p2 = this.particles[j];
-                const dx = p1.x2d - p2.x2d;
-                const dy = p1.y2d - p2.y2d;
-
-                if (Math.abs(dx) > reach || Math.abs(dy) > reach) continue;
-
-                const distSq = dx*dx + dy*dy;
-
-                if (distSq < reachSq) {
-                    const alpha = (1 - distSq / reachSq) * 0.6;
-                    const r = (p1.color.r + p2.color.r) >> 1;
-                    const g = (p1.color.g + p2.color.g) >> 1;
-                    const b = (p1.color.b + p2.color.b) >> 1;
-
-                    const lineR = Math.min(255, r + 15);
-                    const lineG = Math.min(255, g + 15);
-                    const lineB = Math.min(255, b + 15);
-
-                    this.ctx.strokeStyle = `rgba(${lineR}, ${lineG}, ${lineB}, ${alpha})`;
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(p1.x2d, p1.y2d);
-                    this.ctx.lineTo(p2.x2d, p2.y2d);
-                    this.ctx.stroke();
-
-                    if ((i + j) % 2 === 0) {
-                        for (let k = j + 1; k < this.particles.length; k++) {
-                            const p3 = this.particles[k];
-                            const dx2 = p2.x2d - p3.x2d;
-                            const dy2 = p2.y2d - p3.y2d;
-                            const distSq2 = dx2*dx2 + dy2*dy2;
-
-                            if (distSq2 >= reachSq) continue;
-
-                            const dx3 = p1.x2d - p3.x2d;
-                            const dy3 = p1.y2d - p3.y2d;
-                            const distSq3 = dx3*dx3 + dy3*dy3;
-
-                            if (distSq3 < reachSq) {
-                                const maxDist = Math.max(distSq, distSq2, distSq3);
-                                const triAlpha = (1 - maxDist / reachSq) * 0.1;
-
-                                if (triAlpha > 0.02) {
-                                    this.ctx.fillStyle = `rgba(${lineR}, ${lineG}, ${lineB}, ${triAlpha})`;
-                                    this.ctx.beginPath();
-                                    this.ctx.moveTo(p1.x2d, p1.y2d);
-                                    this.ctx.lineTo(p2.x2d, p2.y2d);
-                                    this.ctx.lineTo(p3.x2d, p3.y2d);
-                                    this.ctx.closePath();
-                                    this.ctx.fill();
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+    draw(ctx) {
+        ctx.beginPath();
+        if (this.history.length > 0) {
+            ctx.moveTo(this.history[0].x, this.history[0].y);
+            for(let p of this.history) ctx.lineTo(p.x, p.y);
+        } else {
+            ctx.moveTo(this.x, this.y);
         }
+        ctx.lineTo(this.x, this.y);
+        
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = this.color;
+        ctx.stroke();
+        ctx.shadowBlur = 0; 
+    }
+}
 
-        this.ctx.globalCompositeOperation = 'source-over';
+class Particle {
+    constructor(x, y, palette) {
+        this.x = x;
+        this.y = y;
+        this.palette = palette;
+        this.color = palette[Math.floor(Math.random() * palette.length)]; // <--- ESTO ESTABA COMENTADO
+        
+        this.vx = 0;
+        this.vy = 0;
+        this.alpha = 1;
+        this.friction = 0.95;
+        this.gravity = 0.2;
+        this.life = Math.random() * 60 + 40;
+        this.maxLife = this.life;
+        this.size = Math.random() * 2 + 1;
+        this.willow = false; 
     }
 
-    animate() {
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
-        let musicState = { bass: 0 };
-        let pixelData = null;
-        let bufferW = 0, bufferH = 0;
-
-        try {
-            if (this.audioAnalyzer) musicState = this.audioAnalyzer.getState();
-            if (this.colorSampler) {
-                pixelData = this.colorSampler.getPixelData();
-                bufferW = this.colorSampler.width;
-                bufferH = this.colorSampler.height;
-            }
-        } catch (e) {}
-
-        for (let i = 0; i < this.particles.length; i++) {
-            const p = this.particles[i];
-            p.update(musicState, pixelData, bufferW, bufferH, 
-                     this.canvas.width, this.canvas.height, this.mouse);
+    update() {
+        this.vx *= this.friction;
+        this.vy *= this.friction;
+        this.vy += this.gravity;
+        
+        this.x += this.vx;
+        this.y += this.vy;
+        this.life--;
+        
+        if (this.life < 20) this.alpha -= 0.05;
+        
+        if (this.life < 40 && Math.random() > 0.8) {
+            this.alpha = 0; 
+        } else if (this.life < 40) {
+            this.alpha = (this.life / 40);
         }
+    } // <--- FALTABA ESTA LLAVE DE CIERRE
 
-        for (let i = 0; i < this.particles.length; i++) {
-            const p = this.particles[i];
-            p.draw(this.ctx, this.canvas.width/2, this.canvas.height/2, musicState);
+    draw(ctx) {
+        if (this.alpha <= 0) return;
+        
+        ctx.save();
+        ctx.globalAlpha = this.alpha;
+        ctx.fillStyle = this.color;
+        
+        if (this.willow) {
+             ctx.fillStyle = `rgba(255, 215, 0, ${this.alpha})`; 
+             ctx.fillRect(this.x, this.y, 1.5, 4); 
+        } else {
+             ctx.beginPath();
+             ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+             ctx.fill();
         }
+        ctx.restore();
+    }
+}
 
-        this.drawConnections(musicState.bass || 0);
-        requestAnimationFrame(this.animate);
+class Sparkle {
+    constructor(x, y, color) {
+        this.x = x + (Math.random() * 4 - 2);
+        this.y = y + (Math.random() * 4 - 2);
+        this.color = color;
+        this.alpha = 1;
+        this.life = 20;
     }
 
-    start() { this.animate(); }
-    
-    resize(w, h) { 
-        this.canvas.width = w; 
-        this.canvas.height = h; 
+    update() {
+        this.y += 0.5; 
+        this.life--;
+        this.alpha = this.life / 20;
+    }
+
+    draw(ctx) {
+        if (this.alpha <= 0) return;
+        ctx.globalAlpha = this.alpha;
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, 1.5, 1.5); 
+        ctx.globalAlpha = 1;
     }
 }
