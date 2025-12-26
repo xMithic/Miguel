@@ -27,7 +27,7 @@ html, body {
     to { opacity: 1; } 
 }
 
-/* 2. VIDEO DE FONDO CON ESTILO "DOT MATRIX" */
+/* 2. VIDEO DE FONDO CON ESTILO "DOT MATRIX" Y BLUR OPTIMIZADO */
 #background-layer {
     position: fixed; inset: 0;
     width: 100%; height: 100%;
@@ -41,8 +41,27 @@ html, body {
     background-size: 4px 4px;
     background-position: 0 0, 2px 2px;
     object-fit: cover;
+
+    /* Blur optimizado con aceleraciÃ³n GPU */
+    filter: blur(8px);
+    transform: translate3d(0, 0, 0);
+    -webkit-transform: translate3d(0, 0, 0);
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+
     mask-image: radial-gradient(circle, rgba(0,0,0,1) 40%, rgba(0,0,0,0.4) 100%);
     -webkit-mask-image: radial-gradient(circle, rgba(0,0,0,1) 40%, rgba(0,0,0,0.4) 100%);
+}
+
+/* Si el video estÃ¡ dentro de #background-layer */
+#background-layer video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* Forzar aceleraciÃ³n GPU para el video */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
 }
 
 /* 3. LIENZOS */
@@ -184,7 +203,7 @@ video.main-video {
         0 0 30px var(--cursor-glow);
     transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     animation: cursorPulse 2s ease-in-out infinite;
-    /* Interacción con el fondo */
+    /* InteracciÃ³n con el fondo */
     mix-blend-mode: difference;
 }
 
@@ -221,7 +240,7 @@ video.main-video {
         inset 0 0 15px rgba(255, 255, 255, 0.2),
         0 0 20px rgba(100, 200, 255, 0.3);
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    /* Interacción con el fondo - invierte colores */
+    /* InteracciÃ³n con el fondo - invierte colores */
     mix-blend-mode: exclusion;
 }
 
@@ -245,7 +264,7 @@ video.main-video {
     opacity: 1;
 }
 
-/* ESTADO HOVER - Cuando está sobre elementos interactivos */
+/* ESTADO HOVER - Cuando estÃ¡ sobre elementos interactivos */
 #custom-cursor.hover .cursor-inner {
     width: 12px;
     height: 12px;
@@ -310,7 +329,7 @@ video.main-video {
         0 0 35px rgba(255, 107, 157, 0.5);
 }
 
-/* 7. BOTÓN DE AUDIO */
+/* 7. BOTÃ“N DE AUDIO */
 #audio-btn {
     position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
     z-index: 100;
@@ -384,8 +403,9 @@ video.main-video {
 
 body.show-surprise #surprise-overlay {
     opacity: 1; pointer-events: auto;
-    background: rgba(0, 0, 0, 0.92);
-    backdrop-filter: none;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
 }
 
 #fireworks-canvas {
@@ -396,13 +416,6 @@ body.show-surprise #surprise-overlay {
 
 body.show-surprise #fireworks-canvas { 
     opacity: 1; 
-}
-
-body.show-surprise #surprise-overlay {
-    opacity: 1; pointer-events: auto;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
 }
 
 .message-content {
@@ -425,45 +438,91 @@ body.show-surprise .message-content {
     margin-top: 10px; font-weight: 300; letter-spacing: 2px; text-transform: uppercase;
 }
 
-/* FORZAR CURSOR PERSONALIZADO EN TODOS LOS ELEMENTOS */
+/* FORZAR CURSOR PERSONALIZADO EN TODOS LOS ELEMENTOS (SOLO DESKTOP) */
 *, *::before, *::after {
     cursor: none !important;
 }
 
-/* ADAPTACIÓN PARA DISPOSITIVOS MÓVILES Y TÁCTILES */
-@media (hover: none) and (pointer: coarse) {
-    html, body {
+/* ============================================
+   OPTIMIZACIÃ“N PARA DISPOSITIVOS MÃ“VILES
+   ============================================ */
+
+/* ADAPTACIÃ“N MEJORADA PARA DISPOSITIVOS MÃ“VILES Y TÃCTILES */
+@media (hover: none) and (pointer: coarse), (any-pointer: coarse) {
+    /* Restaurar cursor nativo en mÃ³viles */
+    html, body, *, *::before, *::after {
         cursor: auto !important;
     }
-    
+
+    /* Ocultar completamente el cursor personalizado */
     #custom-cursor {
         display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
     }
-    
-    *, *::before, *::after {
-        cursor: auto !important;
+
+    .cursor-inner,
+    .cursor-outer {
+        display: none !important;
     }
-    
+
+    /* Restaurar cursor normal en botÃ³n de audio */
     #audio-btn {
         cursor: pointer !important;
+        -webkit-tap-highlight-color: rgba(100, 200, 255, 0.2);
+    }
+
+    /* Reducir blur en mÃ³viles para mejor rendimiento */
+    #background-layer {
+        filter: blur(4px);
     }
 }
 
+/* Detectar si el dispositivo tiene touch */
+@media (pointer: coarse) {
+    #custom-cursor {
+        pointer-events: none !important;
+        display: none !important;
+    }
+}
+
+/* OPTIMIZACIÃ“N ADICIONAL PARA BLUR EN DISPOSITIVOS DE BAJO RENDIMIENTO */
+@media (prefers-reduced-motion: reduce) {
+    /* Reducir efectos para usuarios que prefieren menos animaciÃ³n */
+    #background-layer {
+        filter: blur(4px);
+    }
+
+    .cursor-inner {
+        animation: none;
+    }
+
+    .eq-bar {
+        animation-duration: 2s;
+    }
+}
+
+/* RESPONSIVE PARA MÃ“VILES */
 @media (max-width: 600px) { 
     .glow-text { 
         font-size: 2rem; 
     }
-    
+
     .card-wrapper {
         max-width: 95%;
     }
-    
+
     #audio-btn {
         bottom: 20px;
         padding: 12px 24px;
     }
-    
+
     :root {
         --cursor-outer-size: 35px;
     }
-}
+
+    /* Reducir blur en pantallas pequeÃ±as */
+    #background-layer {
+        filter: blur(5px);
+    }
+                                  }
