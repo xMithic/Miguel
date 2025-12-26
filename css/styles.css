@@ -361,15 +361,20 @@ html, body, * { cursor: none !important; }
 
 #surprise-overlay {
     position: fixed;
-    inset: 0;
+    inset: 0; /* Ocupa toda la pantalla */
     z-index: 5000;
+    
+    /* CENTRADO PERFECTO FLEXBOX */
     display: flex;
+    flex-direction: column; /* Apila título y subtítulo */
     justify-content: center;
     align-items: center;
-    background: rgba(0,0,0,0.8);
+    
+    background: rgba(0, 0, 0, 0.85); /* Fondo un poco más oscuro para contraste */
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.5s;
+    transition: opacity 0.5s ease;
+    backdrop-filter: blur(5px); /* Efecto vidrio borroso detrás */
 }
 
 body.show-surprise #surprise-overlay {
@@ -377,18 +382,83 @@ body.show-surprise #surprise-overlay {
     pointer-events: auto;
 }
 
-.glow-text {
-    font-size: 3rem;
-    text-shadow: 0 0 20px rgba(100, 200, 255, 0.8);
-}
-
-.sub-text {
+/* CONTENEDOR DEL TEXTO */
+.message-content {
     text-align: center;
-    font-size: 1.2rem;
-    color: #ccc;
+    padding: 20px;
+    width: 90%; /* Margen de seguridad en móviles */
+    max-width: 800px;
+    
+    /* Animación de entrada suave */
+    transform: translateY(20px);
+    transition: transform 0.5s ease-out;
 }
 
-@media (max-width: 600px) {
-    .card-wrapper { width: 95%; }
-    .glow-text { font-size: 2rem; }
+body.show-surprise .message-content {
+    transform: translateY(0);
+}
+
+/* TÍTULO PRINCIPAL (Te Quiero) */
+.glow-text {
+    font-family: 'Montserrat', sans-serif, system-ui; /* Fuente moderna */
+    font-weight: 800; /* Extra bold */
+    color: #fff;
+    margin: 0 0 10px 0;
+    line-height: 1.1;
+    
+    /* Tamaño Responsivo Base (PC) */
+    font-size: 5rem; 
+    
+    /* EL EFECTO GLOW (NEÓN) REFINADO */
+    text-shadow: 
+        0 0 10px rgba(255, 255, 255, 0.8),
+        0 0 20px rgba(255, 0, 128, 0.5), /* Rosa neón */
+        0 0 40px rgba(255, 0, 128, 0.3);
+        
+    letter-spacing: -2px; /* Estilo compacto moderno */
+}
+
+/* SUBTÍTULO (Eres mi persona favorita) */
+.sub-text {
+    font-family: 'Segoe UI', Roboto, Helvetica, sans-serif;
+    font-size: 1.5rem;
+    font-weight: 300;
+    color: #ddd;
+    letter-spacing: 2px; /* Separado para elegancia */
+    text-transform: uppercase;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+/* ============================================
+   RESPONSIVE (CELULARES)
+   ============================================ */
+
+@media (max-width: 768px) {
+    /* Ajustes para Tablets y Móviles grandes */
+    .glow-text {
+        font-size: 3.5rem; /* Reducir tamaño */
+    }
+    .sub-text {
+        font-size: 1.2rem;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Ajustes para Celulares Pequeños (iPhone SE, etc.) */
+    .glow-text {
+        font-size: 12vw; /* Usamos Viewport Width para que NUNCA se desborde */
+        letter-spacing: -1px;
+    }
+    
+    .sub-text {
+        font-size: 1rem;
+        letter-spacing: 1px;
+        margin-top: 5px;
+    }
+    
+    /* Ajuste del contenedor de la tarjeta de video en móvil */
+    .card-wrapper {
+        width: 90% !important; /* Más margen lateral */
+        max-width: none;
+    }
 }
