@@ -3,47 +3,146 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>❤️☺️🥀</title>
-  <!-- Verifica si tu archivo styles.css está en una carpeta llamada "css" o junto al html. 
-       Si está junto al html, borra "css/" -->
+  <title>Sincronización Perfecta ❤️☺️🥀</title>
   <link rel="stylesheet" href="css/styles.css">
+  
+  <style>
+    /* ============================================
+       ESTILO BOTÓN: JAMSHID ELMI (FIX CURSOR)
+       ============================================ */
+    
+    #audio-btn {
+      position: fixed;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+
+      padding: 15px 40px;
+      border: none;
+      outline: none;
+      color: #FFF;
+      
+      /* === CORRECCIÓN AQUÍ === */
+      cursor: none; /* Oculta la mano de Windows para usar tu cursor custom */
+      /* ======================= */
+      
+      background: transparent;
+      border-radius: 12px;
+      
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* CAPA 1: FONDO OSCURO */
+    #audio-btn::after {
+      content: "";
+      z-index: -1;
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background-color: #333333da;
+      left: 0;
+      top: 0;
+      border-radius: 10px;
+    }
+
+    /* CAPA 2: EL ARCOÍRIS GLOW */
+    #audio-btn::before {
+      content: "";
+      background: linear-gradient(
+        45deg,
+        #FF0000, #FF7300, #FFFB00, #48FF00,
+        #00FFD5, #002BFF, #FF00C8, #FF0000
+      );
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      background-size: 600%;
+      z-index: -2;
+      width: calc(100% + 4px);
+      height: calc(100% + 4px);
+      filter: blur(8px);
+      animation: glowing 20s linear infinite;
+      transition: opacity .3s ease-in-out;
+      border-radius: 10px;
+      opacity: 0;
+    }
+
+    @keyframes glowing {
+      0% { background-position: 0 0; }
+      50% { background-position: 400% 0; }
+      100% { background-position: 0 0; }
+    }
+
+    /* INTERACCIONES */
+    #audio-btn:hover::before {
+      opacity: 1;
+    }
+
+    #audio-btn:active:after {
+      background: transparent;
+    }
+
+    #audio-btn:active {
+      color: #000;
+      font-weight: bold;
+    }
+
+    #audio-btn svg {
+      fill: currentColor;
+      transition: transform 0.2s;
+      pointer-events: none; /* Evita que el SVG interfiera con el cursor */
+    }
+    
+    #audio-btn:hover svg {
+      transform: scale(1.1);
+    }
+  </style>
 </head>
 <body>
   
-  <!-- 1. ELEMENTOS DE FONDO -->
-  <div id="custom-cursor"></div>
-  <video id="background-layer" muted loop playsinline></video>
-  <canvas id="particle-canvas"></canvas>
-  <canvas id="drawing-canvas"></canvas>
+  <!-- 1. FONDO (CANVAS) -->
+  <div id="background-layer">
+    <canvas id="bg-canvas"></canvas>
+  </div>
 
-  <!-- 2. CONTENIDO PRINCIPAL (VIDEO Y TARJETA) -->
+  <!-- 2. CAPAS INTERMEDIAS -->
+  <canvas id="particle-canvas"></canvas>
+  
+  <!-- 3. CONTENEDOR PRINCIPAL -->
   <div class="perspective-container">
     <div class="card-wrapper" id="card-wrapper">
       <div id="video-card">
         <div class="card-shine"></div>
-        <video class="main-video" id="main-video" loop muted playsinline autoplay>
-          <!-- IMPORTANTE: Asegúrate que la mayúscula/minúscula coincida con el nombre real del archivo -->
+        <video class="main-video" id="main-video" loop muted playsinline autoplay preload="auto">
           <source src="assets/Laufey.mp4" type="video/mp4" />
         </video>
       </div>
     </div>
   </div>
 
-  <!-- 3. VISUALIZADOR DE AUDIO -->
+  <!-- 4. UI Y EXTRAS -->
+  <canvas id="drawing-canvas"></canvas>
+
   <div class="eq-bars" id="eq-visual">
     <div class="eq-bar"></div>
     <div class="eq-bar"></div>
     <div class="eq-bar"></div>
   </div>
 
-  <!-- 4. BOTÓN DE AUDIO (Solo debe haber uno) -->
   <button id="audio-btn" class="muted" aria-label="Toggle Sound">
     <svg viewBox="0 0 24 24">
       <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9zM12 4L9.91 6.09 12 8.18V4z"/>
     </svg>
   </button>
 
-  <!-- 5. ELEMENTOS DEL SISTEMA DE SORPRESA (Ahora están dentro del body correctamente) -->
+  <div id="custom-cursor">
+    <div class="cursor-inner"></div>
+    <div class="cursor-outer"></div>
+  </div>
+
   <canvas id="fireworks-canvas"></canvas>
   
   <div id="surprise-overlay">
@@ -53,9 +152,49 @@
     </div>
   </div>
 
-  <!-- 6. SCRIPTS (Solo una vez y al final) -->
-  <!-- Verifica si tu main.js está en carpeta "js" o junto al html -->
-  <script type="module" src="js/main.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const video = document.getElementById('main-video');
+      const canvas = document.getElementById('bg-canvas');
+      
+      const ctx = canvas.getContext('2d', { 
+        alpha: false,       
+        desynchronized: true 
+      });
 
+      let width = 0;
+      let height = 0;
+
+      const setupCanvas = () => {
+        if (video.videoWidth > 0) {
+          width = video.videoWidth / 4;
+          height = video.videoHeight / 4;
+          canvas.width = width;
+          canvas.height = height;
+        }
+      };
+
+      const updateCanvas = (now, metadata) => {
+        if (width > 0) {
+          ctx.drawImage(video, 0, 0, width, height);
+        }
+        video.requestVideoFrameCallback(updateCanvas);
+      };
+
+      if (video.readyState >= 1) {
+        setupCanvas();
+        video.requestVideoFrameCallback(updateCanvas);
+      } else {
+        video.addEventListener('loadedmetadata', () => {
+          setupCanvas();
+          video.requestVideoFrameCallback(updateCanvas);
+        });
+      }
+
+      window.addEventListener('resize', setupCanvas);
+    });
+  </script>
+
+  <script type="module" src="js/main.js"></script>
 </body>
 </html>
