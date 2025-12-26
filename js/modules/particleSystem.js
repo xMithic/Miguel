@@ -39,6 +39,8 @@ class NeuralParticle {
         const bass = musicState?.bass || 0;
 
         // --- REPULSIÓN DEL CURSOR ---
+        let applyFriction = false;
+        
         if (mouse.active) {
             const dx = this.x - mouse.x;
             const dy = this.y - mouse.y;
@@ -54,17 +56,29 @@ class NeuralParticle {
                 const forceDirectionY = dy / distance;
                 
                 // Fuerza inversamente proporcional a la distancia
-                const forceMagnitude = (1 - distance / repelRadius) * 2.5;
+                const forceMagnitude = (1 - distance / repelRadius) * 3.0;
                 
                 // Aplicar fuerza de repulsión
                 this.vx += forceDirectionX * forceMagnitude;
                 this.vy += forceDirectionY * forceMagnitude;
+                
+                applyFriction = true;
             }
         }
 
-        // Aplicar fricción para que no aceleren infinitamente
-        this.vx *= 0.98;
-        this.vy *= 0.98;
+        // Aplicar fricción SOLO cuando hay repulsión activa
+        if (applyFriction) {
+            this.vx *= 0.95; // Fricción aumentada para mayor control
+            this.vy *= 0.95;
+        }
+
+        // Limitar velocidad máxima para mantener control
+        const maxSpeed = 8.0;
+        const currentSpeed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+        if (currentSpeed > maxSpeed) {
+            this.vx = (this.vx / currentSpeed) * maxSpeed;
+            this.vy = (this.vy / currentSpeed) * maxSpeed;
+        }
 
         this.x += this.vx * (1 + bass * 0.5);
         this.y += this.vy * (1 + bass * 0.5);
@@ -242,14 +256,8 @@ export class ParticleSystem {
 
         this.ctx.globalCompositeOperation = 'lighter';
 
-        const mouseActive = this.mouse.active;
-        const mouseX = this.mouse.x;
-        const mouseY = this.mouse.y;
-
         for (let i = 0; i < this.particles.length; i++) {
             const p1 = this.particles[i];
-
-            // REMOVIDO: Conexión al mouse (ya no queremos atraer visualmente)
 
             for (let j = i + 1; j < this.particles.length; j++) {
                 const p2 = this.particles[j];
