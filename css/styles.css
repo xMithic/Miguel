@@ -1,3 +1,7 @@
+@import url('https://fonts.googleapis.com/css2?family=Titan+One&display=swap');
+
+@import url('https://fonts.googleapis.com/css2?family=Bangers&display=swap');
+
 :root {
     --cursor-size: 15px;
     --cursor-outer-size: 25px;
@@ -139,39 +143,107 @@ html, body {
     will-change: transform;
 }
 
+/* ============================================
+   ESTILO CÓMIC / POP ART PARA EL VIDEO
+   ============================================ */
+
+/* 1. Contenedor de la viñeta (El Panel) */
 #video-card {
     position: relative;
     width: 100%;
-    border: none;
-    background: transparent;
-    box-shadow: none;
-    filter: drop-shadow(0 20px 40px rgba(0,0,0,0.5));
-    border-radius: var(--card-radius);
+    
+    /* Borde negro grueso estilo tinta */
+    border: 4px solid #000000;
+    
+    /* Sombra sólida "Hard Shadow" para efecto 3D plano */
+    box-shadow: 12px 12px 0px rgba(0, 0, 0, 1);
+    
+    /* Fondo blanco por si el video tarda en cargar */
+    background: #fff;
+    
+    /* Eliminamos el radio suave anterior para esquinas más rectas */
+    border-radius: 4px; 
+    
+    /* Pequeña rotación aleatoria para dar sensación de "pegado" a mano (opcional) */
+    transform: rotate(-1deg);
+    
+    /* Aseguramos que el contenido no se salga */
     overflow: hidden;
-    will-change: transform;
+    
+    /* Transición suave para efectos hover */
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    z-index: 20;
 }
 
+/* 2. El Video Principal (Efecto Tinta/Color) */
 #video-card video.main-video {
     width: 100%;
     height: auto;
     display: block;
-    opacity: 1;
+    
+    /* FILTROS CLAVE: 
+       - Contrast: Aumenta la diferencia negros/blancos.
+       - Saturate: Colores vibrantes estilo cómic.
+       - Brightness: Compensa el contraste. 
+    */
+    filter: contrast(1.25) saturate(1.4) brightness(1.1);
+    
+    /* Asegura que el video cubra todo el panel */
+    object-fit: cover;
 }
 
-.card-shine {
+/* 3. Efecto Halftone (Puntos de cómic) superpuesto */
+#video-card::after {
+    content: "";
     position: absolute;
     inset: 0;
-    border-radius: var(--card-radius);
-    background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(255,255,255,0.2), transparent 50%);
-    z-index: 25;
     pointer-events: none;
-    mix-blend-mode: overlay;
-    opacity: 0;
-    transition: opacity 0.3s;
+    z-index: 25;
+    
+    /* Patrón de puntos sutiles estilo Ben-Day dots */
+    background-image: radial-gradient(circle, #000 1px, transparent 1.5px);
+    background-size: 8px 8px; /* Tamaño de la trama */
+    
+    /* Mezcla suave para no tapar el video */
+    opacity: 0.09;
+    mix-blend-mode: multiply;
 }
 
-.card-wrapper:hover .card-shine {
-    opacity: 1;
+/* 4. Efecto Hover: "Pop-up" interactivo */
+.card-wrapper:hover #video-card {
+    /* El video se levanta y la sombra crece */
+    transform: translate(-4px, -4px) rotate(0deg) scale(1.02);
+    box-shadow: 20px 20px 0px rgba(0, 0, 0, 1);
+    border-color: #fff; /* El borde cambia a blanco o color neón */
+    outline: 4px solid #000; /* Doble borde para más estilo */
+}
+
+/* ============================================
+   RESPONSIVE (ADAPTATIVO)
+   ============================================ */
+
+/* Tablets y Laptops pequeñas */
+@media (max-width: 1024px) {
+    #video-card {
+        box-shadow: 8px 8px 0px #000; /* Sombra más pequeña */
+        border-width: 3px;
+    }
+}
+
+/* Móviles */
+@media (max-width: 768px) {
+    #video-card {
+        transform: none !important; /* Quitamos rotación en móvil para ganar espacio */
+        box-shadow: 6px 6px 0px #000;
+        border-width: 3px;
+        border-radius: 2px;
+    }
+    
+    .card-wrapper:hover #video-card {
+        /* Efecto más sutil en táctil */
+        transform: translate(-2px, -2px);
+        box-shadow: 10px 10px 0px #000;
+    }
 }
 
 /* ============================================
@@ -204,77 +276,131 @@ html, body {
 .eq-bar:nth-child(2) { animation-delay: 0.1s; }
 .eq-bar:nth-child(3) { animation-delay: 0.2s; }
 
-/* ESTILO BOTÓN DE SONIDO */
+/* ============================================
+   BOTÓN DE MÚSICA: CÓMIC PURO (SIN TEXTO)
+   ============================================ */
 #audio-btn {
     position: fixed;
     bottom: 40px;
     left: 50%;
-    transform: translateX(-50%);
+    
+    /* ESTADO INICIAL */
+    transform: translateX(-50%) rotate(-3deg);
+    
     z-index: 100;
-    padding: 15px 40px;
-    border: none;
-    outline: none;
-    color: #FFF;
+    padding: 12px 30px;
+    
+    /* --- ESTILO VISUAL --- */
+    background-color: rgba(255, 221, 64, 0.9) !important; /* Amarillo intenso */
+    backdrop-filter: blur(4px);
+    
+    border: 3px solid #000 !important;
+    box-shadow: 6px 6px 0px #000 !important; /* Sombra dura inicial */
+    
+    color: #000 !important;
+    font-weight: 900;
+    font-family: 'Montserrat', sans-serif, system-ui;
+    text-transform: uppercase;
+    font-size: 1.1rem;
+    letter-spacing: 0.5px;
+    
     cursor: pointer;
-    background-color: transparent;
-    border-radius: 12px;
+    border-radius: 8px;
+    
     display: flex;
     justify-content: center;
     align-items: center;
-    transition: --video-glow 0.1s linear;
+    gap: 8px;
+    
+    /* ANIMACIÓN ELÁSTICA (BOUNCY) ESTILO CÓMIC */
+    /* Esto hace que al crecer "reabote" un poco al final */
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-/* Fondo oscuro interior */
-#audio-btn::after {
-    content: "";
-    z-index: -1;
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background-color: #111;
-    left: 0;
-    top: 0;
-    border-radius: 10px;
-    transition: background-color 0.2s;
-}
-
-/* El brillo dinámico */
+/* Eliminamos definitivamente el texto flotante y triángulos */
+#audio-btn::after,
 #audio-btn::before {
-    content: "";
-    background: linear-gradient(
-        45deg,
-        var(--video-glow),
-        #ffffff 50%,
-        var(--video-glow)
-    );
-    position: absolute;
-    top: -2px;
-    left: -2px;
-    background-size: 400%;
-    z-index: -2;
-    width: calc(100% + 4px);
-    height: calc(100% + 4px);
-    filter: blur(10px);
-    animation: glowing 20s linear infinite;
-    opacity: 0;
-    border-radius: 10px;
-    transition: opacity 0.3s ease-in-out;
+    display: none;
+    content: none;
 }
 
-@keyframes glowing {
-    0% { background-position: 0 0; }
-    50% { background-position: 400% 0; }
-    100% { background-position: 0 0; }
+/* --- ESTADO HOVER (¡POP!) --- */
+#audio-btn:hover {
+    /* 1. Mantenemos el ángulo (-3deg)
+       2. Aumentamos la escala a 1.15 (15% más grande) para que destaque */
+    transform: translateX(-50%) rotate(-3deg) scale(1.15);
+    
+    /* La sombra crece mucho para dar sensación de que "vuela" hacia ti */
+    box-shadow: 14px 14px 0px #000 !important;
+    
+    /* Color un poco más brillante */
+    background-color: #FFEA80 !important;
 }
 
-#audio-btn:hover::before { opacity: 1; }
-#audio-btn:active::after { background: transparent; }
-#audio-btn:active { color: #000; font-weight: bold; }
+/* --- ESTADO CLICK (GOLPE) --- */
+#audio-btn:active {
+    /* Al hacer click se encoge un poco (efecto de presión) */
+    transform: translateX(-50%) rotate(-3deg) scale(0.95);
+    
+    /* La sombra desaparece casi por completo */
+    box-shadow: 2px 2px 0px #000 !important;
+    
+    background-color: #FFC000 !important; /* Amarillo más oscuro */
+    transition: all 0.1s ease; /* Reacción rápida al click */
+}
 
+/* --- ICONO SVG --- */
 #audio-btn svg {
     width: 24px;
-    fill: currentColor;
+    height: 24px;
+    fill: #000 !important;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
+
+/* El icono también crece un poco extra dentro del botón */
+#audio-btn:hover svg {
+    transform: scale(1.2);
+}
+
+
+
+
+
+
+/* --- ESTADO HOVER (ACTIVACIÓN) --- */
+#audio-btn:hover {
+    /* ALERTA: Mantenemos la rotación -3deg o lo enderezamos suavemente a 0deg? 
+       Si quieres que NO se mueva nada, usa rotate(-3deg) aquí también. 
+       Para efecto "vivo", rotate(0deg) está bien, pero el active debe coincidir.
+       Vamos a mantenerlo quieto en ángulo para máxima estabilidad. */
+    transform: translateX(-50%) rotate(-3deg) scale(1.05); 
+    
+    box-shadow: 10px 10px 0px #000 !important;
+    background-color: rgba(255, 234, 128, 0.95) !important;
+}
+
+#audio-btn:hover::after,
+#audio-btn:hover::before {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+}
+
+/* --- ESTADO CLICK (SOLUCIÓN DEL DESFASE) --- */
+#audio-btn:active {
+    /* CLAVE: Mantenemos rotate(-3deg) para que no salte hacia los lados */
+    transform: translateX(-50%) translateY(4px) rotate(-3deg);
+    
+    box-shadow: 2px 2px 0px #000 !important;
+}
+
+/* --- ICONO INTERNO --- */
+#audio-btn svg {
+    width: 20px;
+    height: 20px;
+    fill: #000 !important;
+    filter: none !important;
+}
+
 
 
 /* ============================================
@@ -398,67 +524,186 @@ body.show-surprise .message-content {
     transform: translateY(0);
 }
 
-/* TÍTULO PRINCIPAL (Te Quiero) */
+/* 2. ESTILO TÍTULO "TE QUIERO" (Estilo Cómic Romántico - El que te gustó) */
 .glow-text {
-    font-family: 'Montserrat', sans-serif, system-ui; /* Fuente moderna */
-    font-weight: 800; /* Extra bold */
-    color: #fff;
-    margin: 0 0 10px 0;
+    font-family: 'Titan One', cursive; /* Fuente gordita */
+    font-size: 5.5rem;
     line-height: 1.1;
+    margin: 0 0 15px 0;
     
-    /* Tamaño Responsivo Base (PC) */
-    font-size: 5rem; 
+    /* Relleno blanco puro */
+    color: #ffffff;
     
-    /* EL EFECTO GLOW (NEÓN) REFINADO */
+    /* Borde negro estilo tinta de cómic */
+    -webkit-text-stroke: 3px #020101;
+    
+    /* Sombras sólidas en capas (Rosa Chicle + Rosa Profundo + Negro) */
     text-shadow: 
-        0 0 10px rgba(255, 255, 255, 0.8),
-        0 0 20px rgba(255, 0, 128, 0.5), /* Rosa neón */
-        0 0 40px rgba(255, 0, 128, 0.3);
+        4px 4px 0px #FF69B4,
+        8px 8px 0px #0000001e,
+        12px 12px 0px #000000;
         
-    letter-spacing: -2px; /* Estilo compacto moderno */
+    letter-spacing: 2px;
+    
+    /* Animación flotante */
+    animation: comicFloat 3s ease-in-out infinite;
+    will-change: transform;
 }
 
-/* SUBTÍTULO (Eres mi persona favorita) */
-.sub-text {
-    font-family: 'Segoe UI', Roboto, Helvetica, sans-serif;
-    font-size: 1.5rem;
-    font-weight: 300;
-    color: #ddd;
-    letter-spacing: 2px; /* Separado para elegancia */
-    text-transform: uppercase;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+/* =========================================================
+   DISEÑO "COMIC LOVE POP-ART" (NIVEL PRO)
+   ========================================================= */
+
+/* TÍTULO CÓMIC CLÁSICO (Amarillo + Negro) */
+.glow-text {
+    /* Mantenemos la estructura para que no se desfase */
+    position: relative;
+    width: 100%;
+    text-align: center;
+    
+    font-family: 'Bangers', cursive;
+    font-size: 7rem;
+    line-height: 1;
+    margin-bottom: 20px;
+    z-index: 10;
+    
+    /* 1. COLOR AMARILLO CÓMIC (Sólido y Vibrante) */
+    color: #FFD700; /* Oro/Amarillo clásico */
+    
+    /* 2. CONTORNO NEGRO INTERNO (Definición) */
+    -webkit-text-stroke: 2.5px #000;
+    
+    /* 3. SOMBRA DE BLOQUE (Efecto 3D Cómic) */
+    text-shadow: 6px 6px 0px #000; /* Sombra negra dura y sólida */
+    
+    letter-spacing: 3px;
+    transform: rotate(-3deg); /* Inclinación típica */
+    
+    /* Animación flotante simple */
+    animation: comicFloat 3s ease-in-out infinite;
 }
 
-/* ============================================
-   RESPONSIVE (CELULARES)
-   ============================================ */
+/* Borramos los pseudo-elementos complejos anteriores para limpiar */
+.glow-text::before,
+.glow-text::after {
+    display: none;
+    content: none;
+}
 
+/* RESPONSIVE */
 @media (max-width: 768px) {
-    /* Ajustes para Tablets y Móviles grandes */
     .glow-text {
-        font-size: 3.5rem; /* Reducir tamaño */
-    }
-    .sub-text {
-        font-size: 1.2rem;
+        font-size: 4.5rem;
+        -webkit-text-stroke: 1.5px #000;
+        text-shadow: 4px 4px 0px #000;
     }
 }
 
-@media (max-width: 480px) {
-    /* Ajustes para Celulares Pequeños (iPhone SE, etc.) */
+/* Decoración: Pequeños brillos/estrellas alrededor (Pseudo-elemento) */
+.glow-text::after {
+    content: "✦";
+    position: absolute;
+    top: -20px;
+    right: -10px;
+    font-size: 4rem;
+    color: #FFD700;
+    -webkit-text-stroke: 1px #000;
+    text-shadow: 2px 2px 0 #000;
+    animation: spinStar 3s linear infinite;
+    z-index: 20;
+}
+
+
+/* 2. SUBTÍTULO: Estilo "Sticker" con Fondo Blanco */
+.sub-text {
+    position: relative;
+    display: inline-block; /* Necesario para que el fondo se ajuste al texto */
+    font-family: 'Bangers', cursive;
+    font-size: 2.5rem;
+    color: #000; /* Texto negro para máximo contraste */
+    
+    /* Fondo Blanco estilo "Recorte de papel" */
+    background-color: #fff;
+    padding: 10px 25px; /* Espacio alrededor del texto */
+    border: 3px solid #000; /* Borde negro del recuadro */
+    border-radius: 15px 0px 15px 0px; /* Bordes irregulares */
+    
+    /* Sombra rosada desplazada */
+    box-shadow: 8px 8px 0px #FF69B4, 12px 12px 0px #000;
+    
+    margin-top: 20px;
+    transform: rotate(2deg);
+    
+    /* Animación de aparición pop */
+    animation: popIn 1s ease-out backwards, tiltMove 3s ease-in-out infinite alternate;
+}
+
+/* Decoración del subtítulo (Corazón) */
+.sub-text::before {
+    content: "❤";
+    position: absolute;
+    left: -25px;
+    top: -25px;
+    font-size: 3rem;
+    color: #FF0000;
+    -webkit-text-stroke: 1.5px #000;
+    text-shadow: 2px 2px 0 #000;
+    transform: rotate(-15deg);
+    animation: heartBeat 1.5s infinite;
+}
+
+/* --- ANIMACIONES AVANZADAS --- */
+
+/* Flotar tipo Gelatina (Más elástico que el anterior) */
+@keyframes jellyFloat {
+    0%, 100% { transform: rotate(-3deg) translateY(0) scale(1); }
+    50% { transform: rotate(-3deg) translateY(-15px) scale(1.05); }
+}
+
+/* Movimiento de lado a lado suave */
+@keyframes tiltMove {
+    from { transform: rotate(2deg); }
+    to { transform: rotate(4deg); }
+}
+
+/* Estrella girando */
+@keyframes spinStar {
+    0% { transform: rotate(0deg) scale(1); }
+    50% { transform: rotate(180deg) scale(1.2); }
+    100% { transform: rotate(360deg) scale(1); }
+}
+
+/* Latido fuerte */
+@keyframes heartBeat {
+    0% { transform: scale(1) rotate(-15deg); }
+    15% { transform: scale(1.3) rotate(-15deg); }
+    30% { transform: scale(1) rotate(-15deg); }
+    45% { transform: scale(1.3) rotate(-15deg); }
+    100% { transform: scale(1) rotate(-15deg); }
+}
+
+/* --- RESPONSIVE --- */
+@media (max-width: 768px) {
     .glow-text {
-        font-size: 12vw; /* Usamos Viewport Width para que NUNCA se desborde */
-        letter-spacing: -1px;
+        font-size: 4rem; /* Texto más pequeño en móvil */
+        -webkit-text-stroke: 1px #000;
+        filter: drop-shadow(5px 5px 0px #000);
+        background-size: 4px 4px, 100% 100%; /* Puntos más pequeños */
     }
     
     .sub-text {
-        font-size: 1rem;
-        letter-spacing: 1px;
-        margin-top: 5px;
+        font-size: 1.5rem;
+        padding: 8px 15px;
+        box-shadow: 5px 5px 0px #FF69B4, 8px 8px 0px #000;
     }
     
-    /* Ajuste del contenedor de la tarjeta de video en móvil */
-    .card-wrapper {
-        width: 90% !important; /* Más margen lateral */
-        max-width: none;
+    .sub-text::before { /* Corazón más pequeño */
+        font-size: 2rem;
+        left: -15px; top: -20px;
+    }
+    
+    .glow-text::after { /* Estrella más pequeña */
+        font-size: 2.5rem;
+        top: -10px; right: -5px;
     }
 }
