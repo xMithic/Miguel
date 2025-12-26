@@ -1,8 +1,10 @@
 :root {
     --cursor-size: 20px;
+    --cursor-outer-size: 40px;
     --ui-blur: 16px;
     --btn-size: 50px;
     --card-radius: 24px;
+    --cursor-glow: rgba(100, 200, 255, 0.5);
 }
 
 /* 1. RESET Y GPU HACKS GLOBALES */
@@ -146,20 +148,19 @@ video.main-video {
 .eq-bar:nth-child(2) { animation-delay: 0.1s; }
 .eq-bar:nth-child(3) { animation-delay: 0.2s; }
 
-/* 6. CURSOR PERSONALIZADO (Optimizado con transiciones suaves) */
+/* ============================================
+   6. CURSOR PERSONALIZADO ULTRA PREMIUM
+   ============================================ */
+
 #custom-cursor {
-    position: fixed; 
-    width: var(--cursor-size); 
-    height: var(--cursor-size);
-    border: 2px solid rgba(255,255,255,0.9); 
-    border-radius: 50%;
-    top: 0; left: 0; 
-    pointer-events: none; 
+    position: fixed;
+    top: 0;
+    left: 0;
+    pointer-events: none;
     z-index: 10000;
-    mix-blend-mode: difference;
-    transition: transform 0.05s linear, opacity 0.6s ease;
     transform: translate3d(-50%, -50%, 0);
     will-change: transform, top, left, opacity;
+    transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
     opacity: 1;
 }
 
@@ -167,13 +168,149 @@ video.main-video {
     opacity: 0;
 }
 
-#custom-cursor.active {
-    transform: translate3d(-50%, -50%, 0) scale(2.2);
-    background: rgba(255,255,255,0.2); 
-    border-color: transparent;
+/* INNER CURSOR - Punto central con glow */
+.cursor-inner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    background: linear-gradient(135deg, #ffffff, #e0f7ff);
+    border-radius: 50%;
+    box-shadow: 
+        0 0 10px rgba(255, 255, 255, 0.8),
+        0 0 20px var(--cursor-glow),
+        0 0 30px var(--cursor-glow);
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: cursorPulse 2s ease-in-out infinite;
+    /* Interacción con el fondo */
+    mix-blend-mode: difference;
 }
 
-/* 7. BOTÓN DE AUDIO - SIN CURSOR POR DEFECTO */
+@keyframes cursorPulse {
+    0%, 100% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: translate(-50%, -50%) scale(1.1);
+        opacity: 0.9;
+    }
+}
+
+/* OUTER CURSOR - Anillo exterior con glassmorphism */
+.cursor-outer {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: var(--cursor-outer-size);
+    height: var(--cursor-outer-size);
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+    background: radial-gradient(
+        circle at center,
+        rgba(255, 255, 255, 0.15) 0%,
+        rgba(255, 255, 255, 0.08) 50%,
+        transparent 100%
+    );
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    box-shadow: 
+        inset 0 0 15px rgba(255, 255, 255, 0.2),
+        0 0 20px rgba(100, 200, 255, 0.3);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Interacción con el fondo - invierte colores */
+    mix-blend-mode: exclusion;
+}
+
+/* Efecto de trailing/estela */
+.cursor-outer::before {
+    content: '';
+    position: absolute;
+    inset: -5px;
+    border-radius: 50%;
+    background: radial-gradient(
+        circle at center,
+        transparent 40%,
+        rgba(255, 255, 255, 0.08) 100%
+    );
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    mix-blend-mode: screen;
+}
+
+#custom-cursor.hover .cursor-outer::before {
+    opacity: 1;
+}
+
+/* ESTADO HOVER - Cuando está sobre elementos interactivos */
+#custom-cursor.hover .cursor-inner {
+    width: 12px;
+    height: 12px;
+    background: linear-gradient(135deg, #64c8ff, #ffffff);
+    box-shadow: 
+        0 0 15px rgba(100, 200, 255, 1),
+        0 0 30px rgba(100, 200, 255, 0.8),
+        0 0 45px rgba(100, 200, 255, 0.6);
+}
+
+#custom-cursor.hover .cursor-outer {
+    width: 60px;
+    height: 60px;
+    border-color: rgba(100, 200, 255, 0.6);
+    background: radial-gradient(
+        circle at center,
+        rgba(100, 200, 255, 0.2) 0%,
+        rgba(100, 200, 255, 0.1) 50%,
+        transparent 100%
+    );
+    box-shadow: 
+        inset 0 0 20px rgba(100, 200, 255, 0.3),
+        0 0 30px rgba(100, 200, 255, 0.4);
+}
+
+/* ESTADO ACTIVE - Cuando se hace click */
+#custom-cursor.active .cursor-inner {
+    width: 6px;
+    height: 6px;
+    background: linear-gradient(135deg, #ff6b9d, #ffc371);
+    box-shadow: 
+        0 0 20px rgba(255, 107, 157, 1),
+        0 0 40px rgba(255, 107, 157, 0.8);
+    animation: clickPulse 0.3s ease-out;
+}
+
+@keyframes clickPulse {
+    0% {
+        transform: translate(-50%, -50%) scale(1);
+    }
+    50% {
+        transform: translate(-50%, -50%) scale(1.5);
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+#custom-cursor.active .cursor-outer {
+    width: 50px;
+    height: 50px;
+    border-color: rgba(255, 107, 157, 0.8);
+    border-width: 3px;
+    background: radial-gradient(
+        circle at center,
+        rgba(255, 107, 157, 0.3) 0%,
+        rgba(255, 195, 113, 0.15) 50%,
+        transparent 100%
+    );
+    box-shadow: 
+        inset 0 0 25px rgba(255, 107, 157, 0.4),
+        0 0 35px rgba(255, 107, 157, 0.5);
+}
+
+/* 7. BOTÓN DE AUDIO */
 #audio-btn {
     position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
     z-index: 100;
@@ -236,11 +373,6 @@ video.main-video {
     opacity: 0.5; 
 }
 
-/* Forzar cursor personalizado en todos los elementos interactivos */
-*, *::before, *::after {
-    cursor: none !important;
-}
-
 /* 8. SORPRESA OVERLAY */
 #surprise-overlay {
     position: fixed; inset: 0; z-index: 9001;
@@ -293,7 +425,12 @@ body.show-surprise .message-content {
     margin-top: 10px; font-weight: 300; letter-spacing: 2px; text-transform: uppercase;
 }
 
-/* 9. ADAPTACIÓN PARA DISPOSITIVOS MÓVILES Y TÁCTILES */
+/* FORZAR CURSOR PERSONALIZADO EN TODOS LOS ELEMENTOS */
+*, *::before, *::after {
+    cursor: none !important;
+}
+
+/* ADAPTACIÓN PARA DISPOSITIVOS MÓVILES Y TÁCTILES */
 @media (hover: none) and (pointer: coarse) {
     html, body {
         cursor: auto !important;
@@ -324,5 +461,9 @@ body.show-surprise .message-content {
     #audio-btn {
         bottom: 20px;
         padding: 12px 24px;
+    }
+    
+    :root {
+        --cursor-outer-size: 35px;
     }
 }
