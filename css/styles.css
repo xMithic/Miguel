@@ -1,6 +1,6 @@
 :root {
-    --cursor-size: 20px;
-    --cursor-outer-size: 40px;
+    --cursor-size: 10px;
+    --cursor-outer-size: 20px;
     --ui-blur: 16px;
     --btn-size: 50px;
     --card-radius: 24px;
