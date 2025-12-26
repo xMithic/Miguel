@@ -24,9 +24,7 @@ class NeuralParticle {
         this.vx = Math.cos(angle) * speed;
         this.vy = Math.sin(angle) * speed;
 
-        // REDUCIDO: Tamaño base más pequeño
-        this.baseSize = 1.0 + Math.random() * 1.0; // Antes: 1.0 + Math.random() * 1.5
-
+        this.baseSize = 1.0 + Math.random() * 1.0;
         this.history = [];
     }
 
@@ -34,11 +32,39 @@ class NeuralParticle {
         return (1 - amt) * start + amt * end;
     }
 
-    update(musicState, pixelData, bufferWidth, bufferHeight, canvasWidth, canvasHeight) {
+    update(musicState, pixelData, bufferWidth, bufferHeight, canvasWidth, canvasHeight, mouse) {
         this.width = canvasWidth;
         this.height = canvasHeight;
 
         const bass = musicState?.bass || 0;
+
+        // --- REPULSIÓN DEL CURSOR ---
+        if (mouse.active) {
+            const dx = this.x - mouse.x;
+            const dy = this.y - mouse.y;
+            const distSq = dx * dx + dy * dy;
+            const repelRadius = 150; // Radio de influencia del cursor
+            const repelRadiusSq = repelRadius * repelRadius;
+
+            if (distSq < repelRadiusSq && distSq > 0) {
+                const distance = Math.sqrt(distSq);
+                
+                // Vector normalizado de dirección (desde cursor hacia partícula)
+                const forceDirectionX = dx / distance;
+                const forceDirectionY = dy / distance;
+                
+                // Fuerza inversamente proporcional a la distancia
+                const forceMagnitude = (1 - distance / repelRadius) * 2.5;
+                
+                // Aplicar fuerza de repulsión
+                this.vx += forceDirectionX * forceMagnitude;
+                this.vy += forceDirectionY * forceMagnitude;
+            }
+        }
+
+        // Aplicar fricción para que no aceleren infinitamente
+        this.vx *= 0.98;
+        this.vy *= 0.98;
 
         this.x += this.vx * (1 + bass * 0.5);
         this.y += this.vy * (1 + bass * 0.5);
@@ -123,16 +149,13 @@ class NeuralParticle {
                 ctx.lineTo(this.history[i].x, this.history[i].y);
             }
             ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.3)`;
-            ctx.lineWidth = 0.5; // Más delgado
+            ctx.lineWidth = 0.5;
             ctx.stroke();
         }
 
         ctx.globalCompositeOperation = 'lighter';
 
         const size = Math.max(0.3, this.baseSize * (1 + (musicState?.bass || 0) * 0.3));
-
-        // ELIMINADO: Resplandor externo (efecto huevo frito)
-        // Solo mantenemos el núcleo compacto
 
         // Núcleo más definido y pequeño
         const rCore = Math.min(255, r + 15);
@@ -141,7 +164,7 @@ class NeuralParticle {
 
         ctx.fillStyle = `rgba(${rCore}, ${gCore}, ${bCore}, 0.95)`;
         ctx.beginPath();
-        ctx.arc(this.x2d, this.y2d, size, 0, Math.PI * 2); // Sin multiplicador, solo size
+        ctx.arc(this.x2d, this.y2d, size, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.globalCompositeOperation = 'source-over';
@@ -204,11 +227,16 @@ export class ParticleSystem {
 
         window.addEventListener('pointerup', endInteraction);
         window.addEventListener('pointercancel', endInteraction);
-        window.addEventListener('pointerleave', endInteraction);
+        window.addEventListener('pointerleave', (e) => {
+            // Desactivar mouse cuando sale del canvas
+            this.mouse.active = false;
+            this.mouse.x = -1000;
+            this.mouse.y = -1000;
+        });
     }
 
     drawConnections(bassFactor) {
-        this.ctx.lineWidth = 1.0; // Líneas más delgadas
+        this.ctx.lineWidth = 1.0;
         const reach = this.CONNECTION_DISTANCE * (1 + bassFactor);
         const reachSq = reach * reach;
 
@@ -221,17 +249,7 @@ export class ParticleSystem {
         for (let i = 0; i < this.particles.length; i++) {
             const p1 = this.particles[i];
 
-            if (mouseActive) {
-                const dx = p1.x2d - mouseX;
-                const dy = p1.y2d - mouseY;
-                if (dx*dx + dy*dy < 22500) {
-                    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(p1.x2d, p1.y2d);
-                    this.ctx.lineTo(mouseX, mouseY);
-                    this.ctx.stroke();
-                }
-            }
+            // REMOVIDO: Conexión al mouse (ya no queremos atraer visualmente)
 
             for (let j = i + 1; j < this.particles.length; j++) {
                 const p2 = this.particles[j];
@@ -243,7 +261,7 @@ export class ParticleSystem {
                 const distSq = dx*dx + dy*dy;
 
                 if (distSq < reachSq) {
-                    const alpha = (1 - distSq / reachSq) * 0.6; // Reducida opacidad
+                    const alpha = (1 - distSq / reachSq) * 0.6;
                     const r = (p1.color.r + p2.color.r) >> 1;
                     const g = (p1.color.g + p2.color.g) >> 1;
                     const b = (p1.color.b + p2.color.b) >> 1;
@@ -273,7 +291,7 @@ export class ParticleSystem {
 
                             if (distSq3 < reachSq) {
                                 const maxDist = Math.max(distSq, distSq2, distSq3);
-                                const triAlpha = (1 - maxDist / reachSq) * 0.1; // Reducido
+                                const triAlpha = (1 - maxDist / reachSq) * 0.1;
 
                                 if (triAlpha > 0.02) {
                                     this.ctx.fillStyle = `rgba(${lineR}, ${lineG}, ${lineB}, ${triAlpha})`;
@@ -313,7 +331,11 @@ export class ParticleSystem {
 
         for (let i = 0; i < this.particles.length; i++) {
             const p = this.particles[i];
-            p.update(musicState, pixelData, bufferW, bufferH, this.canvas.width, this.canvas.height);
+            p.update(musicState, pixelData, bufferW, bufferH, this.canvas.width, this.canvas.height, this.mouse);
+        }
+
+        for (let i = 0; i < this.particles.length; i++) {
+            const p = this.particles[i];
             p.draw(this.ctx, this.canvas.width/2, this.canvas.height/2, musicState);
         }
 
