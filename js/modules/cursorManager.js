@@ -1,59 +1,77 @@
-
 export class CursorManager {
-  constructor(cursorElement, cardWrapper, shine) {
-    this.cursor = cursorElement;
-    this.cardWrapper = cardWrapper;
-    this.shine = shine;
-    this.mouseX = window.innerWidth / 2;
-    this.mouseY = window.innerHeight / 2;
-    this.cursorTimer = null;
-    
-    this.setupEventListeners();
-  }
+    constructor(cursorElement, cardWrapper, shine) {
+        this.cursor = cursorElement;
+        this.cardWrapper = cardWrapper;
+        this.shine = shine;
+        this.mouseX = window.innerWidth / 2;
+        this.mouseY = window.innerHeight / 2;
+        this.cursorTimer = null;
+        this.isTouchDevice = this.detectTouch();
+        
+        this.setupEventListeners();
+        this.initializeCursor();
+    }
 
-  setupEventListeners() {
-    window.addEventListener('pointermove', (e) => this.handleMove(e));
-    window.addEventListener('pointerdown', () => this.handleDown());
-    window.addEventListener('pointerup', () => this.handleUp());
-  }
+    detectTouch() {
+        return ('ontouchstart' in window) || 
+               (navigator.maxTouchPoints > 0) || 
+               (navigator.msMaxTouchPoints > 0);
+    }
 
-  handleMove(e) {
-    this.mouseX = e.clientX;
-    this.mouseY = e.clientY;
+    initializeCursor() {
+        if (this.isTouchDevice) {
+            this.cursor.style.display = 'none';
+            document.body.style.cursor = 'auto';
+        } else {
+            this.cursor.classList.add('hidden');
+        }
+    }
 
-    this.cursor.style.left = e.clientX + 'px';
-    this.cursor.style.top = e.clientY + 'px';
-    this.cursor.classList.remove('hidden');
-    
-    clearTimeout(this.cursorTimer);
-    this.cursorTimer = setTimeout(() => {
-      this.cursor.classList.add('hidden');
-    }, 2500);
+    setupEventListeners() {
+        if (this.isTouchDevice) {
+            return;
+        }
 
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-    const centerX = width / 2;
-    const centerY = height / 2;
+        window.addEventListener('pointermove', (e) => this.handleMove(e));
+        window.addEventListener('pointerdown', () => this.handleDown());
+        window.addEventListener('pointerup', () => this.handleUp());
+    }
 
-    const rotateX = (centerY - e.clientY) / 25;
-    const rotateY = (e.clientX - centerX) / 25;
-    this.cardWrapper.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+    handleMove(e) {
+        this.mouseX = e.clientX;
+        this.mouseY = e.clientY;
+        this.cursor.style.left = e.clientX + 'px';
+        this.cursor.style.top = e.clientY + 'px';
+        
+        this.cursor.classList.remove('hidden');
+        
+        clearTimeout(this.cursorTimer);
+        this.cursorTimer = setTimeout(() => {
+            this.cursor.classList.add('hidden');
+        }, 2000);
 
-    this.shine.style.setProperty('--x', `${(e.clientX / width) * 100}%`);
-    this.shine.style.setProperty('--y', `${(e.clientY / height) * 100}%`);
-  }
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        const centerX = width / 2;
+        const centerY = height / 2;
+        const rotateX = (centerY - e.clientY) / 25;
+        const rotateY = (e.clientX - centerX) / 25;
 
-  handleDown() {
-    this.cursor.classList.add('active');
-    this.cardWrapper.style.transform += ' scale(0.985)';
-  }
+        this.cardWrapper.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+        this.shine.style.setProperty('--x', `${(e.clientX / width) * 100}%`);
+        this.shine.style.setProperty('--y', `${(e.clientY / height) * 100}%`);
+    }
 
-  handleUp() {
-    this.cursor.classList.remove('active');
-  }
+    handleDown() {
+        this.cursor.classList.add('active');
+        this.cardWrapper.style.transform += ' scale(0.985)';
+    }
 
-  getMousePosition() {
-    return { x: this.mouseX, y: this.mouseY };
-  }
+    handleUp() {
+        this.cursor.classList.remove('active');
+    }
+
+    getMousePosition() {
+        return { x: this.mouseX, y: this.mouseY };
+    }
 }
-
