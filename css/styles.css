@@ -205,7 +205,7 @@ html, body {
     background-size: 8px 8px; /* Tamaño de la trama */
     
     /* Mezcla suave para no tapar el video */
-    opacity: 0.09;
+    opacity: 0.05;
     mix-blend-mode: multiply;
 }
 
@@ -551,159 +551,398 @@ body.show-surprise .message-content {
 }
 
 /* =========================================================
-   DISEÑO "COMIC LOVE POP-ART" (NIVEL PRO)
-   ========================================================= */
+   DISEÑO "COMIC LOVE POP-ART" (NIVEL PRO++) ⚡💥
+   Mejoras: Animaciones 3D, onomatopeyas, efectos halftone
+========================================================= */
 
-//* TÍTULO CÓMIC CLÁSICO (Amarillo + Negro) */
+/* TÍTULO PRINCIPAL: Efecto Comic Explosivo */
 .glow-text {
-    /* Mantenemos la estructura para que no se desfase */
     position: relative;
     width: 100%;
     text-align: center;
-    
     font-family: 'Bangers', cursive;
-    font-size: 7rem;
+    font-size: 8rem;
     line-height: 1;
-    margin-bottom: 20px;
+    margin-bottom: 30px;
     z-index: 10;
-    
-    /* 1. COLOR AMARILLO CÓMIC (Sólido y Vibrante) */
-    color: #FFD700; /* Oro/Amarillo clásico */
-    
-    /* 2. CONTORNO NEGRO INTERNO (Definición) */
-    -webkit-text-stroke: 2.5px #000;
-    
-    /* 3. SOMBRA DE BLOQUE (Efecto 3D Cómic) */
-    text-shadow: 6px 6px 0px #000; /* Sombra negra dura y sólida */
-    
-    letter-spacing: 3px;
-    transform: rotate(-3deg); /* Inclinación típica */
-    
-    /* Animación flotante simple */
-    animation: comicFloat 3s ease-in-out infinite;
+
+    /* Color amarillo vibrante con gradiente */
+    background: linear-gradient(180deg, #FFE600 0%, #FFD700 50%, #FFA500 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+
+    /* Contorno negro grueso tipo tinta */
+    -webkit-text-stroke: 4px #000;
+
+    /* Sombra múltiple para efecto 3D profundo */
+    filter: drop-shadow(6px 6px 0px #FF1493) 
+            drop-shadow(10px 10px 0px #00FFFF)
+            drop-shadow(14px 14px 0px #000);
+
+    letter-spacing: 5px;
+    transform: rotate(-2deg);
+
+    /* Animación elástica con rebote */
+    animation: comicBounce 4s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+    will-change: transform;
 }
 
-/* Borramos los pseudo-elementos complejos anteriores para limpiar */
-.glow-text::before,
-.glow-text::after {
-    display: none;
-    content: none;
+/* Efecto Halftone (puntos Ben-Day) detrás del título */
+.glow-text::before {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+
+    /* Fondo de puntos cómic */
+    background-image: 
+        radial-gradient(circle, #FF1493 2px, transparent 2px),
+        radial-gradient(circle, #00FFFF 2px, transparent 2px);
+    background-size: 15px 15px, 15px 15px;
+    background-position: 0 0, 7.5px 7.5px;
+
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    opacity: 0.3;
+
+    animation: halftoneShift 8s linear infinite;
 }
 
-/* RESPONSIVE */
-@media (max-width: 768px) {
-    .glow-text {
-        font-size: 4.5rem;
-        -webkit-text-stroke: 1.5px #000;
-        text-shadow: 4px 4px 0px #000;
-    }
-}
-
-/* Decoración: Pequeños brillos/estrellas alrededor (Pseudo-elemento) */
+/* Decoración: Estrella brillante animada */
 .glow-text::after {
     content: "✦";
     position: absolute;
-    top: -20px;
-    right: -10px;
-    font-size: 4rem;
-    color: #FFD700;
-    -webkit-text-stroke: 1px #000;
-    text-shadow: 2px 2px 0 #000;
-    animation: spinStar 3s linear infinite;
+    top: -40px;
+    right: -30px;
+    font-size: 5rem;
+
+    /* Gradiente amarillo brillante */
+    background: linear-gradient(45deg, #FFD700, #FFF700, #FFD700);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+
+    -webkit-text-stroke: 2px #000;
+    filter: drop-shadow(3px 3px 0 #000) drop-shadow(0 0 20px #FFD700);
+
+    animation: starPulse 2s ease-in-out infinite;
     z-index: 20;
 }
 
-
-/* 2. SUBTÍTULO: Estilo "Sticker" con Fondo Blanco */
+/* SUBTÍTULO: Estilo Bocadillo de Cómic */
 .sub-text {
     position: relative;
-    display: inline-block; /* Necesario para que el fondo se ajuste al texto */
+    display: inline-block;
     font-family: 'Bangers', cursive;
-    font-size: 2.5rem;
-    color: #000; /* Texto negro para máximo contraste */
-    
-    /* Fondo Blanco estilo "Recorte de papel" */
-    background-color: #fff;
-    padding: 10px 25px; /* Espacio alrededor del texto */
-    border: 3px solid #000; /* Borde negro del recuadro */
-    border-radius: 15px 0px 15px 0px; /* Bordes irregulares */
-    
-    /* Sombra rosada desplazada */
-    box-shadow: 8px 8px 0px #FF69B4, 12px 12px 0px #000;
-    
-    margin-top: 20px;
-    transform: rotate(2deg);
-    
-    /* Animación de aparición pop */
-    animation: popIn 1s ease-out backwards, tiltMove 3s ease-in-out infinite alternate;
+    font-size: 3rem;
+    color: #000;
+
+    /* Fondo blanco brillante */
+    background: linear-gradient(135deg, #FFFFFF 0%, #F0F0F0 100%);
+    padding: 15px 40px;
+
+    /* Borde negro irregular tipo viñeta */
+    border: 4px solid #000;
+    border-radius: 20px 5px 20px 5px;
+
+    /* Sombra múltiple tipo offset printing */
+    box-shadow: 
+        6px 6px 0px #FF1493,
+        10px 10px 0px #00FFFF,
+        14px 14px 0px #000,
+        inset 0 -3px 8px rgba(0,0,0,0.1);
+
+    margin-top: 30px;
+    transform: rotate(1deg);
+
+    /* Animación de balanceo suave */
+    animation: popWiggle 3s ease-in-out infinite;
 }
 
-/* Decoración del subtítulo (Corazón) */
+/* Patrón de puntos sobre el subtítulo */
+.sub-text::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 20px 5px 20px 5px;
+    background-image: radial-gradient(circle, rgba(0,0,0,0.06) 1px, transparent 1px);
+    background-size: 6px 6px;
+    pointer-events: none;
+}
+
+/* Corazón animado decorativo */
 .sub-text::before {
     content: "❤";
     position: absolute;
-    left: -25px;
-    top: -25px;
-    font-size: 3rem;
-    color: #FF0000;
-    -webkit-text-stroke: 1.5px #000;
-    text-shadow: 2px 2px 0 #000;
-    transform: rotate(-15deg);
-    animation: heartBeat 1.5s infinite;
+    left: -35px;
+    top: -35px;
+    font-size: 4rem;
+
+    background: linear-gradient(180deg, #FF0066, #FF0000);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+
+    -webkit-text-stroke: 2.5px #000;
+    filter: drop-shadow(3px 3px 0 #000) drop-shadow(0 0 15px #FF0066);
+    transform: rotate(-20deg);
+
+    animation: heartBeat 1.2s infinite;
 }
 
-/* --- ANIMACIONES AVANZADAS --- */
-
-/* Flotar tipo Gelatina (Más elástico que el anterior) */
-@keyframes jellyFloat {
-    0%, 100% { transform: rotate(-3deg) translateY(0) scale(1); }
-    50% { transform: rotate(-3deg) translateY(-15px) scale(1.05); }
+/* ONOMATOPEYAS DECORATIVAS */
+/* Se agregan dinámicamente con JavaScript o HTML */
+.comic-pow {
+    position: absolute;
+    top: 15%;
+    right: 10%;
+    font-family: 'Bangers', cursive;
+    font-size: 3.5rem;
+    color: #FFD700;
+    -webkit-text-stroke: 2px #000;
+    text-shadow: 4px 4px 0 #000;
+    transform: rotate(15deg);
+    animation: pow-explosion 3s ease-in-out infinite;
+    z-index: 30;
 }
 
-/* Movimiento de lado a lado suave */
-@keyframes tiltMove {
-    from { transform: rotate(2deg); }
-    to { transform: rotate(4deg); }
+.comic-boom {
+    position: absolute;
+    bottom: 20%;
+    left: 8%;
+    font-family: 'Bangers', cursive;
+    font-size: 2.8rem;
+    color: #FF1493;
+    -webkit-text-stroke: 2px #000;
+    text-shadow: 4px 4px 0 #000;
+    transform: rotate(-12deg);
+    animation: boom-shake 4s ease-in-out infinite;
+    z-index: 30;
 }
 
-/* Estrella girando */
-@keyframes spinStar {
-    0% { transform: rotate(0deg) scale(1); }
-    50% { transform: rotate(180deg) scale(1.2); }
-    100% { transform: rotate(360deg) scale(1); }
+/* LÍNEAS DE VELOCIDAD (Speed lines) */
+.speed-lines {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 5;
+    opacity: 0;
+    animation: speedLinesFlash 5s ease-in-out infinite;
 }
 
-/* Latido fuerte */
+.speed-lines::before,
+.speed-lines::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(90deg, transparent 0%, #000 50%, transparent 100%);
+}
+
+.speed-lines::before {
+    top: 30%;
+    animation: lineSlide 1.5s linear infinite;
+}
+
+.speed-lines::after {
+    bottom: 30%;
+    animation: lineSlide 1.5s linear infinite reverse;
+}
+
+/* ======= ANIMACIONES MEJORADAS ======= */
+
+/* Rebote elástico 3D */
+@keyframes comicBounce {
+    0%, 100% { 
+        transform: rotate(-2deg) translateY(0) scale(1);
+    }
+    25% { 
+        transform: rotate(-3deg) translateY(-20px) scale(1.08) rotateX(10deg);
+    }
+    50% { 
+        transform: rotate(-2deg) translateY(-10px) scale(1.05);
+    }
+    75% { 
+        transform: rotate(-1deg) translateY(-15px) scale(1.06) rotateX(-5deg);
+    }
+}
+
+/* Balanceo suave del subtítulo */
+@keyframes popWiggle {
+    0%, 100% { 
+        transform: rotate(1deg) translateY(0);
+    }
+    33% { 
+        transform: rotate(3deg) translateY(-5px);
+    }
+    66% { 
+        transform: rotate(-1deg) translateY(-3px);
+    }
+}
+
+/* Latido intenso del corazón */
 @keyframes heartBeat {
-    0% { transform: scale(1) rotate(-15deg); }
-    15% { transform: scale(1.3) rotate(-15deg); }
-    30% { transform: scale(1) rotate(-15deg); }
-    45% { transform: scale(1.3) rotate(-15deg); }
-    100% { transform: scale(1) rotate(-15deg); }
+    0%, 100% { 
+        transform: scale(1) rotate(-20deg);
+        filter: drop-shadow(3px 3px 0 #000) drop-shadow(0 0 15px #FF0066);
+    }
+    10% { 
+        transform: scale(1.35) rotate(-15deg);
+        filter: drop-shadow(4px 4px 0 #000) drop-shadow(0 0 30px #FF0066);
+    }
+    20% { 
+        transform: scale(1) rotate(-20deg);
+    }
+    30% { 
+        transform: scale(1.35) rotate(-15deg);
+        filter: drop-shadow(4px 4px 0 #000) drop-shadow(0 0 30px #FF0066);
+    }
 }
 
-/* --- RESPONSIVE --- */
+/* Pulso brillante de estrella */
+@keyframes starPulse {
+    0%, 100% { 
+        transform: rotate(0deg) scale(1);
+        filter: drop-shadow(3px 3px 0 #000) drop-shadow(0 0 20px #FFD700);
+    }
+    50% { 
+        transform: rotate(180deg) scale(1.3);
+        filter: drop-shadow(4px 4px 0 #000) drop-shadow(0 0 40px #FFD700);
+    }
+}
+
+/* Explosión POW */
+@keyframes pow-explosion {
+    0%, 100% { 
+        transform: rotate(15deg) scale(1);
+        opacity: 0.8;
+    }
+    50% { 
+        transform: rotate(18deg) scale(1.15);
+        opacity: 1;
+        text-shadow: 6px 6px 0 #000, 0 0 20px #FFD700;
+    }
+}
+
+/* Vibración BOOM */
+@keyframes boom-shake {
+    0%, 100% { 
+        transform: rotate(-12deg) translateX(0);
+    }
+    10% { transform: rotate(-12deg) translateX(-3px); }
+    20% { transform: rotate(-12deg) translateX(3px); }
+    30% { transform: rotate(-12deg) translateX(-3px); }
+    40% { transform: rotate(-12deg) translateX(3px); }
+    50% { transform: rotate(-12deg) translateX(0); }
+}
+
+/* Movimiento de puntos halftone */
+@keyframes halftoneShift {
+    0% { background-position: 0 0, 7.5px 7.5px; }
+    100% { background-position: 15px 15px, 22.5px 22.5px; }
+}
+
+/* Líneas de velocidad */
+@keyframes lineSlide {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+@keyframes speedLinesFlash {
+    0%, 90%, 100% { opacity: 0; }
+    92%, 98% { opacity: 0.6; }
+}
+
+/* ======= RESPONSIVE MEJORADO ======= */
+
 @media (max-width: 768px) {
     .glow-text {
-        font-size: 4rem; /* Texto más pequeño en móvil */
-        -webkit-text-stroke: 1px #000;
-        filter: drop-shadow(5px 5px 0px #000);
-        background-size: 4px 4px, 100% 100%; /* Puntos más pequeños */
+        font-size: 4.5rem;
+        -webkit-text-stroke: 2.5px #000;
+        filter: drop-shadow(4px 4px 0px #FF1493) 
+                drop-shadow(6px 6px 0px #00FFFF)
+                drop-shadow(8px 8px 0px #000);
+        letter-spacing: 2px;
     }
-    
+
+    .glow-text::after {
+        font-size: 3rem;
+        top: -20px;
+        right: -15px;
+    }
+
     .sub-text {
-        font-size: 1.5rem;
-        padding: 8px 15px;
-        box-shadow: 5px 5px 0px #FF69B4, 8px 8px 0px #000;
+        font-size: 1.8rem;
+        padding: 10px 25px;
+        box-shadow: 
+            4px 4px 0px #FF1493,
+            6px 6px 0px #00FFFF,
+            8px 8px 0px #000;
     }
-    
-    .sub-text::before { /* Corazón más pequeño */
-        font-size: 2rem;
-        left: -15px; top: -20px;
-    }
-    
-    .glow-text::after { /* Estrella más pequeña */
+
+    .sub-text::before {
         font-size: 2.5rem;
-        top: -10px; right: -5px;
+        left: -20px;
+        top: -20px;
     }
+
+    .comic-pow, .comic-boom {
+        font-size: 2rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .glow-text {
+        font-size: 3rem;
+        letter-spacing: 1px;
+    }
+
+    .sub-text {
+        font-size: 1.3rem;
+        padding: 8px 15px;
+    }
+}
+
+/* ======= EXTRAS: EFECTOS OPCIONALES ======= */
+
+/* Añadir clase .message-content para aplicar todo */
+.message-content {
+    position: relative;
+}
+
+/* Partículas flotantes (se pueden agregar con JS) */
+.particle-heart {
+    position: absolute;
+    font-size: 1.5rem;
+    color: #FF1493;
+    animation: floatParticle 6s linear infinite;
+    opacity: 0;
+}
+
+@keyframes floatParticle {
+    0% { 
+        transform: translateY(100vh) rotate(0deg);
+        opacity: 0;
+    }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { 
+        transform: translateY(-100px) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+/* Brillo de fondo pulsante */
+@keyframes backgroundPulse {
+    0%, 100% { background-color: rgba(0, 0, 0, 0.85); }
+    50% { background-color: rgba(10, 0, 20, 0.9); }
+}
+
+#surprise-overlay.show-pulse {
+    animation: backgroundPulse 4s ease-in-out infinite;
 }
