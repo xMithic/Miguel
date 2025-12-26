@@ -1,465 +1,417 @@
 :root {
-    --cursor-size: 20px;
-    --cursor-outer-size: 40px;
-    --ui-blur: 16px;
-    --btn-size: 50px;
-    --card-radius: 24px;
-    --cursor-glow: rgba(100, 200, 255, 0.5);
+  --cursor-size: 15px;
+  --cursor-outer-size: 25px;
+  --ui-blur: 16px;
+  --btn-size: 50px;
+  --card-radius: 24px;
+  --cursor-glow: rgba(100, 200, 255, 0.5);
 }
 
-/* 1. RESET Y GPU HACKS GLOBALES */
+/* ============================================
+   RESET Y ESTRUCTURA GLOBAL
+============================================ */
 html, body {
-    margin: 0; padding: 0;
-    width: 100%; height: 100%;
-    overflow: hidden;
-    background-color: #000;
-    color: #fff;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    cursor: none;
-    user-select: none;
-    -webkit-user-select: none;
-    -webkit-font-smoothing: antialiased;
-    animation: fadeInPage 0.5s ease-out forwards;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: #000;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  cursor: none; /* Oculta cursor por defecto */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
-@keyframes fadeInPage { 
-    from { opacity: 0; } 
-    to { opacity: 1; } 
-}
-
-/* 2. VIDEO DE FONDO CON ESTILO "DOT MATRIX" */
+/* ============================================
+   1. FONDO (CANVAS) - Z-INDEX: 0
+============================================ */
 #background-layer {
-    position: fixed; inset: 0;
-    width: 100%; height: 100%;
-    z-index: 1;
-    pointer-events: none;
-    opacity: 1;
-    background-color: #000;
-    background-image:
-        radial-gradient(rgba(0, 0, 0, 0.3) 1px, transparent 1px),
-        radial-gradient(rgba(0, 0, 0, 0.3) 1px, transparent 1px);
-    background-size: 4px 4px;
-    background-position: 0 0, 2px 2px;
-    object-fit: cover;
-    mask-image: radial-gradient(circle, rgba(0,0,0,1) 40%, rgba(0,0,0,0.4) 100%);
-    -webkit-mask-image: radial-gradient(circle, rgba(0,0,0,1) 40%, rgba(0,0,0,0.4) 100%);
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0; /* Capa más baja */
+  pointer-events: none;
+  overflow: hidden;
+  background: #000;
 }
 
-/* 3. LIENZOS */
-#particle-canvas, #drawing-canvas {
-    position: fixed; inset: 0; width: 100%; height: 100%;
-    touch-action: none;
+#bg-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Asegura que el elemento ocupe todo */
+  
+  /* EL EFECTO BLUR AQUÍ */
+  filter: blur(20px) brightness(0.1) saturate(1.2) contrast(1.1);
+  -webkit-filter: blur(20px) brightness(0.6) saturate(1.2) contrast(1.1);
+
+  transform: scale(1.1); /* Ligero zoom para evitar bordes difuminados blancos */
 }
 
-#particle-canvas { 
-    z-index: 2; 
-    pointer-events: none; 
+/* Overlay con textura de puntos (Estilo Comic Oscuro y Separado) */
+#background-layer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+
+  /* 1. SOLO PUNTOS OSCUROS */
+  /* Usamos negro (0,0,0) con opacidad alta (0.7) para que se noten bien */
+  background-image: 
+    radial-gradient(rgba(0, 0, 0, 0.7) 1.5px, transparent 1.5px),
+    radial-gradient(rgba(0, 0, 0, 0.7) 1.5px, transparent 1.5px);
+    
+  /* 2. MÁS SEPARADOS */
+  /* Aumentamos el tamaño de la celda de 6px a 12px para separarlos */
+  background-size: 12px 12px;
+  
+  /* 3. POSICIÓN INTERCALADA */
+  /* El segundo valor debe ser exactamente la mitad del tamaño (6px) para crear la trama cruzada */
+  background-position: 0 0, 6px 6px;
+
+  /* Opcional: Una sombra interior fuerte para que el fondo no compita con el video principal */
+  box-shadow: inset 0 0 150px rgba(0,0,0,0.8);
 }
 
-#drawing-canvas { 
-    z-index: 50; 
-    pointer-events: auto; 
-    mix-blend-mode: screen; 
+/* ============================================
+   2. PARTICULAS Y DIBUJO - Z-INDEX: 5-50
+============================================ */
+#particle-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 5;
+  pointer-events: none;
 }
 
-/* 4. TARJETA CENTRAL (Sin bordes) */
+#drawing-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 50;
+  pointer-events: auto; /* Permite dibujar */
+  mix-blend-mode: screen;
+}
+
+/* ============================================
+   3. TARJETA CENTRAL - Z-INDEX: 20
+============================================ */
 .perspective-container {
-    position: absolute; inset: 0;
-    display: flex; justify-content: center; align-items: center;
-    perspective: 1200px;
-    z-index: 10;
-    pointer-events: none;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  perspective: 1200px;
+  z-index: 20; /* Encima del fondo y partículas */
+  pointer-events: none;
 }
 
 .card-wrapper {
-    width: 700px; max-width: 85%;
-    position: relative;
-    transform-style: preserve-3d;
-    will-change: transform;
-    pointer-events: auto;
+  width: 700px; /* Ancho fijo base (TAMAÑO ORIGINAL) */
+  max-width: 85%; /* Responsive */
+  /* Quitamos aspect-ratio fijo para que se adapte al video real sin deformar la caja */
+  position: relative;
+  transform-style: preserve-3d;
+  will-change: transform;
 }
 
 #video-card {
-    position: relative;
-    border-radius: var(--card-radius);
-    background: linear-gradient(
-        165deg,
-        rgba(30, 30, 30, 0.95) 0%,
-        rgba(10, 10, 10, 0.98) 100%
-    );
-    /* BORDES ELIMINADOS */
-    box-shadow:
-        0 20px 50px rgba(0, 0, 0, 0.9);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    overflow: hidden;
-    will-change: transform;
+  position: relative;
+  width: 100%;
+  /* height: 100%; <-- Quitamos height 100% fijo para que la caja se ajuste al video */
+  
+  /* SIN BORDES NI FONDO (LIMPIO) */
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  
+  /* Sombra sutil solo detrás del video para separarlo del fondo (Opcional) */
+  filter: drop-shadow(0 20px 40px rgba(0,0,0,0.5));
+  
+  border-radius: var(--card-radius);
+  overflow: hidden;
+  will-change: transform;
 }
 
-/* Video dentro de la tarjeta */
-video.main-video {
-    display: block; width: 100%; height: auto;
-    border-radius: var(--card-radius);
-    opacity: 0.9;
-    transition: opacity 0.3s ease;
-    transform: translateZ(0);
+#video-card video.main-video {
+  width: 100%;
+  height: auto; /* Mantiene proporción natural */
+  display: block;
+  opacity: 1; /* Asegurar visibilidad */
 }
 
 .card-shine {
-    position: absolute; inset: 0;
-    background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(255,255,255,0.15), transparent 60%);
-    pointer-events: none;
-    mix-blend-mode: overlay;
-    opacity: 0;
-    transition: opacity 0.3s;
-    will-change: opacity;
+  position: absolute;
+  inset: 0;
+  border-radius: var(--card-radius); /* Aseguramos que el brillo siga la curva */
+  background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(255,255,255,0.2), transparent 50%);
+  z-index: 25;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  opacity: 0;
+  transition: opacity 0.3s;
 }
 
-.card-wrapper:hover .card-shine { 
-    opacity: 1; 
+.card-wrapper:hover .card-shine {
+  opacity: 1;
 }
 
-/* 5. ECUALIZADOR */
+/* ============================================
+   4. UI ELEMENTOS - Z-INDEX ALTO
+============================================ */
 .eq-bars {
-    position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
-    display: flex; gap: 4px; z-index: 90; opacity: 0; transition: opacity 0.5s;
-    pointer-events: none;
+  position: absolute;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  z-index: 30;
+  pointer-events: none;
 }
 
 .eq-bar {
-    width: 3px; height: 10px; background: white; border-radius: 2px;
-    animation: eqBounce 1s infinite ease-in-out;
-    transform-origin: bottom;
-    will-change: transform;
+  width: 4px;
+  height: 15px;
+  background: white;
+  border-radius: 2px;
+  animation: eqBounce 1s infinite ease-in-out;
 }
 
-.playing .eq-bars { 
-    opacity: 0.8; 
+@keyframes eqBounce {
+  0%, 100% { transform: scaleY(0.5); }
+  50% { transform: scaleY(1.5); }
 }
-
-@keyframes eqBounce { 
-    0%, 100% { transform: scaleY(0.6); } 
-    50% { transform: scaleY(1.8); } 
-}
-
-.eq-bar:nth-child(1) { animation-delay: 0s; }
 .eq-bar:nth-child(2) { animation-delay: 0.1s; }
 .eq-bar:nth-child(3) { animation-delay: 0.2s; }
 
 /* ============================================
-   6. CURSOR PERSONALIZADO ULTRA PREMIUM
+   ESTILO BOTÓN DE SONIDO (GLOWING EFFECT)
+   Adaptado de: Jamshid Elmi
    ============================================ */
-
-#custom-cursor {
-    position: fixed;
-    top: 0;
-    left: 0;
-    pointer-events: none;
-    z-index: 10000;
-    transform: translate3d(-50%, -50%, 0);
-    will-change: transform, top, left, opacity;
-    transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-    opacity: 1;
-}
-
-#custom-cursor.hidden {
-    opacity: 0;
-}
-
-/* INNER CURSOR - Punto central con glow */
-.cursor-inner {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 8px;
-    height: 8px;
-    background: linear-gradient(135deg, #ffffff, #e0f7ff);
-    border-radius: 50%;
-    box-shadow: 
-        0 0 10px rgba(255, 255, 255, 0.8),
-        0 0 20px var(--cursor-glow),
-        0 0 30px var(--cursor-glow);
-    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-    animation: cursorPulse 2s ease-in-out infinite;
-    mix-blend-mode: difference;
-}
-
-@keyframes cursorPulse {
-    0%, 100% {
-        transform: translate(-50%, -50%) scale(1);
-        opacity: 1;
-    }
-    50% {
-        transform: translate(-50%, -50%) scale(1.1);
-        opacity: 0.9;
-    }
-}
-
-/* OUTER CURSOR - Anillo exterior con glassmorphism */
-.cursor-outer {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: var(--cursor-outer-size);
-    height: var(--cursor-outer-size);
-    border: 2px solid rgba(255, 255, 255, 0.4);
-    border-radius: 50%;
-    background: radial-gradient(
-        circle at center,
-        rgba(255, 255, 255, 0.15) 0%,
-        rgba(255, 255, 255, 0.08) 50%,
-        transparent 100%
-    );
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-    box-shadow: 
-        inset 0 0 15px rgba(255, 255, 255, 0.2),
-        0 0 20px rgba(100, 200, 255, 0.3);
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    mix-blend-mode: exclusion;
-}
-
-.cursor-outer::before {
-    content: '';
-    position: absolute;
-    inset: -5px;
-    border-radius: 50%;
-    background: radial-gradient(
-        circle at center,
-        transparent 40%,
-        rgba(255, 255, 255, 0.08) 100%
-    );
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    mix-blend-mode: screen;
-}
-
-#custom-cursor.hover .cursor-outer::before {
-    opacity: 1;
-}
-
-/* ESTADO HOVER */
-#custom-cursor.hover .cursor-inner {
-    width: 12px;
-    height: 12px;
-    background: linear-gradient(135deg, #64c8ff, #ffffff);
-    box-shadow: 
-        0 0 15px rgba(100, 200, 255, 1),
-        0 0 30px rgba(100, 200, 255, 0.8),
-        0 0 45px rgba(100, 200, 255, 0.6);
-}
-
-#custom-cursor.hover .cursor-outer {
-    width: 60px;
-    height: 60px;
-    border-color: rgba(100, 200, 255, 0.6);
-    background: radial-gradient(
-        circle at center,
-        rgba(100, 200, 255, 0.2) 0%,
-        rgba(100, 200, 255, 0.1) 50%,
-        transparent 100%
-    );
-    box-shadow: 
-        inset 0 0 20px rgba(100, 200, 255, 0.3),
-        0 0 30px rgba(100, 200, 255, 0.4);
-}
-
-/* ESTADO ACTIVE */
-#custom-cursor.active .cursor-inner {
-    width: 6px;
-    height: 6px;
-    background: linear-gradient(135deg, #ff6b9d, #ffc371);
-    box-shadow: 
-        0 0 20px rgba(255, 107, 157, 1),
-        0 0 40px rgba(255, 107, 157, 0.8);
-    animation: clickPulse 0.3s ease-out;
-}
-
-@keyframes clickPulse {
-    0% {
-        transform: translate(-50%, -50%) scale(1);
-    }
-    50% {
-        transform: translate(-50%, -50%) scale(1.5);
-    }
-    100% {
-        transform: translate(-50%, -50%) scale(1);
-    }
-}
-
-#custom-cursor.active .cursor-outer {
-    width: 50px;
-    height: 50px;
-    border-color: rgba(255, 107, 157, 0.8);
-    border-width: 3px;
-    background: radial-gradient(
-        circle at center,
-        rgba(255, 107, 157, 0.3) 0%,
-        rgba(255, 195, 113, 0.15) 50%,
-        transparent 100%
-    );
-    box-shadow: 
-        inset 0 0 25px rgba(255, 107, 157, 0.4),
-        0 0 35px rgba(255, 107, 157, 0.5);
-}
-
-/* 7. BOTÓN DE AUDIO */
 #audio-btn {
-    position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
-    z-index: 100;
-    padding: 15px 30px;
-    border: none; outline: none;
-    color: #FFF; 
-    cursor: none !important;
-    background: transparent; 
-    border-radius: 12px;
-    display: flex; justify-content: center; align-items: center;
-    transition: color 0.3s ease-in-out;
-    pointer-events: auto;
-    -webkit-tap-highlight-color: transparent;
+  /* Mantenemos tu posicionamiento original */
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+
+  /* Estilos del efecto Glowing */
+  padding: 15px 40px;
+  border: none;
+  outline: none;
+  color: #FFF;
+  cursor: pointer;
+  background-color: transparent; /* Importante para ver el fondo negro del ::after */
+  border-radius: 12px;
+  
+  /* Necesario para que los pseudo-elementos se posicionen bien */
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
+/* Fondo oscuro del botón (el interior) */
 #audio-btn::after {
-    content: ""; position: absolute; inset: 0; z-index: -1;
-    background-color: #333333bb; border-radius: 12px;
-    transition: background-color 0.3s ease-in-out;
+  content: "";
+  z-index: -1;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background-color: #0a0a0a; /* Fondo casi negro para coincidir con tu video */
+  left: 0;
+  top: 0;
+  border-radius: 10px;
 }
 
+/* El brillo (Glow) con tus colores temáticos */
 #audio-btn::before {
-    content: ""; position: absolute; top: -2px; left: -2px;
-    width: calc(100% + 4px); height: calc(100% + 4px);
-    background: linear-gradient(45deg, #FF0000, #FF7300, #FFFB00, #48FF00, #00FFD5, #002BFF, #FF00C8, #FF0000);
-    background-size: 800%; z-index: -5;
-    filter: blur(8px);
-    animation: glowing 20s linear infinite; opacity: 0;
-    transition: opacity .3s ease-in-out; border-radius: 12px;
-    will-change: background-position;
+  content: "";
+  background: linear-gradient(
+    45deg,
+    #64c8ff, /* Tu azul claro (--cursor-glow) */
+    #00FFD5, /* Cian vibrante */
+    #002BFF, /* Azul profundo */
+    #64c8ff  /* Repetimos para el ciclo */
+  );
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  background-size: 400%;
+  z-index: -2;
+  width: calc(100% + 4px);
+  height: calc(100% + 4px);
+  filter: blur(8px);
+  animation: glowing 20s linear infinite;
+  transition: opacity .3s ease-in-out;
+  border-radius: 10px;
+  opacity: 0; /* Por defecto apagado hasta hover */
 }
 
-@keyframes glowing { 
-    0% { background-position: 0 0; } 
-    50% { background-position: 400% 0; } 
-    100% { background-position: 0 0; } 
+/* Animación del movimiento del degradado */
+@keyframes glowing {
+  0% { background-position: 0 0; }
+  50% { background-position: 400% 0; }
+  100% { background-position: 0 0; }
 }
 
-#audio-btn:hover::before { 
-    opacity: 1; 
+#audio-btn {
+  /* Variable por defecto (Cyan) por si el video no carga o es negro puro */
+  --video-glow: #00FFD5; 
+  
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  padding: 15px 40px;
+  border: none;
+  outline: none;
+  color: #FFF;
+  cursor: pointer;
+  background-color: transparent;
+  border-radius: 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /* Transición suave para que el cambio de color no sea brusco */
+  transition: --video-glow 0.1s linear; 
 }
 
-#audio-btn:active { 
-    color: #000; 
+/* Fondo oscuro interior */
+#audio-btn::after {
+  content: "";
+  z-index: -1;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background-color: #111; /* Un poco más claro que negro puro para contraste */
+  left: 0;
+  top: 0;
+  border-radius: 10px;
 }
 
-#audio-btn:active::after { 
-    background: transparent; 
+/* El brillo dinámico */
+#audio-btn::before {
+  content: "";
+  /* Usamos la variable JS para el color */
+  background: linear-gradient(
+    45deg,
+    var(--video-glow),
+    #ffffff 50%,     /* Destello blanco en el centro */
+    var(--video-glow)
+  );
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  background-size: 400%; /* Tamaño para que se mueva la animación */
+  z-index: -2;
+  width: calc(100% + 4px);
+  height: calc(100% + 4px);
+  filter: blur(10px); /* Blur para el efecto neón */
+  animation: glowing 20s linear infinite;
+  opacity: 0; /* Oculto hasta hover */
+  border-radius: 10px;
+  transition: opacity 0.3s ease-in-out;
 }
 
-#audio-btn svg { 
-    width: 24px; 
-    fill: currentColor; 
-    position: relative; 
-    z-index: 2;
-    pointer-events: none;
+/* Animación de movimiento */
+@keyframes glowing {
+  0% { background-position: 0 0; }
+  50% { background-position: 400% 0; }
+  100% { background-position: 0 0; }
 }
 
-#audio-btn.muted svg { 
-    opacity: 0.5; 
+/* Al pasar el mouse, se enciende el color del video */
+#audio-btn:hover::before {
+  opacity: 1;
 }
 
-/* 8. SORPRESA OVERLAY */
+#audio-btn:active:after {
+  background: transparent;
+}
+
+#audio-btn:active {
+  color: #000;
+  font-weight: bold;
+}
+
+
+
+#audio-btn svg {
+  width: 24px;
+  fill: currentColor;
+}
+
+/* ============================================
+   5. CURSOR Y SORPRESAS - Z-INDEX MAXIMO
+============================================ */
+#custom-cursor {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  mix-blend-mode: difference;
+}
+.cursor-inner {
+  position: absolute;
+  width: 8px; height: 8px;
+  background: white;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+.cursor-outer {
+  position: absolute;
+  width: 30px; height: 30px;
+  border: 1px solid white;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.2s, height 0.2s;
+}
+
 #surprise-overlay {
-    position: fixed; inset: 0; z-index: 9001;
-    display: flex; justify-content: center; align-items: center;
-    pointer-events: none; opacity: 0;
-    transition: opacity 0.8s ease;
-    background: transparent;
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0,0,0,0.8);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s;
 }
 
 body.show-surprise #surprise-overlay {
-    opacity: 1; pointer-events: auto;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
-}
-
-#fireworks-canvas {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    z-index: 9002;
-    pointer-events: none; opacity: 0; transition: opacity 1s ease;
-}
-
-body.show-surprise #fireworks-canvas { 
-    opacity: 1; 
-}
-
-.message-content {
-    text-align: center; transform: translateY(20px);
-    transition: transform 1.5s cubic-bezier(0.2, 0.8, 0.2, 1);
-    will-change: transform;
-}
-
-body.show-surprise .message-content { 
-    transform: translateY(0); 
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .glow-text {
-    font-size: 3.5rem; font-weight: 300; color: #fff; margin: 0;
-    letter-spacing: 4px; text-shadow: 0 0 15px rgba(122, 252, 255, 0.6);
+  font-size: 3rem;
+  text-shadow: 0 0 20px rgba(100, 200, 255, 0.8);
 }
-
 .sub-text {
-    font-size: 1.2rem; color: rgba(255, 255, 255, 0.8);
-    margin-top: 10px; font-weight: 300; letter-spacing: 2px; text-transform: uppercase;
+  text-align: center;
+  font-size: 1.2rem;
+  color: #ccc;
 }
 
-/* FORZAR CURSOR PERSONALIZADO SOLO EN PC */
-@media (hover: hover) and (pointer: fine) {
-    *, *::before, *::after {
-        cursor: none !important;
-    }
+/* RESPONSIVE */
+@media (max-width: 600px) {
+  .card-wrapper { width: 95%; }
+  .glow-text { font-size: 2rem; }
 }
-
-/* ADAPTACIÓN PARA DISPOSITIVOS MÓVILES */
-@media (hover: none) and (pointer: coarse) {
-    html, body {
-        cursor: auto !important;
-    }
-    
-    #custom-cursor {
-        display: none !important;
-        visibility: hidden !important;
-    }
-    
-    *, *::before, *::after {
-        cursor: auto !important;
-    }
-    
-    #audio-btn {
-        cursor: pointer !important;
-    }
-    
-    .card-wrapper {
-        pointer-events: auto !important;
-    }
-}
-
-@media (max-width: 600px) { 
-    .glow-text { 
-        font-size: 2rem; 
-    }
-    
-    .card-wrapper {
-        max-width: 95%;
-    }
-    
-    #audio-btn {
-        bottom: 20px;
-        padding: 12px 24px;
-    }
-    
-    :root {
-        --cursor-outer-size: 35px;
-    }
-    }
