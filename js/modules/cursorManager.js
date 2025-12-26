@@ -1,181 +1,124 @@
 export class CursorManager {
     constructor(cursorElement, cardWrapper, shine) {
         this.cursor = cursorElement;
-        this.cursorInner = null;
-        this.cursorOuter = null;
         this.cardWrapper = cardWrapper;
         this.shine = shine;
-        this.mouseX = window.innerWidth / 2;
-        this.mouseY = window.innerHeight / 2;
-        this.cursorTimer = null;
-        this.isTouchDevice = this.detectTouch();
+        
+        // Coordenadas
+        this.clientX = window.innerWidth / 2;
+        this.clientY = window.innerHeight / 2;
+        
         this.isFlipped = false;
         
-        this.createCursorElements();
+        this.init();
+    }
+
+    init() {
+        // 1. Crear Cursor
+        this.cursor.innerHTML = '<div class="cursor-inner"></div><div class="cursor-outer"></div>';
+
+        // 2. BLOQUEO DE ARRASTRE NATIVO (El Fix Real)
+        window.addEventListener('dragstart', e => e.preventDefault(), { passive: false });
+        
+        // 3. BUCLE VISUAL (Render Loop)
+        // Desacopla la vista de los eventos. Si el evento se traba, esto sigue pintando.
+        const render = () => {
+            this.cursor.style.transform = `translate3d(${this.clientX}px, ${this.clientY}px, 0)`;
+            requestAnimationFrame(render);
+        };
+        requestAnimationFrame(render);
+
+        // 4. EVENTOS (Pointer API - Unificada y Robusta)
         this.setupEventListeners();
-        this.initializeCursor();
-    }
-
-    detectTouch() {
-        return ('ontouchstart' in window) || 
-               (navigator.maxTouchPoints > 0) || 
-               (navigator.msMaxTouchPoints > 0);
-    }
-
-    createCursorElements() {
-        this.cursor.innerHTML = '';
-        
-        this.cursorInner = document.createElement('div');
-        this.cursorInner.className = 'cursor-inner';
-        
-        this.cursorOuter = document.createElement('div');
-        this.cursorOuter.className = 'cursor-outer';
-        
-        this.cursor.appendChild(this.cursorInner);
-        this.cursor.appendChild(this.cursorOuter);
-    }
-
-    initializeCursor() {
-        if (this.isTouchDevice) {
-            this.cursor.style.display = 'none';
-            document.body.style.cursor = 'auto';
-        } else {
-            this.cursor.classList.add('hidden');
-        }
     }
 
     setupEventListeners() {
-        if (this.isTouchDevice) {
-            // En móvil, solo agregar evento de click para el flip
-            this.cardWrapper.style.pointerEvents = 'auto';
-            this.cardWrapper.addEventListener('click', (e) => this.handleCardClick(e));
-            return;
-        }
+        // MOVIMIENTO (Funciona para Mouse, Touch y Pen a la vez)
+        window.addEventListener('pointermove', (e) => {
+            this.clientX = e.clientX;
+            this.clientY = e.clientY;
+            
+            // Lógica visual extra
+            this.cursor.classList.remove('hidden');
+            this.updateCardTilt(e.clientX, e.clientY);
+            
+            // Reset timer inactividad
+            clearTimeout(this.cursorTimer);
+            this.cursorTimer = setTimeout(() => this.cursor.classList.add('hidden'), 3000);
+        }, { passive: true });
 
-        // En PC, agregar todos los eventos
-        window.addEventListener('pointermove', (e) => this.handleMove(e));
-        window.addEventListener('pointerdown', (e) => this.handleDown(e));
-        window.addEventListener('pointerup', () => this.handleUp());
-        
-        // Hacer la tarjeta clickeable
-        this.cardWrapper.style.pointerEvents = 'auto';
-        
-        // Detectar hover sobre elementos interactivos
+        // CLICKS (MANTENER PRESIONADO)
+        window.addEventListener('pointerdown', (e) => {
+            this.cursor.classList.add('clicked'); // Activa la animación CSS
+            
+            if (!this.isFlipped && this.cardWrapper) {
+                this.cardWrapper.style.transform += ' scale(0.98)';
+            }
+        }, { passive: true });
+
+        // SOLTAR CLICK
+        window.addEventListener('pointerup', () => {
+            this.cursor.classList.remove('clicked');
+            
+            if (!this.isFlipped && this.cardWrapper) {
+                // Limpieza segura del scale
+                const current = this.cardWrapper.style.transform;
+                this.cardWrapper.style.transform = current.replace(' scale(0.98)', '');
+            }
+        }, { passive: true });
+
+        // HOVER INTELIGENTE
         setTimeout(() => {
-            document.querySelectorAll('a, button, [role="button"], .interactive, #audio-btn').forEach(el => {
-                el.addEventListener('mouseenter', () => this.handleHoverEnter());
-                el.addEventListener('mouseleave', () => this.handleHoverLeave());
+            const targets = document.querySelectorAll('a, button, .interactive, #audio-btn');
+            targets.forEach(el => {
+                el.addEventListener('pointerenter', () => this.cursor.classList.add('hovered'));
+                el.addEventListener('pointerleave', () => this.cursor.classList.remove('hovered'));
             });
-        }, 100);
-    }
+        }, 500);
 
-    handleMove(e) {
-        this.mouseX = e.clientX;
-        this.mouseY = e.clientY;
-        
-        this.cursor.style.left = e.clientX + 'px';
-        this.cursor.style.top = e.clientY + 'px';
-        
-        this.cursor.classList.remove('hidden');
-        
-        clearTimeout(this.cursorTimer);
-        this.cursorTimer = setTimeout(() => {
-            this.cursor.classList.add('hidden');
-        }, 2000);
-
-        const width = window.innerWidth;
-        const height = window.innerHeight;
-        const centerX = width / 2;
-        const centerY = height / 2;
-        const rotateX = (centerY - e.clientY) / 25;
-        const rotateY = (e.clientX - centerX) / 25;
-
-        if (!this.isFlipped) {
-            this.cardWrapper.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
-        }
-        
-        this.shine.style.setProperty('--x', `${(e.clientX / width) * 100}%`);
-        this.shine.style.setProperty('--y', `${(e.clientY / height) * 100}%`);
-    }
-
-    handleDown(e) {
-        this.cursor.classList.add('active');
-        
-        // Verificar si el click fue en la tarjeta
-        if (e.target.closest('.card-wrapper')) {
-            this.handleCardClick(e);
-        } else {
-            this.cardWrapper.style.transform += ' scale(0.985)';
+        // CLICK TARJETA
+        if (this.cardWrapper) {
+            this.cardWrapper.addEventListener('click', (e) => this.handleCardClick(e));
         }
     }
 
-    handleUp() {
-        this.cursor.classList.remove('active');
+    // --- MÉTODOS AUXILIARES ---
+    updateCardTilt(x, y) {
+        if (this.isFlipped || !this.cardWrapper) return;
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        
+        if (this.shine) {
+            this.shine.style.setProperty('--x', `${(x / w) * 100}%`);
+            this.shine.style.setProperty('--y', `${(y / h) * 100}%`);
+        }
+
+        const rx = ((h/2) - y) / 30;
+        const ry = (x - (w/2)) / 30;
+        this.cardWrapper.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`;
     }
 
     handleCardClick(e) {
-        // Obtener la posición del click relativa a la tarjeta
+        if (!this.cardWrapper) return;
         const rect = this.cardWrapper.getBoundingClientRect();
-        const clickX = e.clientX - rect.left;
-        const clickY = e.clientY - rect.top;
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
         
-        // Calcular el centro de la tarjeta
-        const centerX = rect.width / 2;
-        const centerY = rect.height / 2;
-        
-        // Determinar la dirección del flip basado en dónde se hizo click
-        let flipDirection = '';
-        const threshold = 50; // píxeles desde el centro para determinar dirección
-        
-        if (Math.abs(clickX - centerX) > Math.abs(clickY - centerY)) {
-            // Flip horizontal
-            flipDirection = clickX < centerX ? 'left' : 'right';
-        } else {
-            // Flip vertical
-            flipDirection = clickY < centerY ? 'top' : 'bottom';
-        }
-        
-        // Aplicar el flip
-        this.flipCard(flipDirection);
+        const dir = (Math.abs(x - rect.width/2) > Math.abs(y - rect.height/2))
+            ? (x < rect.width/2 ? 'left' : 'right')
+            : (y < rect.height/2 ? 'top' : 'bottom');
+            
+        this.flipCard(dir);
     }
 
-    flipCard(direction) {
+    flipCard(dir) {
         this.isFlipped = !this.isFlipped;
-        
-        let transform = '';
-        const flipDegrees = this.isFlipped ? 180 : 0;
-        
-        switch(direction) {
-            case 'left':
-            case 'right':
-                transform = `rotateY(${flipDegrees}deg)`;
-                break;
-            case 'top':
-            case 'bottom':
-                transform = `rotateX(${flipDegrees}deg)`;
-                break;
-        }
-        
-        this.cardWrapper.style.transition = 'transform 0.8s cubic-bezier(0.4, 0.0, 0.2, 1)';
-        this.cardWrapper.style.transform = transform;
-        
-        // Restaurar transición después de la animación
+        const deg = this.isFlipped ? 180 : 0;
+        const axis = (dir === 'left' || dir === 'right') ? 'Y' : 'X';
+        this.cardWrapper.style.transition = 'transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1)';
+        this.cardWrapper.style.transform = `rotate${axis}(${deg}deg)`;
         setTimeout(() => {
-            if (!this.isFlipped) {
-                this.cardWrapper.style.transition = '';
-            }
+            if (!this.isFlipped) this.cardWrapper.style.transition = '';
         }, 800);
     }
-
-    handleHoverEnter() {
-        this.cursor.classList.add('hover');
-    }
-
-    handleHoverLeave() {
-        this.cursor.classList.remove('hover');
-    }
-
-    getMousePosition() {
-        return { x: this.mouseX, y: this.mouseY };
-    }
-    }
+}
