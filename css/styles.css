@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Titan+One&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Titan+One&family=Chewy&display=swap');
 
 @import url('https://fonts.googleapis.com/css2?family=Bangers&display=swap');
 
@@ -554,7 +554,7 @@ body.show-surprise .message-content {
    DISEÑO "COMIC LOVE POP-ART" (NIVEL PRO)
    ========================================================= */
 
-/* TÍTULO CÓMIC CLÁSICO (Amarillo + Negro) */
+//* TÍTULO CÓMIC CLÁSICO (Amarillo + Negro) */
 .glow-text {
     /* Mantenemos la estructura para que no se desfase */
     position: relative;
