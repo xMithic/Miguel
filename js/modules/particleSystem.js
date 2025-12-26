@@ -3,6 +3,7 @@ import { ColorSampler } from '../utils/colorSampler.js';
 /* ==========================================
    CLASE NEURAL PARTICLE
 ========================================== */
+
 class NeuralParticle {
     constructor(width, height) {
         this.width = width;
@@ -18,12 +19,10 @@ class NeuralParticle {
     reset(isInitial = false) {
         this.x = Math.random() * this.width;
         this.y = Math.random() * this.height;
-
         const angle = Math.random() * Math.PI * 2;
-        const speed = 0.5 + Math.random() * 1.0;
-        this.vx = Math.cos(angle) * speed;
-        this.vy = Math.sin(angle) * speed;
-
+        this.baseSpeed = 0.5 + Math.random() * 1.0;
+        this.vx = Math.cos(angle) * this.baseSpeed;
+        this.vy = Math.sin(angle) * this.baseSpeed;
         this.baseSize = 1.0 + Math.random() * 1.0;
         this.history = [];
     }
@@ -35,49 +34,54 @@ class NeuralParticle {
     update(musicState, pixelData, bufferWidth, bufferHeight, canvasWidth, canvasHeight, mouse) {
         this.width = canvasWidth;
         this.height = canvasHeight;
-
         const bass = musicState?.bass || 0;
 
         // --- REPULSIÓN DEL CURSOR ---
         let applyFriction = false;
-        
         if (mouse.active) {
             const dx = this.x - mouse.x;
             const dy = this.y - mouse.y;
             const distSq = dx * dx + dy * dy;
-            const repelRadius = 150; // Radio de influencia del cursor
+            const repelRadius = 150;
             const repelRadiusSq = repelRadius * repelRadius;
 
             if (distSq < repelRadiusSq && distSq > 0) {
                 const distance = Math.sqrt(distSq);
-                
-                // Vector normalizado de dirección (desde cursor hacia partícula)
                 const forceDirectionX = dx / distance;
                 const forceDirectionY = dy / distance;
-                
-                // Fuerza inversamente proporcional a la distancia
                 const forceMagnitude = (1 - distance / repelRadius) * 3.0;
                 
-                // Aplicar fuerza de repulsión
                 this.vx += forceDirectionX * forceMagnitude;
                 this.vy += forceDirectionY * forceMagnitude;
-                
                 applyFriction = true;
             }
         }
 
         // Aplicar fricción SOLO cuando hay repulsión activa
         if (applyFriction) {
-            this.vx *= 0.95; // Fricción aumentada para mayor control
+            this.vx *= 0.95;
             this.vy *= 0.95;
-        }
 
-        // Limitar velocidad máxima para mantener control
-        const maxSpeed = 8.0;
-        const currentSpeed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
-        if (currentSpeed > maxSpeed) {
-            this.vx = (this.vx / currentSpeed) * maxSpeed;
-            this.vy = (this.vy / currentSpeed) * maxSpeed;
+            // Limitar velocidad máxima para mantener control
+            const maxSpeed = 8.0;
+            const currentSpeed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+            if (currentSpeed > maxSpeed) {
+                this.vx = (this.vx / currentSpeed) * maxSpeed;
+                this.vy = (this.vy / currentSpeed) * maxSpeed;
+            }
+        } else {
+            // NUEVO: Interpolación suave hacia la velocidad base
+            const currentSpeed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+            
+            if (currentSpeed > 0.1) {
+                // Calcular velocidad objetivo normalizada
+                const targetVx = (this.vx / currentSpeed) * this.baseSpeed;
+                const targetVy = (this.vy / currentSpeed) * this.baseSpeed;
+                
+                // Interpolar suavemente hacia la velocidad objetivo (0.08 = velocidad de interpolación)
+                this.vx = this.lerp(this.vx, targetVx, 0.08);
+                this.vy = this.lerp(this.vy, targetVy, 0.08);
+            }
         }
 
         this.x += this.vx * (1 + bass * 0.5);
@@ -87,6 +91,7 @@ class NeuralParticle {
             this.vx *= -1;
             this.x = Math.max(0, Math.min(canvasWidth, this.x));
         }
+
         if (this.y < 0 || this.y > canvasHeight) {
             this.vy *= -1;
             this.y = Math.max(0, Math.min(canvasHeight, this.y));
@@ -99,7 +104,7 @@ class NeuralParticle {
         if (pixelData && bufferWidth > 0 &&
             this.x2d >= 0 && this.x2d < canvasWidth &&
             this.y2d >= 0 && this.y2d < canvasHeight) {
-
+            
             const bufferX = (this.x2d / canvasWidth * bufferWidth) | 0;
             const bufferY = (this.y2d / canvasHeight * bufferHeight) | 0;
 
@@ -110,10 +115,11 @@ class NeuralParticle {
                 for (let dx = -1; dx <= 1; dx++) {
                     const sampleX = bufferX + dx;
                     const sampleY = bufferY + dy;
-                    
-                    if (sampleX >= 0 && sampleX < bufferWidth && sampleY >= 0 && sampleY < bufferHeight) {
+
+                    if (sampleX >= 0 && sampleX < bufferWidth && 
+                        sampleY >= 0 && sampleY < bufferHeight) {
                         const index = (sampleY * bufferWidth + sampleX) << 2;
-                        
+
                         if (index >= 0 && index < pixelData.length - 4) {
                             totalR += pixelData[index];
                             totalG += pixelData[index + 1];
@@ -128,13 +134,12 @@ class NeuralParticle {
                 const r = totalR / samples;
                 const g = totalG / samples;
                 const b = totalB / samples;
-
                 const luminosity = (r * 0.299 + g * 0.587 + b * 0.114);
-                
-                const boostFactor = luminosity < 128 
+
+                const boostFactor = luminosity < 128
                     ? 1.5 + (128 - luminosity) / 128 * 0.8
                     : 1.2 + (128 - luminosity) / 128 * 0.3;
-                
+
                 const targetR = Math.min(255, r * boostFactor);
                 const targetG = Math.min(255, g * boostFactor);
                 const targetB = Math.min(255, b * boostFactor);
@@ -168,7 +173,6 @@ class NeuralParticle {
         }
 
         ctx.globalCompositeOperation = 'lighter';
-
         const size = Math.max(0.3, this.baseSize * (1 + (musicState?.bass || 0) * 0.3));
 
         // Núcleo más definido y pequeño
@@ -188,6 +192,7 @@ class NeuralParticle {
 /* ==========================================
    SISTEMA DE PARTÍCULAS PRINCIPAL
 ========================================== */
+
 export class ParticleSystem {
     constructor(canvas, colorSampler, audioAnalyzer) {
         this.canvas = canvas;
@@ -242,7 +247,6 @@ export class ParticleSystem {
         window.addEventListener('pointerup', endInteraction);
         window.addEventListener('pointercancel', endInteraction);
         window.addEventListener('pointerleave', (e) => {
-            // Desactivar mouse cuando sale del canvas
             this.mouse.active = false;
             this.mouse.x = -1000;
             this.mouse.y = -1000;
@@ -339,7 +343,8 @@ export class ParticleSystem {
 
         for (let i = 0; i < this.particles.length; i++) {
             const p = this.particles[i];
-            p.update(musicState, pixelData, bufferW, bufferH, this.canvas.width, this.canvas.height, this.mouse);
+            p.update(musicState, pixelData, bufferW, bufferH, 
+                     this.canvas.width, this.canvas.height, this.mouse);
         }
 
         for (let i = 0; i < this.particles.length; i++) {
@@ -348,10 +353,13 @@ export class ParticleSystem {
         }
 
         this.drawConnections(musicState.bass || 0);
-
         requestAnimationFrame(this.animate);
     }
 
     start() { this.animate(); }
-    resize(w, h) { this.canvas.width = w; this.canvas.height = h; }
+    
+    resize(w, h) { 
+        this.canvas.width = w; 
+        this.canvas.height = h; 
+    }
 }
