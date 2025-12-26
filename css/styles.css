@@ -41,25 +41,25 @@ html, body {
     background-size: 4px 4px;
     background-position: 0 0, 2px 2px;
     object-fit: cover;
-
-    /* Blur optimizado con aceleraciÃ³n GPU */
+    
+    /* Blur optimizado con aceleración GPU */
     filter: blur(8px);
     transform: translate3d(0, 0, 0);
     -webkit-transform: translate3d(0, 0, 0);
     will-change: transform;
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
-
+    
     mask-image: radial-gradient(circle, rgba(0,0,0,1) 40%, rgba(0,0,0,0.4) 100%);
     -webkit-mask-image: radial-gradient(circle, rgba(0,0,0,1) 40%, rgba(0,0,0,0.4) 100%);
 }
 
-/* Si el video estÃ¡ dentro de #background-layer */
+/* Si el video está dentro de #background-layer */
 #background-layer video {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    /* Forzar aceleraciÃ³n GPU para el video */
+    /* Forzar aceleración GPU para el video */
     transform: translateZ(0);
     -webkit-transform: translateZ(0);
 }
@@ -203,7 +203,7 @@ video.main-video {
         0 0 30px var(--cursor-glow);
     transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     animation: cursorPulse 2s ease-in-out infinite;
-    /* InteracciÃ³n con el fondo */
+    /* Interacción con el fondo */
     mix-blend-mode: difference;
 }
 
@@ -240,7 +240,7 @@ video.main-video {
         inset 0 0 15px rgba(255, 255, 255, 0.2),
         0 0 20px rgba(100, 200, 255, 0.3);
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    /* InteracciÃ³n con el fondo - invierte colores */
+    /* Interacción con el fondo - invierte colores */
     mix-blend-mode: exclusion;
 }
 
@@ -264,7 +264,7 @@ video.main-video {
     opacity: 1;
 }
 
-/* ESTADO HOVER - Cuando estÃ¡ sobre elementos interactivos */
+/* ESTADO HOVER - Cuando está sobre elementos interactivos */
 #custom-cursor.hover .cursor-inner {
     width: 12px;
     height: 12px;
@@ -329,12 +329,13 @@ video.main-video {
         0 0 35px rgba(255, 107, 157, 0.5);
 }
 
-/* 7. BOTÃ“N DE AUDIO */
+/* 7. BOTÓN DE AUDIO */
 #audio-btn {
     position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
     z-index: 100;
     padding: 15px 30px;
-    border: none; outline: none;
+    border: none;
+    outline: none !important;
     color: #FFF; 
     cursor: none !important;
     background: transparent; 
@@ -343,6 +344,20 @@ video.main-video {
     transition: color 0.3s ease-in-out;
     pointer-events: auto;
     -webkit-tap-highlight-color: transparent;
+    /* Eliminar recuadro de selección */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/* Eliminar outline en todos los estados */
+#audio-btn:focus,
+#audio-btn:active,
+#audio-btn:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+    border: none !important;
 }
 
 #audio-btn::after {
@@ -443,86 +458,120 @@ body.show-surprise .message-content {
     cursor: none !important;
 }
 
+/* Eliminar outline de todos los elementos interactivos */
+button, a, input, textarea, select {
+    outline: none !important;
+}
+
+button:focus, button:active, button:focus-visible,
+a:focus, a:active, a:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
 /* ============================================
-   OPTIMIZACIÃ“N PARA DISPOSITIVOS MÃ“VILES
+   OPTIMIZACIÓN PARA DISPOSITIVOS MÓVILES
    ============================================ */
 
-/* ADAPTACIÃ“N MEJORADA PARA DISPOSITIVOS MÃ“VILES Y TÃCTILES */
-@media (hover: none) and (pointer: coarse), (any-pointer: coarse) {
-    /* Restaurar cursor nativo en mÃ³viles */
-    html, body, *, *::before, *::after {
-        cursor: auto !important;
-    }
-
-    /* Ocultar completamente el cursor personalizado */
-    #custom-cursor {
-        display: none !important;
-        visibility: hidden !important;
-        opacity: 0 !important;
-    }
-
+/* ADAPTACIÓN MEJORADA PARA DISPOSITIVOS MÓVILES Y TÁCTILES */
+@media (hover: none) and (pointer: coarse) {
+    /* OCULTAR CURSOR PERSONALIZADO COMPLETAMENTE */
+    #custom-cursor,
+    #custom-cursor *,
     .cursor-inner,
     .cursor-outer {
         display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
     }
-
-    /* Restaurar cursor normal en botÃ³n de audio */
+    
+    /* Restaurar cursor nativo en móviles */
+    html, body, *, *::before, *::after {
+        cursor: auto !important;
+    }
+    
+    /* Restaurar cursor normal y táctil en botón de audio */
     #audio-btn {
         cursor: pointer !important;
         -webkit-tap-highlight-color: rgba(100, 200, 255, 0.2);
+        touch-action: manipulation;
     }
-
-    /* Reducir blur en mÃ³viles para mejor rendimiento */
+    
+    /* Reducir blur en móviles para mejor rendimiento */
     #background-layer {
         filter: blur(4px);
     }
 }
 
-/* Detectar si el dispositivo tiene touch */
+/* Detectar dispositivos táctiles adicionales */
 @media (pointer: coarse) {
     #custom-cursor {
-        pointer-events: none !important;
+        display: none !important;
+    }
+    
+    html, body {
+        cursor: auto !important;
+    }
+}
+
+/* Para tablets en modo landscape que también son táctiles */
+@media (any-pointer: coarse) {
+    #custom-cursor {
         display: none !important;
     }
 }
 
-/* OPTIMIZACIÃ“N ADICIONAL PARA BLUR EN DISPOSITIVOS DE BAJO RENDIMIENTO */
+/* OPTIMIZACIÓN ADICIONAL PARA BLUR EN DISPOSITIVOS DE BAJO RENDIMIENTO */
 @media (prefers-reduced-motion: reduce) {
-    /* Reducir efectos para usuarios que prefieren menos animaciÃ³n */
+    /* Reducir efectos para usuarios que prefieren menos animación */
     #background-layer {
         filter: blur(4px);
     }
-
+    
     .cursor-inner {
         animation: none;
     }
-
+    
     .eq-bar {
         animation-duration: 2s;
     }
 }
 
-/* RESPONSIVE PARA MÃ“VILES */
+/* RESPONSIVE PARA MÓVILES */
 @media (max-width: 600px) { 
+    /* FORZAR OCULTACIÓN DEL CURSOR EN PANTALLAS PEQUEÑAS */
+    #custom-cursor,
+    #custom-cursor *,
+    .cursor-inner,
+    .cursor-outer {
+        display: none !important;
+    }
+    
+    html, body, *, *::before, *::after {
+        cursor: auto !important;
+    }
+    
     .glow-text { 
         font-size: 2rem; 
     }
-
+    
     .card-wrapper {
         max-width: 95%;
     }
-
+    
     #audio-btn {
         bottom: 20px;
         padding: 12px 24px;
+        cursor: pointer !important;
     }
-
+    
     :root {
         --cursor-outer-size: 35px;
     }
-
-    /* Reducir blur en pantallas pequeÃ±as */
+    
+    /* Reducir blur en pantallas pequeñas */
     #background-layer {
         filter: blur(5px);
     }
-                                  }
+    }
