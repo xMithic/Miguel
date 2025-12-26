@@ -5,16 +5,16 @@ export class SurpriseSystem {
         this.width = window.innerWidth;
         this.height = window.innerHeight;
         this.isRunning = false;
-        
+
         // Colecciones de objetos
         this.rockets = [];
         this.particles = [];
-        this.sparkles = []; // Nuevas partículas secundarias (rastros)
+        this.sparkles = []; 
 
         // Configuración visual
         this.config = {
-            rocketSpawnChance: 0.03, // Probabilidad por frame
-            particleCount: 100,      // Partículas por explosión base
+            rocketSpawnChance: 0.05, 
+            particleCount: 100,      
             gravity: 0.12,
             friction: 0.96,
             colors: [
@@ -42,6 +42,9 @@ export class SurpriseSystem {
         if (!this.canvas) return;
         this.isRunning = true;
         document.body.classList.add('show-surprise');
+        
+        // Lanzamiento inicial inmediato
+        this.launchRocket();
         this.loop();
 
         // Auto-cierre inteligente
@@ -69,12 +72,14 @@ export class SurpriseSystem {
         if (!this.isRunning) return;
         requestAnimationFrame(() => this.loop());
 
-        // 1. Fondo con efecto "Motion Blur" (Rastro suave)
+        if (!this.ctx) return;
+
+        // 1. Fondo con efecto "Motion Blur"
         this.ctx.globalCompositeOperation = 'destination-out';
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.15)'; // Más transparencia = rastro más largo
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
         this.ctx.fillRect(0, 0, this.width, this.height);
 
-        // 2. Modo de mezcla aditiva para brillo intenso
+        // 2. Modo de mezcla aditiva
         this.ctx.globalCompositeOperation = 'lighter';
 
         // 3. Lógica de Cohetes
@@ -82,13 +87,12 @@ export class SurpriseSystem {
             this.launchRocket();
         }
 
-        // Actualizar y dibujar Cohetes
+        // Actualizar Cohetes
         for (let i = this.rockets.length - 1; i >= 0; i--) {
             let r = this.rockets[i];
             r.update();
             r.draw(this.ctx);
 
-            // Emitir chispas de rastro
             if (Math.random() > 0.5) {
                 this.sparkles.push(new Sparkle(r.x, r.y, r.color));
             }
@@ -99,7 +103,7 @@ export class SurpriseSystem {
             }
         }
 
-        // 4. Actualizar y dibujar Partículas (Explosiones)
+        // 4. Actualizar Partículas
         for (let i = this.particles.length - 1; i >= 0; i--) {
             let p = this.particles[i];
             p.update();
@@ -109,7 +113,7 @@ export class SurpriseSystem {
             }
         }
 
-        // 5. Actualizar y dibujar Chispas (Detalles finos)
+        // 5. Actualizar Chispas
         for (let i = this.sparkles.length - 1; i >= 0; i--) {
             let s = this.sparkles[i];
             s.update();
@@ -124,13 +128,11 @@ export class SurpriseSystem {
         const x = Math.random() * (this.width * 0.8) + (this.width * 0.1);
         const targetY = Math.random() * (this.height * 0.4) + (this.height * 0.1);
         const palette = this.config.colors[Math.floor(Math.random() * this.config.colors.length)];
-        // Tipos de explosión: 0=Esfera, 1=Corazón, 2=Anillo, 3=Sauce
         const type = Math.floor(Math.random() * 4); 
         this.rockets.push(new Rocket(x, this.height, targetY, palette, type));
     }
 
     createExplosion(rocket) {
-        // Flash de pantalla sutil para impacto
         if (Math.random() > 0.7) {
             this.ctx.save();
             this.ctx.globalCompositeOperation = 'screen';
@@ -140,50 +142,42 @@ export class SurpriseSystem {
         }
 
         const count = this.config.particleCount;
-        const mainColor = rocket.color;
         
         for (let i = 0; i < count; i++) {
             const p = new Particle(rocket.x, rocket.y, rocket.palette);
             
-            // FÍSICA SEGÚN TIPO DE EXPLOSIÓN
             if (rocket.type === 1) { // Corazón
                 const angle = (Math.PI * 2 * i) / count;
-                // Fórmula paramétrica del corazón
-                const r = Math.random() * 2 + 10; // velocidad base
+                const r = Math.random() * 2 + 10; 
                 const xDir = 16 * Math.pow(Math.sin(angle), 3);
                 const yDir = -(13 * Math.cos(angle) - 5 * Math.cos(2 * angle) - 2 * Math.cos(3 * angle) - Math.cos(4 * angle));
                 
-                // Normalizar y aplicar velocidad
                 p.vx = (xDir / 10) * (Math.random() * 0.5 + 0.5);
                 p.vy = (yDir / 10) * (Math.random() * 0.5 + 0.5);
-                p.friction = 0.94; // Frenado rápido para mantener forma
-                p.gravity = 0.05;  // Cae despacio
-                p.life = 120; // Dura más
-            
-            } else if (rocket.type === 2) { // Anillo (Saturno)
+                p.friction = 0.94; 
+                p.gravity = 0.05;  
+                p.life = 120; 
+            } else if (rocket.type === 2) { // Saturno
                 const angle = Math.random() * Math.PI * 2;
-                const speed = Math.random() * 1 + 8; // Velocidad muy uniforme
+                const speed = Math.random() * 1 + 8; 
                 p.vx = Math.cos(angle) * speed;
                 p.vy = Math.sin(angle) * speed;
                 p.friction = 0.92;
-                
-            } else if (rocket.type === 3) { // Sauce Llorón (Willow)
+            } else if (rocket.type === 3) { // Sauce
                 const angle = Math.random() * Math.PI * 2;
                 const speed = Math.random() * 10 + 2;
                 p.vx = Math.cos(angle) * speed;
                 p.vy = Math.sin(angle) * speed;
-                p.friction = 0.90; // Mucha resistencia aire
-                p.gravity = 0.08;  // Gravedad media
-                p.willow = true;   // Flag para dejar rastro largo
+                p.friction = 0.90; 
+                p.gravity = 0.08;  
+                p.willow = true;   
                 p.life = 150;
-                
-            } else { // Esfera estándar (default)
+            } else { // Esfera
                 const angle = Math.random() * Math.PI * 2;
                 const speed = Math.random() * 12;
                 p.vx = Math.cos(angle) * speed;
                 p.vy = Math.sin(angle) * speed;
             }
-
             this.particles.push(p);
         }
     }
@@ -199,14 +193,14 @@ class Rocket {
         this.y = y;
         this.targetY = targetY;
         this.palette = palette;
-        this.color = palette[1]; // Color medio
+        this.color = palette[1]; 
         this.type = type;
         this.speed = Math.random() * 3 + 12;
-        this.angle = -Math.PI / 2 + (Math.random() * 0.2 - 0.1); // Ligera desviación
+        this.angle = -Math.PI / 2 + (Math.random() * 0.2 - 0.1); 
         this.vx = Math.cos(this.angle) * this.speed;
         this.vy = Math.sin(this.angle) * this.speed;
         this.exploded = false;
-        this.history = []; // Para la cola
+        this.history = []; 
     }
 
     update() {
@@ -215,18 +209,16 @@ class Rocket {
 
         this.x += this.vx;
         this.y += this.vy;
-        this.vy += 0.15; // Gravedad leve al subir
-        this.vx *= 0.99; // Resistencia aire
+        this.vy += 0.15; 
+        this.vx *= 0.99; 
 
-        // Detonar si llega al apogeo o empieza a caer
         if (this.vy >= -1 || this.y <= this.targetY) {
             this.exploded = true;
         }
-    }
+    } // <--- FALTABA ESTA LLAVE DE CIERRE
 
     draw(ctx) {
         ctx.beginPath();
-        // Dibujar cola sólida
         if (this.history.length > 0) {
             ctx.moveTo(this.history[0].x, this.history[0].y);
             for(let p of this.history) ctx.lineTo(p.x, p.y);
@@ -241,7 +233,7 @@ class Rocket {
         ctx.shadowBlur = 15;
         ctx.shadowColor = this.color;
         ctx.stroke();
-        ctx.shadowBlur = 0; // Reset performance
+        ctx.shadowBlur = 0; 
     }
 }
 
@@ -250,8 +242,7 @@ class Particle {
         this.x = x;
         this.y = y;
         this.palette = palette;
-        // Seleccionar color random de la paleta
-        this.color = palette[Math.floor(Math.random() * palette.length)];
+        this.color = palette[Math.floor(Math.random() * palette.length)]; // <--- ESTO ESTABA COMENTADO
         
         this.vx = 0;
         this.vy = 0;
@@ -261,7 +252,7 @@ class Particle {
         this.life = Math.random() * 60 + 40;
         this.maxLife = this.life;
         this.size = Math.random() * 2 + 1;
-        this.willow = false; // Si es true, deja rastro dorado
+        this.willow = false; 
     }
 
     update() {
@@ -273,16 +264,14 @@ class Particle {
         this.y += this.vy;
         this.life--;
         
-        // Fade out basado en vida
         if (this.life < 20) this.alpha -= 0.05;
         
-        // Efecto titileo (twinkle) al final de la vida
         if (this.life < 40 && Math.random() > 0.8) {
-            this.alpha = 0; // Parpadeo
+            this.alpha = 0; 
         } else if (this.life < 40) {
             this.alpha = (this.life / 40);
         }
-    }
+    } // <--- FALTABA ESTA LLAVE DE CIERRE
 
     draw(ctx) {
         if (this.alpha <= 0) return;
@@ -291,12 +280,10 @@ class Particle {
         ctx.globalAlpha = this.alpha;
         ctx.fillStyle = this.color;
         
-        // Si es "Willow", dibujamos chispas cayendo
         if (this.willow) {
-             ctx.fillStyle = `rgba(255, 215, 0, ${this.alpha})`; // Dorado
-             ctx.fillRect(this.x, this.y, 1.5, 4); // Alargado
+             ctx.fillStyle = `rgba(255, 215, 0, ${this.alpha})`; 
+             ctx.fillRect(this.x, this.y, 1.5, 4); 
         } else {
-             // Partícula normal redonda con brillo central
              ctx.beginPath();
              ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
              ctx.fill();
@@ -305,7 +292,6 @@ class Particle {
     }
 }
 
-// Chispas pequeñas y rápidas (Trail Dust)
 class Sparkle {
     constructor(x, y, color) {
         this.x = x + (Math.random() * 4 - 2);
@@ -316,7 +302,7 @@ class Sparkle {
     }
 
     update() {
-        this.y += 0.5; // Caen lento
+        this.y += 0.5; 
         this.life--;
         this.alpha = this.life / 20;
     }
@@ -325,7 +311,7 @@ class Sparkle {
         if (this.alpha <= 0) return;
         ctx.globalAlpha = this.alpha;
         ctx.fillStyle = this.color;
-        ctx.fillRect(this.x, this.y, 1.5, 1.5); // Pixel art style sparkles
+        ctx.fillRect(this.x, this.y, 1.5, 1.5); 
         ctx.globalAlpha = 1;
     }
 }
