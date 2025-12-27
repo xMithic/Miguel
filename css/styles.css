@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Titan+One&family=Chewy&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Titan+One&family=Chewy&family=Luckiest+Guy&display=swap');
 
 @import url('https://fonts.googleapis.com/css2?family=Bangers&display=swap');
 
@@ -10,13 +10,14 @@
     --card-radius: 24px;
     --cursor-glow: rgba(100, 200, 255, 0.5);
     /* Variable por defecto para el glow del botón */
-    --video-glow: #00FFD5; 
+    --video-glow: #00FFD5;
 }
 
 /* ============================================
    RESET Y ESTRUCTURA GLOBAL
 ============================================ */
-html, body {
+html,
+body {
     margin: 0;
     padding: 0;
     width: 100%;
@@ -27,9 +28,12 @@ html, body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     cursor: none !important;
     user-select: none;
-    -webkit-user-select: none; /* Safari/Chrome */
-    -webkit-user-drag: none;   /* ESTA ES LA CLAVE DEL BUG */
-    touch-action: none;        /* Evita scroll/zoom en móviles al dibujar */
+    -webkit-user-select: none;
+    /* Safari/Chrome */
+    -webkit-user-drag: none;
+    /* ESTA ES LA CLAVE DEL BUG */
+    touch-action: none;
+    /* Evita scroll/zoom en móviles al dibujar */
 }
 
 /* Asegurar que el cursor esté siempre encima de todo */
@@ -81,7 +85,7 @@ html, body {
         radial-gradient(rgba(0, 0, 0, 0.7) 1.5px, transparent 1.5px);
     background-size: 12px 12px;
     background-position: 0 0, 6px 6px;
-    box-shadow: inset 0 0 150px rgba(0,0,0,0.8);
+    box-shadow: inset 0 0 150px rgba(0, 0, 0, 0.8);
 }
 
 /* ============================================
@@ -93,7 +97,7 @@ html, body {
     left: 0;
     width: 100%;
     height: 100%;
-    z-index: 5; 
+    z-index: 5;
     pointer-events: none;
 }
 
@@ -111,13 +115,14 @@ html, body {
 /* --- CORRECCIÓN IMPORTANTE: FUEGOS ARTIFICIALES --- */
 /* --- CORRECCIÓN FINAL: FUEGOS ARTIFICIALES --- */
 #fireworks-canvas {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 6000;          /* > 5000 para quedar encima del mensaje */
-  pointer-events: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 6000;
+    /* > 5000 para quedar encima del mensaje */
+    pointer-events: none;
 }
 
 
@@ -151,25 +156,25 @@ html, body {
 #video-card {
     position: relative;
     width: 100%;
-    
+
     /* Borde negro grueso estilo tinta */
     border: 4px solid #000000;
-    
+
     /* Sombra sólida "Hard Shadow" para efecto 3D plano */
     box-shadow: 12px 12px 0px rgba(0, 0, 0, 1);
-    
+
     /* Fondo blanco por si el video tarda en cargar */
     background: #fff;
-    
+
     /* Eliminamos el radio suave anterior para esquinas más rectas */
-    border-radius: 4px; 
-    
+    border-radius: 4px;
+
     /* Pequeña rotación aleatoria para dar sensación de "pegado" a mano (opcional) */
     transform: rotate(-1deg);
-    
+
     /* Aseguramos que el contenido no se salga */
     overflow: hidden;
-    
+
     /* Transición suave para efectos hover */
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     z-index: 20;
@@ -180,14 +185,14 @@ html, body {
     width: 100%;
     height: auto;
     display: block;
-    
+
     /* FILTROS CLAVE: 
        - Contrast: Aumenta la diferencia negros/blancos.
        - Saturate: Colores vibrantes estilo cómic.
        - Brightness: Compensa el contraste. 
     */
     filter: contrast(1.25) saturate(1.4) brightness(1.1);
-    
+
     /* Asegura que el video cubra todo el panel */
     object-fit: cover;
 }
@@ -199,11 +204,12 @@ html, body {
     inset: 0;
     pointer-events: none;
     z-index: 25;
-    
+
     /* Patrón de puntos sutiles estilo Ben-Day dots */
     background-image: radial-gradient(circle, #000 1px, transparent 1.5px);
-    background-size: 8px 8px; /* Tamaño de la trama */
-    
+    background-size: 8px 8px;
+    /* Tamaño de la trama */
+
     /* Mezcla suave para no tapar el video */
     opacity: 0.05;
     mix-blend-mode: multiply;
@@ -214,8 +220,10 @@ html, body {
     /* El video se levanta y la sombra crece */
     transform: translate(-4px, -4px) rotate(0deg) scale(1.02);
     box-shadow: 20px 20px 0px rgba(0, 0, 0, 1);
-    border-color: #fff; /* El borde cambia a blanco o color neón */
-    outline: 4px solid #000; /* Doble borde para más estilo */
+    border-color: #fff;
+    /* El borde cambia a blanco o color neón */
+    outline: 4px solid #000;
+    /* Doble borde para más estilo */
 }
 
 /* ============================================
@@ -225,7 +233,8 @@ html, body {
 /* Tablets y Laptops pequeñas */
 @media (max-width: 1024px) {
     #video-card {
-        box-shadow: 8px 8px 0px #000; /* Sombra más pequeña */
+        box-shadow: 8px 8px 0px #000;
+        /* Sombra más pequeña */
         border-width: 3px;
     }
 }
@@ -233,12 +242,13 @@ html, body {
 /* Móviles */
 @media (max-width: 768px) {
     #video-card {
-        transform: none !important; /* Quitamos rotación en móvil para ganar espacio */
+        transform: none !important;
+        /* Quitamos rotación en móvil para ganar espacio */
         box-shadow: 6px 6px 0px #000;
         border-width: 3px;
         border-radius: 2px;
     }
-    
+
     .card-wrapper:hover #video-card {
         /* Efecto más sutil en táctil */
         transform: translate(-2px, -2px);
@@ -269,12 +279,24 @@ html, body {
 }
 
 @keyframes eqBounce {
-    0%, 100% { transform: scaleY(0.5); }
-    50% { transform: scaleY(1.5); }
+
+    0%,
+    100% {
+        transform: scaleY(0.5);
+    }
+
+    50% {
+        transform: scaleY(1.5);
+    }
 }
 
-.eq-bar:nth-child(2) { animation-delay: 0.1s; }
-.eq-bar:nth-child(3) { animation-delay: 0.2s; }
+.eq-bar:nth-child(2) {
+    animation-delay: 0.1s;
+}
+
+.eq-bar:nth-child(3) {
+    animation-delay: 0.2s;
+}
 
 /* ============================================
    BOTÓN DE MÚSICA: CÓMIC PURO (SIN TEXTO)
@@ -283,35 +305,37 @@ html, body {
     position: fixed;
     bottom: 40px;
     left: 50%;
-    
+
     /* ESTADO INICIAL */
     transform: translateX(-50%) rotate(-3deg);
-    
+
     z-index: 100;
     padding: 12px 30px;
-    
+
     /* --- ESTILO VISUAL --- */
-    background-color: rgba(255, 221, 64, 0.9) !important; /* Amarillo intenso */
+    background-color: rgba(255, 221, 64, 0.9) !important;
+    /* Amarillo intenso */
     backdrop-filter: blur(4px);
-    
+
     border: 3px solid #000 !important;
-    box-shadow: 6px 6px 0px #000 !important; /* Sombra dura inicial */
-    
+    box-shadow: 6px 6px 0px #000 !important;
+    /* Sombra dura inicial */
+
     color: #000 !important;
     font-weight: 900;
     font-family: 'Montserrat', sans-serif, system-ui;
     text-transform: uppercase;
     font-size: 1.1rem;
     letter-spacing: 0.5px;
-    
+
     cursor: pointer;
     border-radius: 8px;
-    
+
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 8px;
-    
+
     /* ANIMACIÓN ELÁSTICA (BOUNCY) ESTILO CÓMIC */
     /* Esto hace que al crecer "reabote" un poco al final */
     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -329,10 +353,10 @@ html, body {
     /* 1. Mantenemos el ángulo (-3deg)
        2. Aumentamos la escala a 1.15 (15% más grande) para que destaque */
     transform: translateX(-50%) rotate(-3deg) scale(1.15);
-    
+
     /* La sombra crece mucho para dar sensación de que "vuela" hacia ti */
     box-shadow: 14px 14px 0px #000 !important;
-    
+
     /* Color un poco más brillante */
     background-color: #FFEA80 !important;
 }
@@ -341,12 +365,14 @@ html, body {
 #audio-btn:active {
     /* Al hacer click se encoge un poco (efecto de presión) */
     transform: translateX(-50%) rotate(-3deg) scale(0.95);
-    
+
     /* La sombra desaparece casi por completo */
     box-shadow: 2px 2px 0px #000 !important;
-    
-    background-color: #FFC000 !important; /* Amarillo más oscuro */
-    transition: all 0.1s ease; /* Reacción rápida al click */
+
+    background-color: #FFC000 !important;
+    /* Amarillo más oscuro */
+    transition: all 0.1s ease;
+    /* Reacción rápida al click */
 }
 
 /* --- ICONO SVG --- */
@@ -373,8 +399,8 @@ html, body {
        Si quieres que NO se mueva nada, usa rotate(-3deg) aquí también. 
        Para efecto "vivo", rotate(0deg) está bien, pero el active debe coincidir.
        Vamos a mantenerlo quieto en ángulo para máxima estabilidad. */
-    transform: translateX(-50%) rotate(-3deg) scale(1.05); 
-    
+    transform: translateX(-50%) rotate(-3deg) scale(1.05);
+
     box-shadow: 10px 10px 0px #000 !important;
     background-color: rgba(255, 234, 128, 0.95) !important;
 }
@@ -389,7 +415,7 @@ html, body {
 #audio-btn:active {
     /* CLAVE: Mantenemos rotate(-3deg) para que no salte hacia los lados */
     transform: translateX(-50%) translateY(4px) rotate(-3deg);
-    
+
     box-shadow: 2px 2px 0px #000 !important;
 }
 
@@ -408,20 +434,26 @@ html, body {
    ============================================ */
 
 /* 1. Global Reset */
-html, body, * { cursor: none !important; }
+html,
+body,
+* {
+    cursor: none !important;
+}
 
 /* 2. Contenedor Maestro (Se mueve con JS) */
 #custom-cursor {
     position: fixed;
-    top: 0; left: 0;
-    width: 0; height: 0;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
     z-index: 10000;
     pointer-events: none;
     mix-blend-mode: difference;
-    
+
     /* Inicio visible */
     opacity: 1;
-    
+
     /* IMPORTANTE: Quitamos transición de transform para que sea INSTANTÁNEO */
     transition: opacity 0.3s ease;
 }
@@ -434,7 +466,8 @@ html, body, * { cursor: none !important; }
 /* 3. Punto Interior (Fijo al centro) */
 .cursor-inner {
     position: absolute;
-    width: 8px; height: 8px;
+    width: 8px;
+    height: 8px;
     background: white;
     border-radius: 50%;
     transform: translate(-50%, -50%);
@@ -443,43 +476,54 @@ html, body, * { cursor: none !important; }
 /* 4. Anillo Exterior (Animaciones solo visuales) */
 .cursor-outer {
     position: absolute;
-    width: 40px; height: 40px;
+    width: 40px;
+    height: 40px;
     border: 1px solid rgba(255, 255, 255, 0.6);
     border-radius: 50%;
     transform: translate(-50%, -50%);
     box-sizing: border-box;
-    
+
     /* Solo animamos cambios de forma, no posición */
     transition: width 0.2s cubic-bezier(0.25, 1, 0.5, 1),
-                height 0.2s cubic-bezier(0.25, 1, 0.5, 1),
-                background-color 0.2s,
-                border-color 0.2s;
+        height 0.2s cubic-bezier(0.25, 1, 0.5, 1),
+        background-color 0.2s,
+        border-color 0.2s;
 }
 
 /* --- ESTADOS --- */
 
 /* Hover (Expandir) */
 #custom-cursor.hovered .cursor-outer {
-    width: 60px; height: 60px;
+    width: 60px;
+    height: 60px;
     background-color: rgba(255, 255, 255, 0.1);
     border-color: transparent;
 }
-#custom-cursor.hovered .cursor-inner { opacity: 0; }
+
+#custom-cursor.hovered .cursor-inner {
+    opacity: 0;
+}
 
 /* Click / Mantener (Pulsar) */
 #custom-cursor.clicked .cursor-outer {
     /* Mantenemos el tamaño un poco reducido mientras se pulsa */
-    width: 35px; height: 35px;
+    width: 35px;
+    height: 35px;
     background-color: rgba(255, 255, 255, 0.2);
     border: 2px solid white;
-    
+
     /* Animación de latido mientras se mantiene */
     animation: clickPulse 0.8s infinite alternate ease-in-out;
 }
 
 @keyframes clickPulse {
-    from { transform: translate(-50%, -50%) scale(1); }
-    to   { transform: translate(-50%, -50%) scale(0.85); }
+    from {
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    to {
+        transform: translate(-50%, -50%) scale(0.85);
+    }
 }
 
 
@@ -487,20 +531,20 @@ html, body, * { cursor: none !important; }
 
 #surprise-overlay {
     position: fixed;
-    inset: 0; /* Ocupa toda la pantalla */
+    inset: 0;
     z-index: 5000;
-    
-    /* CENTRADO PERFECTO FLEXBOX */
+
     display: flex;
-    flex-direction: column; /* Apila título y subtítulo */
+    flex-direction: column;
     justify-content: center;
     align-items: center;
-    
-    background: rgba(0, 0, 0, 0.85); /* Fondo un poco más oscuro para contraste */
+
+    /* Fondo oscuro con toque púrpura profundo */
+    background: radial-gradient(ellipse at center, #1a0033 0%, #000000 100%);
+
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.5s ease;
-    backdrop-filter: blur(5px); /* Efecto vidrio borroso detrás */
+    transition: opacity 0.4s ease;
 }
 
 body.show-surprise #surprise-overlay {
@@ -512,9 +556,10 @@ body.show-surprise #surprise-overlay {
 .message-content {
     text-align: center;
     padding: 20px;
-    width: 90%; /* Margen de seguridad en móviles */
+    width: 90%;
+    /* Margen de seguridad en móviles */
     max-width: 800px;
-    
+
     /* Animación de entrada suave */
     transform: translateY(20px);
     transition: transform 0.5s ease-out;
@@ -526,25 +571,26 @@ body.show-surprise .message-content {
 
 /* 2. ESTILO TÍTULO "TE QUIERO" (Estilo Cómic Romántico - El que te gustó) */
 .glow-text {
-    font-family: 'Titan One', cursive; /* Fuente gordita */
+    font-family: 'Titan One', cursive;
+    /* Fuente gordita */
     font-size: 5.5rem;
     line-height: 1.1;
     margin: 0 0 15px 0;
-    
+
     /* Relleno blanco puro */
     color: #ffffff;
-    
+
     /* Borde negro estilo tinta de cómic */
     -webkit-text-stroke: 3px #020101;
-    
+
     /* Sombras sólidas en capas (Rosa Chicle + Rosa Profundo + Negro) */
-    text-shadow: 
+    text-shadow:
         4px 4px 0px #FF69B4,
         8px 8px 0px #0000001e,
         12px 12px 0px #000000;
-        
+
     letter-spacing: 2px;
-    
+
     /* Animación flotante */
     animation: comicFloat 3s ease-in-out infinite;
     will-change: transform;
@@ -555,144 +601,137 @@ body.show-surprise .message-content {
    Mejoras: Animaciones 3D, onomatopeyas, efectos halftone
 ========================================================= */
 
-/* TÍTULO PRINCIPAL: Efecto Comic Explosivo */
+/* 🍬 TÍTULO DEFINITIVO "SUPER POP CANDY" 3D */
 .glow-text {
     position: relative;
     width: 100%;
     text-align: center;
-    font-family: 'Bangers', cursive;
-    font-size: 8rem;
-    line-height: 1;
-    margin-bottom: 30px;
+    font-family: 'Luckiest Guy', cursive;
+    font-size: 9.5rem;
+    /* ¡GIGANTE E IMPACTANTE! */
+    line-height: 0.9;
+    margin-bottom: 40px;
     z-index: 10;
 
-    /* Color amarillo vibrante con gradiente */
-    background: linear-gradient(180deg, #FFE600 0%, #FFD700 50%, #FFA500 100%);
+    /* Gradiente "Gomita Dulce": Rosa Chicle -> Violeta Eléctrico */
+    background: linear-gradient(180deg, #ff55bb 15%, #ff00cc 85%);
     -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
     background-clip: text;
+    -webkit-text-fill-color: transparent;
 
-    /* Contorno negro grueso tipo tinta */
-    -webkit-text-stroke: 4px #000;
+    /* Trazo Negro Súper Grueso (Comic Ink) */
+    -webkit-text-stroke: 6px #000;
 
-    /* Sombra múltiple para efecto 3D profundo */
-    filter: drop-shadow(6px 6px 0px #FF1493) 
-            drop-shadow(10px 10px 0px #00FFFF)
-            drop-shadow(14px 14px 0px #000);
+    /* Sombra 3D Sólida y Profunda (Violeta Oscuro) */
+    filter:
+        drop-shadow(4px 4px 0px #FFF)
+        /* Brillo borde blanco */
+        drop-shadow(10px 10px 0px #550066);
+    /* Profundidad 3D */
 
-    letter-spacing: 5px;
-    transform: rotate(-2deg);
-
-    /* Animación elástica con rebote */
-    animation: comicBounce 4s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+    transform: rotate(-3deg);
+    animation: superBounce 2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
     will-change: transform;
 }
 
-/* Efecto Halftone (puntos Ben-Day) detrás del título */
+/* ✨ EFECTO PLÁSTICO / GLOSSY (Reflejo de luz) */
 .glow-text::before {
     content: attr(data-text);
     position: absolute;
-    top: 0;
+    top: -2px;
     left: 0;
     width: 100%;
     height: 100%;
-    z-index: -1;
+    z-index: 1;
 
-    /* Fondo de puntos cómic */
-    background-image: 
-        radial-gradient(circle, #FF1493 2px, transparent 2px),
-        radial-gradient(circle, #00FFFF 2px, transparent 2px);
-    background-size: 15px 15px, 15px 15px;
-    background-position: 0 0, 7.5px 7.5px;
-
+    /* Gradiente blanco transparente para brillo plástico arriba */
+    background: linear-gradient(180deg,
+            rgba(255, 255, 255, 0.95) 0%,
+            rgba(255, 255, 255, 0.3) 30%,
+            transparent 35%);
     -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
     background-clip: text;
-    opacity: 0.3;
-
-    animation: halftoneShift 8s linear infinite;
-}
-
-/* Decoración: Estrella brillante animada */
-.glow-text::after {
-    content: "✦";
-    position: absolute;
-    top: -40px;
-    right: -30px;
-    font-size: 5rem;
-
-    /* Gradiente amarillo brillante */
-    background: linear-gradient(45deg, #FFD700, #FFF700, #FFD700);
-    -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    background-clip: text;
 
-    -webkit-text-stroke: 2px #000;
-    filter: drop-shadow(3px 3px 0 #000) drop-shadow(0 0 20px #FFD700);
-
-    animation: starPulse 2s ease-in-out infinite;
-    z-index: 20;
-}
-
-/* SUBTÍTULO: Estilo Bocadillo de Cómic */
-.sub-text {
-    position: relative;
-    display: inline-block;
-    font-family: 'Bangers', cursive;
-    font-size: 3rem;
-    color: #000;
-
-    /* Fondo blanco brillante */
-    background: linear-gradient(135deg, #FFFFFF 0%, #F0F0F0 100%);
-    padding: 15px 40px;
-
-    /* Borde negro irregular tipo viñeta */
-    border: 4px solid #000;
-    border-radius: 20px 5px 20px 5px;
-
-    /* Sombra múltiple tipo offset printing */
-    box-shadow: 
-        6px 6px 0px #FF1493,
-        10px 10px 0px #00FFFF,
-        14px 14px 0px #000,
-        inset 0 -3px 8px rgba(0,0,0,0.1);
-
-    margin-top: 30px;
-    transform: rotate(1deg);
-
-    /* Animación de balanceo suave */
-    animation: popWiggle 3s ease-in-out infinite;
-}
-
-/* Patrón de puntos sobre el subtítulo */
-.sub-text::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: 20px 5px 20px 5px;
-    background-image: radial-gradient(circle, rgba(0,0,0,0.06) 1px, transparent 1px);
-    background-size: 6px 6px;
     pointer-events: none;
 }
 
-/* Corazón animado decorativo */
-.sub-text::before {
+/* Decoración: Corazón "Sticker" */
+.glow-text::after {
     content: "❤";
     position: absolute;
-    left: -35px;
-    top: -35px;
-    font-size: 4rem;
+    top: -45px;
+    right: 15px;
+    font-size: 6rem;
+    color: #FF1493;
+    -webkit-text-stroke: 3px #000;
+    filter: drop-shadow(4px 4px 0 #FFF) drop-shadow(8px 8px 0 #000);
+    animation: heartBeat 1.5s ease-in-out infinite;
+    z-index: 20;
+}
 
-    background: linear-gradient(180deg, #FF0066, #FF0000);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+/* 💬 SUBTÍTULO "SPEECH BUBBLE" REAL */
+.sub-text {
+    position: relative;
+    display: inline-block;
+    font-family: 'Luckiest Guy', cursive;
+    /* Misma fuente para consistencia branding */
+    font-size: 2.8rem;
+    color: #000;
+    letter-spacing: 1px;
 
-    -webkit-text-stroke: 2.5px #000;
-    filter: drop-shadow(3px 3px 0 #000) drop-shadow(0 0 15px #FF0066);
-    transform: rotate(-20deg);
+    background: #FFF;
+    padding: 20px 45px;
 
-    animation: heartBeat 1.2s infinite;
+    /* Estilo Bocadillo Sólido */
+    border: 5px solid #000;
+    border-radius: 20px;
+
+    /* Sombra flotante separada */
+    box-shadow: 10px 10px 0px #FF1493;
+
+    margin-top: 25px;
+    transform: rotate(2deg);
+    animation: floatBubble 3s ease-in-out infinite;
+    z-index: 10;
+}
+
+/* Cola del bocadillo (Triangle) */
+.sub-text::before {
+    content: '';
+    position: absolute;
+    top: -20px;
+    left: 45%;
+    width: 0;
+    height: 0;
+    /* Triángulo apuntando arriba */
+    border-left: 15px solid transparent;
+    border-right: 15px solid transparent;
+    border-bottom: 25px solid #000;
+    /* Borde negro */
+    z-index: -2;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
+}
+
+.sub-text::after {
+    content: '';
+    position: absolute;
+    top: -11px;
+    /* Ajuste para tapar el negro */
+    left: 46%;
+    /* Ajuste fino */
+    width: 0;
+    height: 0;
+    /* Triángulo blanco interno */
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-bottom: 20px solid #FFF;
+    z-index: -1;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
 }
 
 /* ONOMATOPEYAS DECORATIVAS */
@@ -757,48 +796,53 @@ body.show-surprise .message-content {
 /* ======= ANIMACIONES MEJORADAS ======= */
 
 /* Rebote elástico 3D */
-@keyframes comicBounce {
-    0%, 100% { 
-        transform: rotate(-2deg) translateY(0) scale(1);
+/* ======= ANIMACIONES POP ART SUPREMAS ======= */
+
+/* Rebote Elástico y Dinámico */
+@keyframes superBounce {
+
+    0%,
+    100% {
+        transform: rotate(-3deg) scale(1) translateY(0);
     }
-    25% { 
-        transform: rotate(-3deg) translateY(-20px) scale(1.08) rotateX(10deg);
-    }
-    50% { 
-        transform: rotate(-2deg) translateY(-10px) scale(1.05);
-    }
-    75% { 
-        transform: rotate(-1deg) translateY(-15px) scale(1.06) rotateX(-5deg);
+
+    50% {
+        transform: rotate(-3deg) scale(1.1) translateY(-15px);
     }
 }
 
-/* Balanceo suave del subtítulo */
-@keyframes popWiggle {
-    0%, 100% { 
-        transform: rotate(1deg) translateY(0);
+/* Flotación suave para el bocadillo */
+@keyframes floatBubble {
+
+    0%,
+    100% {
+        transform: rotate(2deg) translateY(0);
     }
-    33% { 
-        transform: rotate(3deg) translateY(-5px);
-    }
-    66% { 
-        transform: rotate(-1deg) translateY(-3px);
+
+    50% {
+        transform: rotate(2deg) translateY(-8px) scale(1.02);
     }
 }
 
 /* Latido intenso del corazón */
 @keyframes heartBeat {
-    0%, 100% { 
+
+    0%,
+    100% {
         transform: scale(1) rotate(-20deg);
         filter: drop-shadow(3px 3px 0 #000) drop-shadow(0 0 15px #FF0066);
     }
-    10% { 
+
+    10% {
         transform: scale(1.35) rotate(-15deg);
         filter: drop-shadow(4px 4px 0 #000) drop-shadow(0 0 30px #FF0066);
     }
-    20% { 
+
+    20% {
         transform: scale(1) rotate(-20deg);
     }
-    30% { 
+
+    30% {
         transform: scale(1.35) rotate(-15deg);
         filter: drop-shadow(4px 4px 0 #000) drop-shadow(0 0 30px #FF0066);
     }
@@ -806,11 +850,14 @@ body.show-surprise .message-content {
 
 /* Pulso brillante de estrella */
 @keyframes starPulse {
-    0%, 100% { 
+
+    0%,
+    100% {
         transform: rotate(0deg) scale(1);
         filter: drop-shadow(3px 3px 0 #000) drop-shadow(0 0 20px #FFD700);
     }
-    50% { 
+
+    50% {
         transform: rotate(180deg) scale(1.3);
         filter: drop-shadow(4px 4px 0 #000) drop-shadow(0 0 40px #FFD700);
     }
@@ -818,11 +865,14 @@ body.show-surprise .message-content {
 
 /* Explosión POW */
 @keyframes pow-explosion {
-    0%, 100% { 
+
+    0%,
+    100% {
         transform: rotate(15deg) scale(1);
         opacity: 0.8;
     }
-    50% { 
+
+    50% {
         transform: rotate(18deg) scale(1.15);
         opacity: 1;
         text-shadow: 6px 6px 0 #000, 0 0 20px #FFD700;
@@ -831,31 +881,67 @@ body.show-surprise .message-content {
 
 /* Vibración BOOM */
 @keyframes boom-shake {
-    0%, 100% { 
+
+    0%,
+    100% {
         transform: rotate(-12deg) translateX(0);
     }
-    10% { transform: rotate(-12deg) translateX(-3px); }
-    20% { transform: rotate(-12deg) translateX(3px); }
-    30% { transform: rotate(-12deg) translateX(-3px); }
-    40% { transform: rotate(-12deg) translateX(3px); }
-    50% { transform: rotate(-12deg) translateX(0); }
+
+    10% {
+        transform: rotate(-12deg) translateX(-3px);
+    }
+
+    20% {
+        transform: rotate(-12deg) translateX(3px);
+    }
+
+    30% {
+        transform: rotate(-12deg) translateX(-3px);
+    }
+
+    40% {
+        transform: rotate(-12deg) translateX(3px);
+    }
+
+    50% {
+        transform: rotate(-12deg) translateX(0);
+    }
 }
 
 /* Movimiento de puntos halftone */
 @keyframes halftoneShift {
-    0% { background-position: 0 0, 7.5px 7.5px; }
-    100% { background-position: 15px 15px, 22.5px 22.5px; }
+    0% {
+        background-position: 0 0, 7.5px 7.5px;
+    }
+
+    100% {
+        background-position: 15px 15px, 22.5px 22.5px;
+    }
 }
 
 /* Líneas de velocidad */
 @keyframes lineSlide {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
+    0% {
+        transform: translateX(-100%);
+    }
+
+    100% {
+        transform: translateX(100%);
+    }
 }
 
 @keyframes speedLinesFlash {
-    0%, 90%, 100% { opacity: 0; }
-    92%, 98% { opacity: 0.6; }
+
+    0%,
+    90%,
+    100% {
+        opacity: 0;
+    }
+
+    92%,
+    98% {
+        opacity: 0.6;
+    }
 }
 
 /* ======= RESPONSIVE MEJORADO ======= */
@@ -864,9 +950,7 @@ body.show-surprise .message-content {
     .glow-text {
         font-size: 4.5rem;
         -webkit-text-stroke: 2.5px #000;
-        filter: drop-shadow(4px 4px 0px #FF1493) 
-                drop-shadow(6px 6px 0px #00FFFF)
-                drop-shadow(8px 8px 0px #000);
+        filter: drop-shadow(4px 4px 0px #FF1493) drop-shadow(6px 6px 0px #00FFFF) drop-shadow(8px 8px 0px #000);
         letter-spacing: 2px;
     }
 
@@ -879,7 +963,7 @@ body.show-surprise .message-content {
     .sub-text {
         font-size: 1.8rem;
         padding: 10px 25px;
-        box-shadow: 
+        box-shadow:
             4px 4px 0px #FF1493,
             6px 6px 0px #00FFFF,
             8px 8px 0px #000;
@@ -891,7 +975,8 @@ body.show-surprise .message-content {
         top: -20px;
     }
 
-    .comic-pow, .comic-boom {
+    .comic-pow,
+    .comic-boom {
         font-size: 2rem;
     }
 }
@@ -925,13 +1010,20 @@ body.show-surprise .message-content {
 }
 
 @keyframes floatParticle {
-    0% { 
+    0% {
         transform: translateY(100vh) rotate(0deg);
         opacity: 0;
     }
-    10% { opacity: 1; }
-    90% { opacity: 1; }
-    100% { 
+
+    10% {
+        opacity: 1;
+    }
+
+    90% {
+        opacity: 1;
+    }
+
+    100% {
         transform: translateY(-100px) rotate(360deg);
         opacity: 0;
     }
@@ -939,10 +1031,117 @@ body.show-surprise .message-content {
 
 /* Brillo de fondo pulsante */
 @keyframes backgroundPulse {
-    0%, 100% { background-color: rgba(0, 0, 0, 0.85); }
-    50% { background-color: rgba(10, 0, 20, 0.9); }
+
+    0%,
+    100% {
+        background-color: rgba(0, 0, 0, 0.85);
+    }
+
+    50% {
+        background-color: rgba(10, 0, 20, 0.9);
+    }
 }
 
 #surprise-overlay.show-pulse {
     animation: backgroundPulse 4s ease-in-out infinite;
+}
+
+/* =========================================================
+   🌌 ANIMACIONES "AURORA LOVE" - EFECTOS REVOLUCIONARIOS
+========================================================= */
+
+/* Aurora Boreal - Movimiento del fondo */
+@keyframes auroraShift {
+
+    0%,
+    100% {
+        background-position: 0% 50%, 100% 50%, 50% 50%, 0% 0%;
+    }
+
+    25% {
+        background-position: 50% 0%, 50% 100%, 30% 70%, 0% 0%;
+    }
+
+    50% {
+        background-position: 100% 50%, 0% 50%, 70% 30%, 0% 0%;
+    }
+
+    75% {
+        background-position: 50% 100%, 50% 0%, 50% 50%, 0% 0%;
+    }
+}
+
+/* Flujo de gradiente en el texto */
+@keyframes gradientFlow {
+
+    0%,
+    100% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+}
+
+/* Flotación neón 3D */
+@keyframes neonFloat {
+
+    0%,
+    100% {
+        transform: rotate(-2deg) perspective(500px) rotateX(5deg) translateY(0);
+        filter:
+            drop-shadow(0 0 10px #FF10F0) drop-shadow(0 0 30px #FF10F0) drop-shadow(0 0 60px rgba(255, 16, 240, 0.5)) drop-shadow(4px 4px 0px #000);
+    }
+
+    50% {
+        transform: rotate(-2deg) perspective(500px) rotateX(5deg) translateY(-15px);
+        filter:
+            drop-shadow(0 0 20px #FF10F0) drop-shadow(0 0 50px #FF10F0) drop-shadow(0 0 80px rgba(255, 16, 240, 0.7)) drop-shadow(4px 4px 0px #000);
+    }
+}
+
+/* Pulso del resplandor */
+@keyframes pulseGlow {
+
+    0%,
+    100% {
+        opacity: 0.5;
+        filter: blur(25px);
+    }
+
+    50% {
+        opacity: 0.8;
+        filter: blur(35px);
+    }
+}
+
+/* Corazón flotante */
+@keyframes heartFloat {
+
+    0%,
+    100% {
+        transform: rotate(15deg) scale(1);
+        filter:
+            drop-shadow(0 0 15px #FF10F0) drop-shadow(0 0 30px #FF10F0);
+    }
+
+    50% {
+        transform: rotate(15deg) scale(1.2) translateY(-10px);
+        filter:
+            drop-shadow(0 0 25px #FF10F0) drop-shadow(0 0 50px #FF10F0);
+    }
+}
+
+/* Flotación del glassmorphism */
+@keyframes glassFloat {
+
+    0%,
+    100% {
+        transform: rotate(1deg) translateY(0);
+    }
+
+    50% {
+        transform: rotate(-1deg) translateY(-8px);
+    }
 }
