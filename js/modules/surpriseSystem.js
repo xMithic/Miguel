@@ -45,6 +45,9 @@ export class SurpriseSystem {
         this.isRunning = true;
         document.body.classList.add('show-surprise');
 
+        // NUEVO: Definir mensaje de amor aleatorio
+        this.setRandomLoveMessage();
+
         // Lanzamiento inicial intenso
         for (let i = 0; i < 3; i++) {
             setTimeout(() => this.launchRocket(), i * 300);
@@ -61,6 +64,55 @@ export class SurpriseSystem {
                 document.addEventListener('click', closeHandler, { once: true });
             }, 1000);
         }, 1000);
+    }
+
+    setRandomLoveMessage() {
+        const msgContainer = document.getElementById('dynamic-love-msg');
+        if (!msgContainer) return;
+
+        /* 
+           =========================================================================
+           CONFIGURACIÓN DE MENSAJES Y PROBABILIDADES
+           -------------------------------------------------------------------------
+           Aquí puedes cambiar el texto y la probabilidad de aparición (weight).
+           
+           - text: El mensaje que saldrá (usa <br> para saltos de línea).
+           - weight: La probabilidad (0.225 = 22.5%, 0.1 = 10%).
+           
+           La suma de todos los "weight" idealmente debería ser 1.0 (100%),
+           pero el código funciona igual si no es exacto.
+           =========================================================================
+        */
+        const messages = [
+            // Mensaje Común 1 (22.5%)
+            { text: "Tú eres<br>lo mejor que<br>me ha pasado", weight: 0.225 },
+
+            // Mensaje Común 2 (22.5%)
+            { text: "Mi mundo<br>es más bonito<br>contigo", weight: 0.225 },
+
+            // Mensaje Común 3 (22.5%)
+            { text: "Te elijo a ti<br>una y mil<br>veces más", weight: 0.225 },
+
+            // Mensaje Común 4 (22.5%)
+            { text: "Gracias por<br>existir y<br>hacerme feliz", weight: 0.225 },
+
+            // 🌟 MENSAJE RARO / ESPECIAL (Solo 10% de probabilidad)
+            { text: "¡Eres mi persona<br>favorita en todo<br>el universo! 🪐", weight: 0.1 }
+        ];
+
+        let random = Math.random();
+        let selectedMsg = messages[0].text;
+        let cumulativeWeight = 0;
+
+        for (let msg of messages) {
+            cumulativeWeight += msg.weight;
+            if (random < cumulativeWeight) {
+                selectedMsg = msg.text;
+                break;
+            }
+        }
+
+        msgContainer.innerHTML = `<span class="comic-msg-inner">${selectedMsg}</span>`;
     }
 
     stop() {
