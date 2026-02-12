@@ -1,0 +1,499 @@
+/* ============================================
+   IMAGENES SORPRESA (DYNAMIC ENTRANCE + MOTION)
+   ============================================ */
+
+:root {
+    --surprise-img-width: 100%;
+    --surprise-img-height: 100%;
+}
+
+/* Contenedor */
+.surprise-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.surprise-img {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+
+    width: auto;
+    height: auto;
+    max-width: 85vw;
+    max-height: 85vh;
+
+    object-fit: contain;
+    pointer-events: none;
+
+    border: none;
+    box-shadow: none;
+    background: transparent;
+    border-radius: 0;
+
+    /* ESTADO INICIAL: Invisible + Escondido */
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0) rotate(0deg);
+    /* Sin transición aquí, la animación lo controla todo */
+}
+
+/* ============================================
+   ESTILO IMAGEN 1 (BORDES SUAVES)
+   ============================================ */
+
+.surprise-img:first-child {
+    -webkit-mask-image:
+        linear-gradient(to bottom, transparent 0%, black 1%, black 99%, transparent 100%),
+        linear-gradient(to right, transparent 0%, black 1%, black 99%, transparent 100%);
+    -webkit-mask-composite: source-in;
+    mask-image:
+        linear-gradient(to bottom, transparent 0%, black 1%, black 99%, transparent 100%),
+        linear-gradient(to right, transparent 0%, black 1%, black 99%, transparent 100%);
+    mask-composite: intersect;
+    border-radius: 8px;
+    filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.25));
+}
+
+.surprise-img:last-child {
+    border-radius: 0;
+}
+
+/* ============================================
+   ANIMACIONES (KEYFRAMES)
+   ============================================ */
+
+/* ENTRADA IMAGEN 1: Aparece desde la izquierda con giro y rebote */
+@keyframes slideInImage1 {
+    0% {
+        opacity: 0;
+        transform: translate(-150%, -50%) scale(0.3) rotate(-25deg);
+    }
+
+    60% {
+        opacity: 1;
+        transform: translate(-45%, -50%) scale(1.08) rotate(2deg);
+    }
+
+    80% {
+        transform: translate(-52%, -50%) scale(0.97) rotate(-3deg);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translate(-50%, -50%) translateY(0px) rotate(-2deg);
+    }
+}
+
+/* ENTRADA IMAGEN 2: Aparece desde la derecha con giro y rebote */
+@keyframes slideInImage2 {
+    0% {
+        opacity: 0;
+        transform: translate(50%, -50%) scale(0.3) rotate(25deg);
+    }
+
+    60% {
+        opacity: 1;
+        transform: translate(-55%, -50%) scale(1.08) rotate(-2deg);
+    }
+
+    80% {
+        transform: translate(-48%, -50%) scale(0.97) rotate(3deg);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1) rotate(2deg);
+    }
+}
+
+/* ANIMACIÓN CONTINUA 1: Float lento */
+@keyframes floatImage {
+    0% {
+        transform: translate(-50%, -50%) translateY(0px) rotate(-2deg);
+    }
+
+    50% {
+        transform: translate(-50%, -50%) translateY(-20px) rotate(-3deg);
+    }
+
+    100% {
+        transform: translate(-50%, -50%) translateY(0px) rotate(-2deg);
+    }
+}
+
+/* ANIMACIÓN CONTINUA 2: Pulso suave */
+@keyframes pulseTilt {
+    0% {
+        transform: translate(-50%, -50%) scale(1) rotate(2deg);
+    }
+
+    50% {
+        transform: translate(-50%, -50%) scale(1.05) rotate(4deg);
+    }
+
+    100% {
+        transform: translate(-50%, -50%) scale(1) rotate(2deg);
+    }
+}
+
+/* ============================================
+   ESTADOS VISIBLES (CUANDO SE ACTIVA LA SORPRESA)
+   ============================================ */
+
+/* IMAGEN 1: Entrada desde la izquierda → luego flota */
+body.show-surprise .surprise-img:nth-child(odd) {
+    pointer-events: auto;
+    z-index: 1;
+
+    /* 1. Entrada dinámica (0.8s)  →  2. Flotación infinita */
+    animation:
+        slideInImage1 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards,
+        floatImage 6s ease-in-out 0.8s infinite;
+}
+
+/* IMAGEN 2: Entrada desde la derecha → luego pulsa (con delay) */
+body.show-surprise .surprise-img:nth-child(even) {
+    pointer-events: auto;
+    z-index: 2;
+
+    /* Retraso de 0.3s para que no entren al mismo tiempo */
+    animation:
+        slideInImage2 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards,
+        pulseTilt 4s ease-in-out 1.1s infinite;
+}
+
+/* HOVER */
+body.show-surprise .surprise-img:hover {
+    z-index: 100;
+    animation-play-state: paused;
+    transform: translate(-50%, -50%) scale(1.05) rotate(0deg);
+    transition: transform 0.4s ease;
+}
+
+/* ============================================
+   MENSAJES DE AMOR ESTILO CÓMIC
+   ============================================ */
+
+/* Base común para todos los mensajes */
+.comic-love-msg {
+    position: absolute;
+    z-index: 10;
+    pointer-events: none;
+    opacity: 0;
+    transform: scale(0);
+    text-align: center;
+    line-height: 1.3;
+    will-change: transform, opacity;
+}
+
+.comic-msg-inner {
+    display: block;
+    position: relative;
+    z-index: 2;
+}
+
+/* Degradado ANIMADO aplicado AL SPAN (donde está el texto real) */
+.comic-msg-center .comic-msg-inner {
+    background: linear-gradient(-45deg,
+            #FF006E 0%,
+            #FF69B4 20%,
+            #FFB6C1 40%,
+            #FFFFFF 50%,
+            #FFB6C1 60%,
+            #FF69B4 80%,
+            #FF006E 100%);
+    background-size: 400% 400%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: gradientShimmer 5s ease-in-out infinite;
+}
+
+@keyframes gradientShimmer {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    25% {
+        background-position: 100% 0%;
+    }
+
+    50% {
+        background-position: 100% 100%;
+    }
+
+    75% {
+        background-position: 0% 100%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+/* ── CORAZONES PALPITANTES ── */
+.comic-heart {
+    display: inline-block;
+    animation: heartPulse 1.2s ease-in-out infinite;
+    will-change: transform;
+    filter: drop-shadow(0 0 8px rgba(255, 0, 100, 0.6));
+}
+
+@keyframes heartPulse {
+    0% {
+        transform: scale(1);
+    }
+
+    14% {
+        transform: scale(1.3);
+    }
+
+    28% {
+        transform: scale(1);
+    }
+
+    42% {
+        transform: scale(1.2);
+    }
+
+    56% {
+        transform: scale(1);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* ── MENSAJE CENTRAL: Solo texto, el protagonista ── */
+.comic-msg-center {
+    /* Centrado absoluto (Ajustado un poco más arriba para centrar con img 2) */
+    top: 47%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    z-index: 20;
+
+    /* Sin fondo, sin borde, sin caja — solo letras puras */
+    background: none;
+    border: none;
+    padding: 0;
+
+    /* Tipografía — Titan One: extra gordita y suave */
+    font-family: 'Titan One', cursive;
+    font-size: 3.5rem;
+    line-height: 1.05;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+
+    /* Color fallback (el degradado real está en .comic-msg-inner) */
+    color: #FF1493;
+
+    /* Contorno negro grueso */
+    -webkit-text-stroke: 2.5px #000;
+
+    /* Sombra suave rosa + sombra negra para profundidad */
+    filter: drop-shadow(0 0 6px rgba(255, 20, 147, 0.6)) drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.3));
+}
+
+/* El corazón del centro es más grande */
+.comic-msg-center .comic-heart {
+    font-size: 3rem;
+    -webkit-text-fill-color: initial;
+    -webkit-text-stroke: 0;
+    filter: drop-shadow(0 0 15px rgba(255, 0, 100, 0.8));
+}
+
+/* Entrada del mensaje central (COPIA EXACTA DE IMAGEN 2 para sincro) */
+@keyframes slideInTextSync {
+    0% {
+        opacity: 0;
+        /* Misma traslación y rotación que slideInImage2 */
+        transform: translate(50%, -50%) scale(0.3) rotate(25deg);
+    }
+
+    60% {
+        opacity: 1;
+        transform: translate(-55%, -50%) scale(1.08) rotate(-2deg);
+    }
+
+    80% {
+        transform: translate(-48%, -50%) scale(0.97) rotate(3deg);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1) rotate(2deg);
+    }
+}
+
+/* Animación continua sincronizada con pulseTilt */
+@keyframes pulseTextSync {
+    0% {
+        transform: translate(-50%, -50%) scale(1) rotate(2deg);
+    }
+
+    50% {
+        transform: translate(-50%, -50%) scale(1.05) rotate(4deg);
+    }
+
+    100% {
+        transform: translate(-50%, -50%) scale(1) rotate(2deg);
+    }
+}
+
+body.show-surprise .comic-msg-center {
+    /* Sincronizado TOTAL con IMAGEN 2:
+       - Mismo delay (0.3s)
+       - Misma duración (0.8s slide, 4s pulse)
+       - Mismo easing
+       - Mismas keyframes adaptadas
+    */
+    animation:
+        slideInTextSync 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards,
+        pulseTextSync 4s ease-in-out 1.1s infinite;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .comic-msg-center {
+        font-size: 2.2rem;
+        -webkit-text-stroke: 2px #000;
+    }
+}
+
+@media (max-width: 480px) {
+    .comic-msg-center {
+        font-size: 1.6rem;
+        -webkit-text-stroke: 1.5px #000;
+        letter-spacing: 2px;
+    }
+}
+
+/* ── CORAZONES FLOTANTES (Solo emojis) ── */
+.comic-floating-heart {
+    position: absolute;
+    font-size: 4rem;
+    z-index: 15;
+    pointer-events: none;
+    opacity: 0;
+    transform: scale(0);
+    filter: drop-shadow(0 0 10px rgba(255, 20, 147, 0.5));
+}
+
+/* Posiciones aleatorias distribuidas */
+.heart-1 {
+    top: 15%;
+    right: 10%;
+    transform: rotate(15deg);
+}
+
+.heart-2 {
+    bottom: 20%;
+    left: 8%;
+    transform: rotate(-10deg);
+}
+
+.heart-3 {
+    top: 12%;
+    left: 12%;
+    transform: rotate(-5deg);
+}
+
+/* Animación de entrada y flotación */
+@keyframes heartPopIn {
+    0% {
+        opacity: 0;
+        transform: scale(0);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(1.3);
+    }
+
+    70% {
+        transform: scale(0.9);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Animación de latido (Pulsar) */
+@keyframes heartBeat {
+    0% {
+        transform: scale(1);
+    }
+
+    14% {
+        transform: scale(1.3);
+    }
+
+    28% {
+        transform: scale(1);
+    }
+
+    42% {
+        transform: scale(1.3);
+    }
+
+    70% {
+        transform: scale(1);
+    }
+}
+
+/* Animación de flotación suave */
+@keyframes heartFloatOnly {
+
+    0%,
+    100% {
+        transform: translateY(0) rotate(0deg);
+    }
+
+    50% {
+        transform: translateY(-20px) rotate(5deg);
+    }
+}
+
+body.show-surprise .heart-1 {
+    /* Combinamos: Entrada + Flotar (largo) + Latir (rápido) */
+    animation:
+        heartPopIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.5s forwards,
+        heartFloatOnly 4s ease-in-out 1.1s infinite,
+        heartBeat 1.3s ease-in-out 1.1s infinite;
+    /* Latido */
+}
+
+body.show-surprise .heart-2 {
+    animation:
+        heartPopIn 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.8s forwards,
+        heartFloatOnly 5s ease-in-out 1.5s infinite reverse,
+        heartBeat 1.5s ease-in-out 1.5s infinite;
+    /* Latido distinto */
+}
+
+body.show-surprise .heart-3 {
+    animation:
+        heartPopIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) 1.0s forwards,
+        heartFloatOnly 4.5s ease-in-out 1.8s infinite,
+        heartBeat 1.2s ease-in-out 1.8s infinite;
+    /* Latido distinto */
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 768px) {
+    .comic-floating-heart {
+        font-size: 2.5rem;
+    }
+}
