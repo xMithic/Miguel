@@ -27,7 +27,7 @@ export class SurpriseSystem {
                 ['#ccff00', '#55ff00', '#aaffaa'], // Lime
                 ['#d600ff', '#9900ff', '#ff00cc']  // Purple Neon
             ],
-            words: ["POW", "BAAM", "BOOM", "AMOR", "TE QUIERO", "POP", "WAOS"]
+            words: ["POW!", "BAM!", "BOOM!", "LOVE", "ZAP!", "POP!", "WOW!"]
         };
 
         this.resizeHandler = () => {
@@ -71,11 +71,11 @@ export class SurpriseSystem {
         if (!msgContainer) return;
 
         const messages = [
-            { text: "Tú eres<br>mi premio<br>en esta vida", weight: 0.225 },
-            { text: "Mi mundo<br>tiene color<br>por ti", weight: 0.225 },
+            { text: "Tú eres<br>lo mejor que<br>me ha pasado", weight: 0.225 },
+            { text: "Mi mundo<br>es más bonito<br>contigo", weight: 0.225 },
             { text: "Te elijo a ti<br>una y mil<br>veces más", weight: 0.225 },
             { text: "Gracias por<br>existir y<br>hacerme feliz", weight: 0.225 },
-            { text: "¡Sos la mas linda<br>en todo<br>el universo observable! 🪐", weight: 0.1 }
+            { text: "¡Eres mi persona<br>favorita en todo<br>el universo! 🪐", weight: 0.1 }
         ];
 
         let random = Math.random();
@@ -117,7 +117,6 @@ export class SurpriseSystem {
         this.ctx.globalCompositeOperation = 'source-over'; 
 
         // 2. Lógica de Cadena (Fallback de seguridad)
-        // Si no hay cohetes y no estamos esperando uno, lanzamos (por si se rompe la cadena)
         if (this.rockets.length === 0 && !this.waitingForNext && this.isRunning) {
             this.waitingForNext = true;
             setTimeout(() => {
@@ -190,8 +189,7 @@ export class SurpriseSystem {
     }
 
     createExplosion(rocket) {
-        // --- AQUÍ ESTÁ LA MAGIA DE LA SECUENCIA ---
-        // Esperamos un poquito (500ms) después de la explosión y lanzamos el siguiente
+        // --- SECUENCIA AUTOMÁTICA ---
         if (!this.waitingForNext && this.isRunning) {
             this.waitingForNext = true;
             setTimeout(() => {
@@ -199,13 +197,13 @@ export class SurpriseSystem {
                     this.launchRocket();
                     this.waitingForNext = false;
                 }
-            }, 600); // 600ms de pausa dramática entre explosión y nuevo cohete
+            }, 600); 
         }
 
-        // 1. Crear el "Flash" de cómic
+        // 1. Flash de cómic
         this.comicFlashes.push(new ComicFlash(rocket.x, rocket.y, rocket.color));
 
-        // 2. Flash de pantalla
+        // 2. Flash pantalla
         if (Math.random() > 0.7) {
             this.ctx.save();
             this.ctx.globalCompositeOperation = 'overlay';
@@ -227,16 +225,26 @@ export class SurpriseSystem {
         for (let i = 0; i < count; i++) {
             const p = new Particle(rocket.x, rocket.y, rocket.palette);
 
-            // Lógica de movimiento
-            if (rocket.type === 1) { // Corazón
+            // ==========================================
+            // LÓGICA DE MOVIMIENTO CORREGIDA
+            // ==========================================
+            if (rocket.type === 1) { // ❤️ CORAZÓN MEJORADO ❤️
                 const angle = (Math.PI * 2 * i) / count;
+                // Fórmula paramétrica del corazón
                 const xDir = 16 * Math.pow(Math.sin(angle), 3);
                 const yDir = -(13 * Math.cos(angle) - 5 * Math.cos(2 * angle) - 2 * Math.cos(3 * angle) - Math.cos(4 * angle));
-                p.vx = (xDir / 10) * (Math.random() * 0.5 + 0.5);
-                p.vy = (yDir / 10) * (Math.random() * 0.5 + 0.5);
-                p.friction = 0.94;
-                p.gravity = 0.05;
-                p.life = 140;
+                
+                // CAMBIO: Multiplicador más alto (x 0.18) para que se abra más
+                // CAMBIO: Menos aleatoriedad (* 0.2 + 0.8) para que la línea sea nítida
+                const force = 0.25; 
+                const randomVar = Math.random() * 0.2 + 0.8; // Variación mínima (trazo limpio)
+
+                p.vx = xDir * force * randomVar;
+                p.vy = yDir * force * randomVar;
+                
+                p.friction = 0.93; // Frenado suave
+                p.gravity = 0.08;  // Poca gravedad para mantener la forma
+                p.life = 180;      // Dura más tiempo
             } else if (rocket.type === 2) { // Saturno
                 const angle = Math.random() * Math.PI * 2;
                 const speed = Math.random() * 1 + 8;
