@@ -5,17 +5,19 @@ export class SurpriseSystem {
         this.width = window.innerWidth;
         this.height = window.innerHeight;
         this.isRunning = false;
+        this.waitingForNext = false; // Control para la secuencia
 
         // Colecciones de objetos
         this.rockets = [];
         this.particles = [];
+        this.comicFlashes = []; // Burbujas de explosión estilo cómic
         this.sparkles = [];
-        this.textParticles = []; // NUEVO: Partículas de texto
+        this.textParticles = [];
 
         // Configuración visual
         this.config = {
-            rocketSpawnChance: 0.08, // Ligeramente más rápido
-            particleCount: 150,
+            rocketSpawnChance: 0,    // ANULADO: Ya no salen aleatoriamente
+            particleCount: 120,      
             gravity: 0.12,
             friction: 0.96,
             colors: [
@@ -25,7 +27,7 @@ export class SurpriseSystem {
                 ['#ccff00', '#55ff00', '#aaffaa'], // Lime
                 ['#d600ff', '#9900ff', '#ff00cc']  // Purple Neon
             ],
-            words: ["POW!", "BAM!", "BOOM!", "LOVE", "ZAP!", "POP!", "WOW!"] // Onomatopeyas
+            words: ["POW", "BAAM", "BOOM", "AMOR", "TE QUIERO", "POP", "WAOS"]
         };
 
         this.resizeHandler = () => {
@@ -43,18 +45,16 @@ export class SurpriseSystem {
     trigger() {
         if (!this.canvas) return;
         this.isRunning = true;
+        this.waitingForNext = false;
         document.body.classList.add('show-surprise');
 
-        // NUEVO: Definir mensaje de amor aleatorio
         this.setRandomLoveMessage();
 
-        // Lanzamiento inicial intenso
-        for (let i = 0; i < 3; i++) {
-            setTimeout(() => this.launchRocket(), i * 300);
-        }
+        // Lanzamiento inicial (Solo 1 para empezar la cadena)
+        this.launchRocket();
+        
         this.loop();
 
-        // Auto-cierre
         setTimeout(() => {
             const closeHandler = () => {
                 this.stop();
@@ -70,33 +70,11 @@ export class SurpriseSystem {
         const msgContainer = document.getElementById('dynamic-love-msg');
         if (!msgContainer) return;
 
-        /* 
-           =========================================================================
-           CONFIGURACIÓN DE MENSAJES Y PROBABILIDADES
-           -------------------------------------------------------------------------
-           Aquí puedes cambiar el texto y la probabilidad de aparición (weight).
-           
-           - text: El mensaje que saldrá (usa <br> para saltos de línea).
-           - weight: La probabilidad (0.225 = 22.5%, 0.1 = 10%).
-           
-           La suma de todos los "weight" idealmente debería ser 1.0 (100%),
-           pero el código funciona igual si no es exacto.
-           =========================================================================
-        */
         const messages = [
-            // Mensaje Común 1 (22.5%)
             { text: "Tú eres<br>lo mejor que<br>me ha pasado", weight: 0.225 },
-
-            // Mensaje Común 2 (22.5%)
             { text: "Mi mundo<br>es más bonito<br>contigo", weight: 0.225 },
-
-            // Mensaje Común 3 (22.5%)
             { text: "Te elijo a ti<br>una y mil<br>veces más", weight: 0.225 },
-
-            // Mensaje Común 4 (22.5%)
             { text: "Gracias por<br>existir y<br>hacerme feliz", weight: 0.225 },
-
-            // 🌟 MENSAJE RARO / ESPECIAL (Solo 10% de probabilidad)
             { text: "¡Eres mi persona<br>favorita en todo<br>el universo! 🪐", weight: 0.1 }
         ];
 
@@ -111,7 +89,6 @@ export class SurpriseSystem {
                 break;
             }
         }
-
         msgContainer.innerHTML = `<span class="comic-msg-inner">${selectedMsg}</span>`;
     }
 
@@ -121,6 +98,7 @@ export class SurpriseSystem {
         if (this.ctx) this.ctx.clearRect(0, 0, this.width, this.height);
         this.rockets = [];
         this.particles = [];
+        this.comicFlashes = [];
         this.sparkles = [];
         this.textParticles = [];
     }
@@ -131,28 +109,30 @@ export class SurpriseSystem {
 
         if (!this.ctx) return;
 
-        // 1. Fondo con efecto "Motion Blur"
+        // 1. Fondo
         this.ctx.globalCompositeOperation = 'destination-out';
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; // Un poco más de estela
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'; 
         this.ctx.fillRect(0, 0, this.width, this.height);
 
-        // 2. Modo de mezcla aditiva
-        this.ctx.globalCompositeOperation = 'lighter';
+        this.ctx.globalCompositeOperation = 'source-over'; 
 
-        // 3. Lógica de Cohetes
-        if (this.rockets.length < 8 && Math.random() < this.config.rocketSpawnChance) {
-            this.launchRocket();
+        // 2. Lógica de Cadena (Fallback de seguridad)
+        // Si no hay cohetes y no estamos esperando uno, lanzamos (por si se rompe la cadena)
+        if (this.rockets.length === 0 && !this.waitingForNext && this.isRunning) {
+            this.waitingForNext = true;
+            setTimeout(() => {
+                 if (this.isRunning) {
+                     this.launchRocket();
+                     this.waitingForNext = false;
+                 }
+            }, 500);
         }
 
-        // Actualizar Cohetes
+        // 3. Actualizar Cohetes
         for (let i = this.rockets.length - 1; i >= 0; i--) {
             let r = this.rockets[i];
             r.update();
-            r.draw(this.ctx);
-
-            if (Math.random() > 0.5) {
-                this.sparkles.push(new Sparkle(r.x, r.y, r.color));
-            }
+            r.draw(this.ctx); 
 
             if (r.exploded) {
                 this.createExplosion(r);
@@ -160,7 +140,17 @@ export class SurpriseSystem {
             }
         }
 
-        // 4. Actualizar Partículas
+        // 4. Actualizar Flashes Cómicos
+        for (let i = this.comicFlashes.length - 1; i >= 0; i--) {
+            let f = this.comicFlashes[i];
+            f.update();
+            f.draw(this.ctx);
+            if (f.life <= 0) {
+                this.comicFlashes.splice(i, 1);
+            }
+        }
+
+        // 5. Actualizar Partículas
         for (let i = this.particles.length - 1; i >= 0; i--) {
             let p = this.particles[i];
             p.update();
@@ -170,8 +160,7 @@ export class SurpriseSystem {
             }
         }
 
-        // 5. Actualizar Partículas de Texto (NUEVO)
-        this.ctx.globalCompositeOperation = 'source-over'; // El texto se debe ver nítido, no mezclado
+        // 6. Textos
         for (let i = this.textParticles.length - 1; i >= 0; i--) {
             let tp = this.textParticles[i];
             tp.update();
@@ -180,9 +169,8 @@ export class SurpriseSystem {
                 this.textParticles.splice(i, 1);
             }
         }
-        this.ctx.globalCompositeOperation = 'lighter'; // Volver a modo luz para chispas
 
-        // 6. Actualizar Chispas
+        // 7. Chispas
         for (let i = this.sparkles.length - 1; i >= 0; i--) {
             let s = this.sparkles[i];
             s.update();
@@ -197,68 +185,77 @@ export class SurpriseSystem {
         const x = Math.random() * (this.width * 0.8) + (this.width * 0.1);
         const targetY = Math.random() * (this.height * 0.5) + (this.height * 0.1);
         const palette = this.config.colors[Math.floor(Math.random() * this.config.colors.length)];
-        const type = Math.floor(Math.random() * 5); // Aumentamos tipos para variedad
+        const type = Math.floor(Math.random() * 5);
         this.rockets.push(new Rocket(x, this.height, targetY, palette, type));
     }
 
     createExplosion(rocket) {
-        // Flash de pantalla ocasional (Comic Impact)
-        if (Math.random() > 0.8) {
+        // --- AQUÍ ESTÁ LA MAGIA DE LA SECUENCIA ---
+        // Esperamos un poquito (500ms) después de la explosión y lanzamos el siguiente
+        if (!this.waitingForNext && this.isRunning) {
+            this.waitingForNext = true;
+            setTimeout(() => {
+                if (this.isRunning) {
+                    this.launchRocket();
+                    this.waitingForNext = false;
+                }
+            }, 600); // 600ms de pausa dramática entre explosión y nuevo cohete
+        }
+
+        // 1. Crear el "Flash" de cómic
+        this.comicFlashes.push(new ComicFlash(rocket.x, rocket.y, rocket.color));
+
+        // 2. Flash de pantalla
+        if (Math.random() > 0.7) {
             this.ctx.save();
             this.ctx.globalCompositeOperation = 'overlay';
-            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
             this.ctx.fillRect(0, 0, this.width, this.height);
             this.ctx.restore();
         }
 
-        // Lanza una onomatopeya con probabilidad media
+        // 3. Onomatopeya
         if (Math.random() > 0.3) {
             let word;
-            // 10% de probabilidad de que salga "MG" específicamente
-            if (Math.random() < 0.1) {
-                word = "Hermosa";
-            } else {
-                word = this.config.words[Math.floor(Math.random() * this.config.words.length)];
-            }
+            if (Math.random() < 0.1) word = "Hermosa";
+            else word = this.config.words[Math.floor(Math.random() * this.config.words.length)];
             this.textParticles.push(new TextParticle(rocket.x, rocket.y, word, rocket.color));
         }
 
+        // 4. Partículas
         const count = this.config.particleCount;
-
         for (let i = 0; i < count; i++) {
             const p = new Particle(rocket.x, rocket.y, rocket.palette);
 
-            // Patrones de explosión
+            // Lógica de movimiento
             if (rocket.type === 1) { // Corazón
                 const angle = (Math.PI * 2 * i) / count;
                 const xDir = 16 * Math.pow(Math.sin(angle), 3);
                 const yDir = -(13 * Math.cos(angle) - 5 * Math.cos(2 * angle) - 2 * Math.cos(3 * angle) - Math.cos(4 * angle));
-
                 p.vx = (xDir / 10) * (Math.random() * 0.5 + 0.5);
                 p.vy = (yDir / 10) * (Math.random() * 0.5 + 0.5);
                 p.friction = 0.94;
                 p.gravity = 0.05;
                 p.life = 140;
-            } else if (rocket.type === 2) { // Anillo Saturno
+            } else if (rocket.type === 2) { // Saturno
                 const angle = Math.random() * Math.PI * 2;
                 const speed = Math.random() * 1 + 8;
                 p.vx = Math.cos(angle) * speed;
                 p.vy = Math.sin(angle) * speed;
-                // Aplana el círculo para hacer una elipse
                 p.vy *= 0.4;
                 p.friction = 0.92;
-            } else if (rocket.type === 3) { // Sauce Llorón
+            } else if (rocket.type === 3) { // Sauce
                 const angle = Math.random() * Math.PI * 2;
                 const speed = Math.random() * 10 + 2;
                 p.vx = Math.cos(angle) * speed;
                 p.vy = Math.sin(angle) * speed;
                 p.friction = 0.90;
-                p.gravity = 0.15; // Cae más rápido
+                p.gravity = 0.15;
                 p.willow = true;
                 p.life = 150;
-            } else { // Esfera Clásica
+            } else { // Clásica
                 const angle = Math.random() * Math.PI * 2;
-                const speed = Math.random() * 15; // Más violentas
+                const speed = Math.random() * 15;
                 p.vx = Math.cos(angle) * speed;
                 p.vy = Math.sin(angle) * speed;
             }
@@ -268,8 +265,47 @@ export class SurpriseSystem {
 }
 
 /* =========================================
-   CLASES AUXILIARES (Física y Render)
+   CLASES VISUALES (Estilo Cómic)
    ========================================= */
+
+class ComicFlash {
+    constructor(x, y, color) {
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.radius = 0;
+        this.targetRadius = 100 + Math.random() * 50;
+        this.life = 15; 
+        this.points = 12; 
+    }
+
+    update() {
+        this.radius += (this.targetRadius - this.radius) * 0.4;
+        this.life--;
+    }
+
+    draw(ctx) {
+        if (this.life <= 0) return;
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(Math.random() * 0.2); 
+
+        ctx.beginPath();
+        for (let i = 0; i < this.points * 2; i++) {
+            const angle = (Math.PI * 2 * i) / (this.points * 2);
+            const r = (i % 2 === 0) ? this.radius : this.radius * 0.4;
+            ctx.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
+        }
+        ctx.closePath();
+
+        ctx.fillStyle = '#FFF'; 
+        ctx.fill();
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = '#000';
+        ctx.stroke();
+        ctx.restore();
+    }
+}
 
 class Rocket {
     constructor(x, y, targetY, palette, type) {
@@ -280,7 +316,7 @@ class Rocket {
         this.color = palette[1];
         this.type = type;
         this.speed = Math.random() * 4 + 14;
-        this.angle = -Math.PI / 2 + (Math.random() * 0.1 - 0.05); // Menos desviación
+        this.angle = -Math.PI / 2 + (Math.random() * 0.1 - 0.05);
         this.vx = Math.cos(this.angle) * this.speed;
         this.vy = Math.sin(this.angle) * this.speed;
         this.exploded = false;
@@ -289,7 +325,7 @@ class Rocket {
 
     update() {
         this.history.push({ x: this.x, y: this.y });
-        if (this.history.length > 4) this.history.shift();
+        if (this.history.length > 5) this.history.shift(); 
 
         this.x += this.vx;
         this.y += this.vy;
@@ -309,13 +345,17 @@ class Rocket {
         }
         ctx.lineTo(this.x, this.y);
 
-        ctx.strokeStyle = this.color;
-        ctx.lineWidth = 4;
+        ctx.save();
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 7; 
         ctx.lineCap = 'round';
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = this.color;
         ctx.stroke();
-        ctx.shadowBlur = 0;
+        ctx.restore();
+
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.stroke();
     }
 }
 
@@ -329,24 +369,23 @@ class Particle {
         this.vx = 0;
         this.vy = 0;
         this.alpha = 1;
-        this.friction = 0.94;
-        this.gravity = 0.2;
-        this.life = Math.random() * 60 + 50;
-        this.maxLife = this.life;
-        this.size = Math.random() * 3 + 2; // Partículas más grandes (estilo cómic)
+        this.friction = 0.92;
+        this.gravity = 0.15;
+        this.life = Math.random() * 60 + 40;
+        this.size = Math.random() * 5 + 3; 
         this.willow = false;
+        this.shape = Math.random() > 0.5 ? 'square' : 'circle';
     }
 
     update() {
         this.vx *= this.friction;
         this.vy *= this.friction;
         this.vy += this.gravity;
-
         this.x += this.vx;
         this.y += this.vy;
         this.life--;
 
-        if (this.life < 20) this.alpha -= 0.05;
+        if (this.life < 15) this.alpha -= 0.1;
         if (this.alpha < 0) this.alpha = 0;
     }
 
@@ -355,20 +394,24 @@ class Particle {
 
         ctx.save();
         ctx.globalAlpha = this.alpha;
+        
         ctx.fillStyle = this.color;
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
 
-        // Estilo cuadrado/círculo para estética pixel/pop
         if (this.willow) {
-            ctx.fillStyle = `rgba(255, 230, 100, ${this.alpha})`;
-            ctx.fillRect(this.x, this.y, 2, 6);
+            ctx.fillStyle = this.color;
+            ctx.fillRect(this.x, this.y, 4, 8);
+            ctx.strokeRect(this.x, this.y, 4, 8);
         } else {
-            // Dibujar cuadrados a veces para variar
-            if (Math.random() > 0.5) {
+            if (this.shape === 'square') {
                 ctx.fillRect(this.x - this.size / 2, this.y - this.size / 2, this.size, this.size);
+                ctx.strokeRect(this.x - this.size / 2, this.y - this.size / 2, this.size, this.size);
             } else {
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
                 ctx.fill();
+                ctx.stroke();
             }
         }
         ctx.restore();
@@ -382,23 +425,20 @@ class TextParticle {
         this.text = text;
         this.color = color;
         this.size = 0;
-        this.targetSize = 40 + Math.random() * 20; // Tamaño final
-        this.life = 80;
-        this.angle = (Math.random() * 0.4) - 0.2; // Rotación leve
+        this.targetSize = 50 + Math.random() * 30; 
+        this.life = 70;
+        this.angle = (Math.random() * 0.4) - 0.2;
         this.vx = (Math.random() - 0.5) * 2;
-        this.vy = (Math.random() - 0.5) * 2 - 2; // Sube un poco
+        this.vy = -3; 
     }
 
     update() {
-        // Efecto "Pop" al aparecer
         if (this.size < this.targetSize) {
-            this.size += (this.targetSize - this.size) * 0.2;
+            this.size += (this.targetSize - this.size) * 0.3; 
         }
-
         this.x += this.vx;
         this.y += this.vy;
-        this.vy += 0.05; // Gravedad leve
-
+        this.vy += 0.1; 
         this.life--;
     }
 
@@ -409,25 +449,26 @@ class TextParticle {
         ctx.translate(this.x, this.y);
         ctx.rotate(this.angle);
 
-        // Efecto Fade Out al final
         let alpha = 1;
-        if (this.life < 20) alpha = this.life / 20;
+        if (this.life < 15) alpha = this.life / 15;
         ctx.globalAlpha = alpha;
 
         ctx.font = `900 ${this.size}px 'Bangers', cursive`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        // Borde negro grueso
-        ctx.lineWidth = 4;
+        ctx.lineWidth = 6;
         ctx.strokeStyle = '#000';
+        ctx.lineJoin = 'round';
+        ctx.strokeText(this.text, 5, 5); 
+        
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 6;
         ctx.strokeText(this.text, 0, 0);
 
-        // Relleno vibrante
         ctx.fillStyle = this.color;
         ctx.fillText(this.text, 0, 0);
 
-        // Brillo blanco interior
         ctx.lineWidth = 1;
         ctx.strokeStyle = '#FFF';
         ctx.strokeText(this.text, 0, 0);
@@ -438,24 +479,19 @@ class TextParticle {
 
 class Sparkle {
     constructor(x, y, color) {
-        this.x = x + (Math.random() * 10 - 5);
-        this.y = y + (Math.random() * 10 - 5);
-        this.color = '#FFF'; // Chispas blancas brillan más
-        this.alpha = 1;
-        this.life = 20;
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.life = 10;
+        this.size = Math.random() * 4 + 2;
     }
-
-    update() {
-        this.y += 0.5;
-        this.life--;
-        this.alpha = this.life / 20;
-    }
-
+    update() { this.life--; }
     draw(ctx) {
-        if (this.alpha <= 0) return;
-        ctx.globalAlpha = this.alpha;
-        ctx.fillStyle = this.color;
-        ctx.fillRect(this.x, this.y, 3, 3); // Chispas más grandes
-        ctx.globalAlpha = 1;
+        if (this.life <= 0) return;
+        ctx.fillStyle = '#FFF';
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1;
+        ctx.fillRect(this.x, this.y, this.size, this.size);
+        ctx.strokeRect(this.x, this.y, this.size, this.size);
     }
 }
