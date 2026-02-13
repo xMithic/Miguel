@@ -48,16 +48,10 @@
    ============================================ */
 
 .surprise-img:first-child {
-    -webkit-mask-image:
-        linear-gradient(to bottom, transparent 0%, black 1%, black 99%, transparent 100%),
-        linear-gradient(to right, transparent 0%, black 1%, black 99%, transparent 100%);
-    -webkit-mask-composite: source-in;
-    mask-image:
-        linear-gradient(to bottom, transparent 0%, black 1%, black 99%, transparent 100%),
-        linear-gradient(to right, transparent 0%, black 1%, black 99%, transparent 100%);
-    mask-composite: intersect;
-    border-radius: 8px;
-    filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.25));
+    /* Máscara simplificada para bordes suaves, más compatible con móviles */
+    -webkit-mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);
+    mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);
+    border-radius: 12px;
 }
 
 .surprise-img:last-child {
