@@ -5,27 +5,25 @@ export class SurpriseSystem {
         this.width = window.innerWidth;
         this.height = window.innerHeight;
         this.isRunning = false;
-        this.waitingForNext = false; // Control para la secuencia
+        this.waitingForNext = false;
 
-        // Colecciones de objetos
         this.rockets = [];
         this.particles = [];
-        this.comicFlashes = []; // Burbujas de explosión estilo cómic
+        this.comicFlashes = [];
         this.sparkles = [];
         this.textParticles = [];
 
-        // Configuración visual
         this.config = {
-            rocketSpawnChance: 0,    // ANULADO: Ya no salen aleatoriamente
-            particleCount: 120,      
+            rocketSpawnChance: 0,
+            particleCount: 120,
             gravity: 0.12,
             friction: 0.96,
             colors: [
-                ['#ff0040', '#ff0080', '#ff8000'], // Hot Pink
-                ['#00ffed', '#00b8ff', '#0040ff'], // Cyan Electric
-                ['#ffea00', '#ffaa00', '#ffea80'], // Gold
-                ['#ccff00', '#55ff00', '#aaffaa'], // Lime
-                ['#d600ff', '#9900ff', '#ff00cc']  // Purple Neon
+                ['#ff0040', '#ff0080', '#ff8000'],
+                ['#00ffed', '#00b8ff', '#0040ff'],
+                ['#ffea00', '#ffaa00', '#ffea80'],
+                ['#ccff00', '#55ff00', '#aaffaa'],
+                ['#d600ff', '#9900ff', '#ff00cc']
             ],
             words: ["POW!", "BAM!", "BOOM!", "LOVE", "ZAP!", "POP!", "WOW!"]
         };
@@ -47,12 +45,9 @@ export class SurpriseSystem {
         this.isRunning = true;
         this.waitingForNext = false;
         document.body.classList.add('show-surprise');
-
         this.setRandomLoveMessage();
 
-        // Lanzamiento inicial (Solo 1 para empezar la cadena)
         this.launchRocket();
-        
         this.loop();
 
         setTimeout(() => {
@@ -60,6 +55,7 @@ export class SurpriseSystem {
                 this.stop();
                 document.removeEventListener('click', closeHandler);
             };
+
             setTimeout(() => {
                 document.addEventListener('click', closeHandler, { once: true });
             }, 1000);
@@ -77,7 +73,6 @@ export class SurpriseSystem {
             { text: "Gracias por<br>existir y<br>hacerme feliz", weight: 0.225 },
             { text: "¡Eres mi persona<br>favorita en todo<br>el universo! 🪐", weight: 0.1 }
         ];
-
         let random = Math.random();
         let selectedMsg = messages[0].text;
         let cumulativeWeight = 0;
@@ -89,6 +84,7 @@ export class SurpriseSystem {
                 break;
             }
         }
+
         msgContainer.innerHTML = `<span class="comic-msg-inner">${selectedMsg}</span>`;
     }
 
@@ -106,40 +102,33 @@ export class SurpriseSystem {
     loop() {
         if (!this.isRunning) return;
         requestAnimationFrame(() => this.loop());
-
         if (!this.ctx) return;
 
-        // 1. Fondo
         this.ctx.globalCompositeOperation = 'destination-out';
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'; 
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
         this.ctx.fillRect(0, 0, this.width, this.height);
+        this.ctx.globalCompositeOperation = 'source-over';
 
-        this.ctx.globalCompositeOperation = 'source-over'; 
-
-        // 2. Lógica de Cadena (Fallback de seguridad)
         if (this.rockets.length === 0 && !this.waitingForNext && this.isRunning) {
             this.waitingForNext = true;
             setTimeout(() => {
-                 if (this.isRunning) {
-                     this.launchRocket();
-                     this.waitingForNext = false;
-                 }
+                if (this.isRunning) {
+                    this.launchRocket();
+                    this.waitingForNext = false;
+                }
             }, 500);
         }
 
-        // 3. Actualizar Cohetes
         for (let i = this.rockets.length - 1; i >= 0; i--) {
             let r = this.rockets[i];
             r.update();
-            r.draw(this.ctx); 
-
+            r.draw(this.ctx);
             if (r.exploded) {
                 this.createExplosion(r);
                 this.rockets.splice(i, 1);
             }
         }
 
-        // 4. Actualizar Flashes Cómicos
         for (let i = this.comicFlashes.length - 1; i >= 0; i--) {
             let f = this.comicFlashes[i];
             f.update();
@@ -149,7 +138,6 @@ export class SurpriseSystem {
             }
         }
 
-        // 5. Actualizar Partículas
         for (let i = this.particles.length - 1; i >= 0; i--) {
             let p = this.particles[i];
             p.update();
@@ -159,7 +147,6 @@ export class SurpriseSystem {
             }
         }
 
-        // 6. Textos
         for (let i = this.textParticles.length - 1; i >= 0; i--) {
             let tp = this.textParticles[i];
             tp.update();
@@ -169,7 +156,6 @@ export class SurpriseSystem {
             }
         }
 
-        // 7. Chispas
         for (let i = this.sparkles.length - 1; i >= 0; i--) {
             let s = this.sparkles[i];
             s.update();
@@ -184,12 +170,24 @@ export class SurpriseSystem {
         const x = Math.random() * (this.width * 0.8) + (this.width * 0.1);
         const targetY = Math.random() * (this.height * 0.5) + (this.height * 0.1);
         const palette = this.config.colors[Math.floor(Math.random() * this.config.colors.length)];
-        const type = Math.floor(Math.random() * 5);
+
+        const r = Math.random();
+        let type;
+
+        if (r < 0.07) {
+            type = 1; // Corazón
+        } else if (r < 0.14) {
+            type = 2; // Anillo
+        } else if (r < 0.57) {
+            type = 3; // Willow
+        } else {
+            type = 0; // Normal
+        }
+
         this.rockets.push(new Rocket(x, this.height, targetY, palette, type));
     }
 
     createExplosion(rocket) {
-        // --- SECUENCIA AUTOMÁTICA ---
         if (!this.waitingForNext && this.isRunning) {
             this.waitingForNext = true;
             setTimeout(() => {
@@ -197,13 +195,11 @@ export class SurpriseSystem {
                     this.launchRocket();
                     this.waitingForNext = false;
                 }
-            }, 600); 
+            }, 600);
         }
 
-        // 1. Flash de cómic
         this.comicFlashes.push(new ComicFlash(rocket.x, rocket.y, rocket.color));
 
-        // 2. Flash pantalla
         if (Math.random() > 0.7) {
             this.ctx.save();
             this.ctx.globalCompositeOperation = 'overlay';
@@ -212,47 +208,38 @@ export class SurpriseSystem {
             this.ctx.restore();
         }
 
-        // 3. Onomatopeya
-        if (Math.random() > 0.3) {
-            let word;
-            if (Math.random() < 0.1) word = "Hermosa";
-            else word = this.config.words[Math.floor(Math.random() * this.config.words.length)];
-            this.textParticles.push(new TextParticle(rocket.x, rocket.y, word, rocket.color));
-        }
+        let word;
+        if (Math.random() < 0.1) word = "Hermosa";
+        else word = this.config.words[Math.floor(Math.random() * this.config.words.length)];
+        this.textParticles.push(new TextParticle(rocket.x, rocket.y, word, rocket.color));
 
-        // 4. Partículas
         const count = this.config.particleCount;
         for (let i = 0; i < count; i++) {
             const p = new Particle(rocket.x, rocket.y, rocket.palette);
 
-            // ==========================================
-            // LÓGICA DE MOVIMIENTO CORREGIDA
-            // ==========================================
-            if (rocket.type === 1) { // ❤️ CORAZÓN MEJORADO ❤️
+            if (rocket.type === 1) {
                 const angle = (Math.PI * 2 * i) / count;
-                // Fórmula paramétrica del corazón
                 const xDir = 16 * Math.pow(Math.sin(angle), 3);
                 const yDir = -(13 * Math.cos(angle) - 5 * Math.cos(2 * angle) - 2 * Math.cos(3 * angle) - Math.cos(4 * angle));
-                
-                // CAMBIO: Multiplicador más alto (x 0.18) para que se abra más
-                // CAMBIO: Menos aleatoriedad (* 0.2 + 0.8) para que la línea sea nítida
-                const force = 0.25; 
-                const randomVar = Math.random() * 0.2 + 0.8; // Variación mínima (trazo limpio)
+
+                const force = 0.25;
+                const randomVar = Math.random() * 0.2 + 0.8;
 
                 p.vx = xDir * force * randomVar;
                 p.vy = yDir * force * randomVar;
-                
-                p.friction = 0.93; // Frenado suave
-                p.gravity = 0.08;  // Poca gravedad para mantener la forma
-                p.life = 180;      // Dura más tiempo
-            } else if (rocket.type === 2) { // Saturno
+                p.friction = 0.93;
+                p.gravity = 0.08;
+                p.life = 180;
+
+            } else if (rocket.type === 2) {
                 const angle = Math.random() * Math.PI * 2;
                 const speed = Math.random() * 1 + 8;
                 p.vx = Math.cos(angle) * speed;
                 p.vy = Math.sin(angle) * speed;
                 p.vy *= 0.4;
                 p.friction = 0.92;
-            } else if (rocket.type === 3) { // Sauce
+
+            } else if (rocket.type === 3) {
                 const angle = Math.random() * Math.PI * 2;
                 const speed = Math.random() * 10 + 2;
                 p.vx = Math.cos(angle) * speed;
@@ -261,20 +248,18 @@ export class SurpriseSystem {
                 p.gravity = 0.15;
                 p.willow = true;
                 p.life = 150;
-            } else { // Clásica
+
+            } else {
                 const angle = Math.random() * Math.PI * 2;
                 const speed = Math.random() * 15;
                 p.vx = Math.cos(angle) * speed;
                 p.vy = Math.sin(angle) * speed;
             }
+
             this.particles.push(p);
         }
     }
 }
-
-/* =========================================
-   CLASES VISUALES (Estilo Cómic)
-   ========================================= */
 
 class ComicFlash {
     constructor(x, y, color) {
@@ -283,8 +268,8 @@ class ComicFlash {
         this.color = color;
         this.radius = 0;
         this.targetRadius = 100 + Math.random() * 50;
-        this.life = 15; 
-        this.points = 12; 
+        this.life = 15;
+        this.points = 12;
     }
 
     update() {
@@ -296,8 +281,7 @@ class ComicFlash {
         if (this.life <= 0) return;
         ctx.save();
         ctx.translate(this.x, this.y);
-        ctx.rotate(Math.random() * 0.2); 
-
+        ctx.rotate(Math.random() * 0.2);
         ctx.beginPath();
         for (let i = 0; i < this.points * 2; i++) {
             const angle = (Math.PI * 2 * i) / (this.points * 2);
@@ -305,8 +289,7 @@ class ComicFlash {
             ctx.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
         }
         ctx.closePath();
-
-        ctx.fillStyle = '#FFF'; 
+        ctx.fillStyle = '#FFF';
         ctx.fill();
         ctx.lineWidth = 5;
         ctx.strokeStyle = '#000';
@@ -333,8 +316,7 @@ class Rocket {
 
     update() {
         this.history.push({ x: this.x, y: this.y });
-        if (this.history.length > 5) this.history.shift(); 
-
+        if (this.history.length > 5) this.history.shift();
         this.x += this.vx;
         this.y += this.vy;
         this.vy += 0.2;
@@ -355,7 +337,7 @@ class Rocket {
 
         ctx.save();
         ctx.strokeStyle = '#000';
-        ctx.lineWidth = 7; 
+        ctx.lineWidth = 7;
         ctx.lineCap = 'round';
         ctx.stroke();
         ctx.restore();
@@ -373,14 +355,13 @@ class Particle {
         this.y = y;
         this.palette = palette;
         this.color = palette[Math.floor(Math.random() * palette.length)];
-
         this.vx = 0;
         this.vy = 0;
         this.alpha = 1;
         this.friction = 0.92;
         this.gravity = 0.15;
         this.life = Math.random() * 60 + 40;
-        this.size = Math.random() * 5 + 3; 
+        this.size = Math.random() * 5 + 3;
         this.willow = false;
         this.shape = Math.random() > 0.5 ? 'square' : 'circle';
     }
@@ -392,17 +373,14 @@ class Particle {
         this.x += this.vx;
         this.y += this.vy;
         this.life--;
-
         if (this.life < 15) this.alpha -= 0.1;
         if (this.alpha < 0) this.alpha = 0;
     }
 
     draw(ctx) {
         if (this.alpha <= 0) return;
-
         ctx.save();
         ctx.globalAlpha = this.alpha;
-        
         ctx.fillStyle = this.color;
         ctx.strokeStyle = '#000';
         ctx.lineWidth = 2;
@@ -433,26 +411,32 @@ class TextParticle {
         this.text = text;
         this.color = color;
         this.size = 0;
-        this.targetSize = 50 + Math.random() * 30; 
+        this.targetSize = 50 + Math.random() * 30;
         this.life = 70;
         this.angle = (Math.random() * 0.4) - 0.2;
         this.vx = (Math.random() - 0.5) * 2;
-        this.vy = -3; 
+        this.vy = -3;
+
+        // Para el gradiente animado
+        this.gradientOffset = Math.random() * Math.PI * 2;
+        this.isMulticolor = Math.random() < 0.1; // 10% de probabilidad de ser multicolor
     }
 
     update() {
         if (this.size < this.targetSize) {
-            this.size += (this.targetSize - this.size) * 0.3; 
+            this.size += (this.targetSize - this.size) * 0.3;
         }
         this.x += this.vx;
         this.y += this.vy;
-        this.vy += 0.1; 
+        this.vy += 0.1;
         this.life--;
+
+        // Animar el gradiente
+        this.gradientOffset += 0.08; // Velocidad de animación
     }
 
     draw(ctx) {
         if (this.life <= 0) return;
-
         ctx.save();
         ctx.translate(this.x, this.y);
         ctx.rotate(this.angle);
@@ -465,18 +449,37 @@ class TextParticle {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
+        // Sombra del texto (primer trazo negro desplazado)
         ctx.lineWidth = 6;
         ctx.strokeStyle = '#000';
         ctx.lineJoin = 'round';
-        ctx.strokeText(this.text, 5, 5); 
-        
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = 6;
+        ctx.strokeText(this.text, 5, 5);
+
+        // Borde negro principal
         ctx.strokeText(this.text, 0, 0);
 
-        ctx.fillStyle = this.color;
+        // Relleno: Gradiente multicolor O Color de la explosión
+        if (this.isMulticolor) {
+            const metrics = ctx.measureText(this.text);
+            const textWidth = metrics.width;
+            const gradient = ctx.createLinearGradient(-textWidth / 2, 0, textWidth / 2, 0);
+            const colors = ['#ff0080', '#00ffed', '#ffea00', '#d600ff', '#ff0080'];
+            const numColors = colors.length - 1;
+            for (let i = 0; i < colors.length; i++) {
+                let position = (i / numColors + Math.sin(this.gradientOffset + i) * 0.5 + 0.5) % 1;
+                if (i > 0) {
+                    const prevStop = (i - 1) / numColors;
+                    position = prevStop + (1 / numColors) * ((Math.sin(this.gradientOffset + i) * 0.3 + 0.5));
+                }
+                gradient.addColorStop(Math.min(Math.max(position, i / numColors), (i + 1) / numColors), colors[i]);
+            }
+            ctx.fillStyle = gradient;
+        } else {
+            ctx.fillStyle = this.color;
+        }
         ctx.fillText(this.text, 0, 0);
 
+        // Borde blanco fino para brillo
         ctx.lineWidth = 1;
         ctx.strokeStyle = '#FFF';
         ctx.strokeText(this.text, 0, 0);
@@ -493,7 +496,9 @@ class Sparkle {
         this.life = 10;
         this.size = Math.random() * 4 + 2;
     }
+
     update() { this.life--; }
+
     draw(ctx) {
         if (this.life <= 0) return;
         ctx.fillStyle = '#FFF';
