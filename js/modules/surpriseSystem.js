@@ -71,11 +71,11 @@ export class SurpriseSystem {
         if (!msgContainer) return;
 
         const messages = [
-            { text: "Tú eres<br>lo mejor que<br>me ha pasado", weight: 0.225 },
-            { text: "Mi mundo<br>es más bonito<br>contigo", weight: 0.225 },
+            { text: "Tú eres<br>mi premio<br>en esta vida", weight: 0.225 },
+            { text: "Mi mundo<br>tiene color<br>por ti", weight: 0.225 },
             { text: "Te elijo a ti<br>una y mil<br>veces más", weight: 0.225 },
             { text: "Gracias por<br>existir y<br>hacerme feliz", weight: 0.225 },
-            { text: "¡Eres mi persona<br>favorita en todo<br>el universo! 🪐", weight: 0.1 }
+            { text: "¡Sos la mas linda<br>en todo<br>el universo observable! 🪐", weight: 0.1 }
         ];
 
         let random = Math.random();
