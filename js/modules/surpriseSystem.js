@@ -40,6 +40,11 @@ export class SurpriseSystem {
         if (this.canvas) this.resizeHandler();
     }
 
+    getScale() {
+        // Factor de escala: 1.0 en Desktop, ~0.6 en móviles
+        return this.width < 768 ? 0.6 : 1.0;
+    }
+
     trigger() {
         if (!this.canvas) return;
         this.isRunning = true;
@@ -168,7 +173,14 @@ export class SurpriseSystem {
 
     launchRocket() {
         const x = Math.random() * (this.width * 0.8) + (this.width * 0.1);
-        const targetY = Math.random() * (this.height * 0.5) + (this.height * 0.1);
+        let targetY;
+        if (Math.random() < 0.5) {
+            // Zona superior (5% al 30%)
+            targetY = Math.random() * (this.height * 0.25) + (this.height * 0.05);
+        } else {
+            // Zona inferior (70% al 90%)
+            targetY = Math.random() * (this.height * 0.20) + (this.height * 0.70);
+        }
         const palette = this.config.colors[Math.floor(Math.random() * this.config.colors.length)];
 
         const r = Math.random();
@@ -184,7 +196,8 @@ export class SurpriseSystem {
             type = 0; // Normal
         }
 
-        this.rockets.push(new Rocket(x, this.height, targetY, palette, type));
+        const isRainbow = Math.random() < 0.1;
+        this.rockets.push(new Rocket(x, this.height, targetY, palette, type, isRainbow));
     }
 
     createExplosion(rocket) {
@@ -198,7 +211,8 @@ export class SurpriseSystem {
             }, 600);
         }
 
-        this.comicFlashes.push(new ComicFlash(rocket.x, rocket.y, rocket.color));
+        const scale = this.getScale();
+        this.comicFlashes.push(new ComicFlash(rocket.x, rocket.y, rocket.color, scale));
 
         if (Math.random() > 0.7) {
             this.ctx.save();
@@ -211,11 +225,11 @@ export class SurpriseSystem {
         let word;
         if (Math.random() < 0.1) word = "Hermosa";
         else word = this.config.words[Math.floor(Math.random() * this.config.words.length)];
-        this.textParticles.push(new TextParticle(rocket.x, rocket.y, word, rocket.color));
+        this.textParticles.push(new TextParticle(rocket.x, rocket.y, word, rocket.color, rocket.isRainbow, scale));
 
         const count = this.config.particleCount;
         for (let i = 0; i < count; i++) {
-            const p = new Particle(rocket.x, rocket.y, rocket.palette);
+            const p = new Particle(rocket.x, rocket.y, rocket.palette, rocket.isRainbow, scale);
 
             if (rocket.type === 1) {
                 const angle = (Math.PI * 2 * i) / count;
@@ -256,18 +270,22 @@ export class SurpriseSystem {
                 p.vy = Math.sin(angle) * speed;
             }
 
+            // Aplicar escala a la velocidad de expansión
+            p.vx *= scale;
+            p.vy *= scale;
+
             this.particles.push(p);
         }
     }
 }
 
 class ComicFlash {
-    constructor(x, y, color) {
+    constructor(x, y, color, scale = 1) {
         this.x = x;
         this.y = y;
         this.color = color;
         this.radius = 0;
-        this.targetRadius = 100 + Math.random() * 50;
+        this.targetRadius = (100 + Math.random() * 50) * scale;
         this.life = 15;
         this.points = 12;
     }
@@ -299,13 +317,15 @@ class ComicFlash {
 }
 
 class Rocket {
-    constructor(x, y, targetY, palette, type) {
+    constructor(x, y, targetY, palette, type, isRainbow = false) {
         this.x = x;
         this.y = y;
         this.targetY = targetY;
         this.palette = palette;
         this.color = palette[1];
         this.type = type;
+        this.isRainbow = isRainbow;
+        this.hue = Math.random() * 360; // Start at random hue
         this.speed = Math.random() * 4 + 14;
         this.angle = -Math.PI / 2 + (Math.random() * 0.1 - 0.05);
         this.vx = Math.cos(this.angle) * this.speed;
@@ -315,7 +335,8 @@ class Rocket {
     }
 
     update() {
-        this.history.push({ x: this.x, y: this.y });
+        if (this.isRainbow) this.hue = (this.hue + 5) % 360;
+        this.history.push({ x: this.x, y: this.y, hue: this.hue });
         if (this.history.length > 5) this.history.shift();
         this.x += this.vx;
         this.y += this.vy;
@@ -342,7 +363,11 @@ class Rocket {
         ctx.stroke();
         ctx.restore();
 
-        ctx.strokeStyle = this.color;
+        if (this.isRainbow) {
+            ctx.strokeStyle = `hsl(${this.hue}, 100%, 60%)`;
+        } else {
+            ctx.strokeStyle = this.color;
+        }
         ctx.lineWidth = 3;
         ctx.lineCap = 'round';
         ctx.stroke();
@@ -350,10 +375,12 @@ class Rocket {
 }
 
 class Particle {
-    constructor(x, y, palette) {
+    constructor(x, y, palette, isRainbow = false, scale = 1) {
         this.x = x;
         this.y = y;
         this.palette = palette;
+        this.isRainbow = isRainbow;
+        this.hue = Math.random() * 360;
         this.color = palette[Math.floor(Math.random() * palette.length)];
         this.vx = 0;
         this.vy = 0;
@@ -361,12 +388,13 @@ class Particle {
         this.friction = 0.92;
         this.gravity = 0.15;
         this.life = Math.random() * 60 + 40;
-        this.size = Math.random() * 5 + 3;
+        this.size = (Math.random() * 5 + 3) * scale;
         this.willow = false;
         this.shape = Math.random() > 0.5 ? 'square' : 'circle';
     }
 
     update() {
+        if (this.isRainbow) this.hue = (this.hue + 2) % 360;
         this.vx *= this.friction;
         this.vy *= this.friction;
         this.vy += this.gravity;
@@ -381,7 +409,11 @@ class Particle {
         if (this.alpha <= 0) return;
         ctx.save();
         ctx.globalAlpha = this.alpha;
-        ctx.fillStyle = this.color;
+        if (this.isRainbow) {
+            ctx.fillStyle = `hsl(${this.hue}, 100%, 65%)`;
+        } else {
+            ctx.fillStyle = this.color;
+        }
         ctx.strokeStyle = '#000';
         ctx.lineWidth = 2;
 
@@ -405,21 +437,23 @@ class Particle {
 }
 
 class TextParticle {
-    constructor(x, y, text, color) {
+    constructor(x, y, text, color, isRainbow = false, scale = 1) {
         this.x = x;
         this.y = y;
         this.text = text;
         this.color = color;
+        this.isRainbow = isRainbow;
         this.size = 0;
-        this.targetSize = 50 + Math.random() * 30;
+        this.targetSize = (50 + Math.random() * 30) * scale;
         this.life = 70;
         this.angle = (Math.random() * 0.4) - 0.2;
-        this.vx = (Math.random() - 0.5) * 2;
-        this.vy = -3;
+        this.vx = (Math.random() - 0.5) * 2 * scale;
+        this.vy = -3 * scale;
 
         // Para el gradiente animado
         this.gradientOffset = Math.random() * Math.PI * 2;
-        this.isMulticolor = Math.random() < 0.1; // 10% de probabilidad de ser multicolor
+        // Si isRainbow es true, isMulticolor será siempre true
+        this.isMulticolor = isRainbow || (Math.random() < 0.1);
     }
 
     update() {
