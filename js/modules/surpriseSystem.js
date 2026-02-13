@@ -1,3 +1,23 @@
+function hexToHsl(hex) {
+    let r = parseInt(hex.slice(1, 3), 16) / 255;
+    let g = parseInt(hex.slice(3, 5), 16) / 255;
+    let b = parseInt(hex.slice(5, 7), 16) / 255;
+    let max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h, s, l = (max + min) / 2;
+    if (max === min) h = s = 0;
+    else {
+        let d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+            case g: h = (b - r) / d + 2; break;
+            case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+    }
+    return [h * 360, s * 100, l * 100];
+}
+
 export class SurpriseSystem {
     constructor() {
         this.canvas = document.getElementById('fireworks-canvas');
@@ -45,12 +65,17 @@ export class SurpriseSystem {
         return this.width < 768 ? 0.6 : 1.0;
     }
 
+    hexToHsl(hex) {
+        return hexToHsl(hex);
+    }
+
     trigger() {
         if (!this.canvas) return;
         this.isRunning = true;
         this.waitingForNext = false;
         document.body.classList.add('show-surprise');
         this.setRandomLoveMessage();
+        this.randomizeHearts();
 
         this.launchRocket();
         this.loop();
@@ -91,6 +116,34 @@ export class SurpriseSystem {
         }
 
         msgContainer.innerHTML = `<span class="comic-msg-inner">${selectedMsg}</span>`;
+    }
+
+    randomizeHearts() {
+        const hearts = document.querySelectorAll('.comic-floating-heart');
+        hearts.forEach(heart => {
+            // Escolher una zona (evitando el centro: 30% a 70%)
+            // side: 0=Top, 1=Bottom, 2=Left, 3=Right
+            const side = Math.floor(Math.random() * 4);
+            let top, left;
+
+            if (side === 0) { // Banda Superior (5-20% y 5-95%)
+                top = Math.random() * 15 + 5;
+                left = Math.random() * 90 + 5;
+            } else if (side === 1) { // Banda Inferior (80-95% y 5-95%)
+                top = Math.random() * 15 + 80;
+                left = Math.random() * 90 + 5;
+            } else if (side === 2) { // Banda Izquierda (5-95% y 5-20%)
+                top = Math.random() * 90 + 5;
+                left = Math.random() * 15 + 5;
+            } else { // Banda Derecha (5-95% y 80-95%)
+                top = Math.random() * 90 + 5;
+                left = Math.random() * 15 + 80;
+            }
+
+            heart.style.top = `${top}%`;
+            heart.style.left = `${left}%`;
+            heart.style.setProperty('--heart-rotate', `${(Math.random() * 60 - 30)}deg`);
+        });
     }
 
     stop() {
@@ -229,7 +282,7 @@ export class SurpriseSystem {
 
         const count = this.config.particleCount;
         for (let i = 0; i < count; i++) {
-            const p = new Particle(rocket.x, rocket.y, rocket.palette, rocket.isRainbow, scale);
+            const p = new Particle(rocket.x, rocket.y, rocket.color, rocket.isRainbow, scale);
 
             if (rocket.type === 1) {
                 const angle = (Math.PI * 2 * i) / count;
@@ -335,7 +388,7 @@ class Rocket {
     }
 
     update() {
-        if (this.isRainbow) this.hue = (this.hue + 5) % 360;
+        if (this.isRainbow) this.hue = (this.hue + 8) % 360;
         this.history.push({ x: this.x, y: this.y, hue: this.hue });
         if (this.history.length > 5) this.history.shift();
         this.x += this.vx;
@@ -375,13 +428,22 @@ class Rocket {
 }
 
 class Particle {
-    constructor(x, y, palette, isRainbow = false, scale = 1) {
+    constructor(x, y, color, isRainbow = false, scale = 1) {
         this.x = x;
         this.y = y;
-        this.palette = palette;
         this.isRainbow = isRainbow;
         this.hue = Math.random() * 360;
-        this.color = palette[Math.floor(Math.random() * palette.length)];
+
+        if (!this.isRainbow) {
+            // Generar variantes claras y oscuras del mismo color
+            const [h, s, l] = hexToHsl(color);
+            const lVar = l + (Math.random() * 36 - 18); // +/- 18% de luminosidad
+            const sVar = s + (Math.random() * 20 - 10); // +/- 10% de saturación
+            this.color = `hsl(${h}, ${Math.max(0, Math.min(100, sVar))}%, ${Math.max(0, Math.min(100, lVar))}%)`;
+        } else {
+            this.color = color;
+        }
+
         this.vx = 0;
         this.vy = 0;
         this.alpha = 1;
@@ -394,7 +456,10 @@ class Particle {
     }
 
     update() {
-        if (this.isRainbow) this.hue = (this.hue + 2) % 360;
+        if (this.isRainbow) {
+            this.hue = (this.hue + 12) % 360; // Cambio rápido arcoíris
+            this.color = `hsl(${this.hue}, 100%, 65%)`;
+        }
         this.vx *= this.friction;
         this.vy *= this.friction;
         this.vy += this.gravity;
@@ -452,8 +517,8 @@ class TextParticle {
 
         // Para el gradiente animado
         this.gradientOffset = Math.random() * Math.PI * 2;
-        // Si isRainbow es true, isMulticolor será siempre true
-        this.isMulticolor = isRainbow || (Math.random() < 0.1);
+        // El texto solo es arcoíris si el fuego artificial lo es
+        this.isMulticolor = isRainbow;
     }
 
     update() {
