@@ -65,36 +65,47 @@
    ============================================ */
 
 .surprise-img:first-child {
-    /* Estética de Panel Artístico Premium */
-    border: 7px solid #000;
-    background-color: transparent;
+    /* Acabado de Degradado Perimetral Fino y Minimalista */
+    border: none;
+    background: none;
     padding: 0;
-    border-radius: 4px;
+    border-radius: 0;
 
-    /* Sombra Pop-Art Multinivel con Resplandor Rosa */
-    box-shadow:
-        10px 10px 0px #000,
-        15px 15px 35px rgba(255, 105, 180, 0.4);
-    /* Brillo rosa profundo */
+    /* Máscara de Desvanecimiento Uniforme en los 4 bordes (10px de pluma) */
+    -webkit-mask-image:
+        linear-gradient(to bottom, transparent, black 10px, black calc(100% - 10px), transparent),
+        linear-gradient(to right, transparent, black 10px, black calc(100% - 10px), transparent);
+    mask-image:
+        linear-gradient(to bottom, transparent, black 10px, black calc(100% - 10px), transparent),
+        linear-gradient(to right, transparent, black 10px, black calc(100% - 10px), transparent);
 
-    /* Brillo Glossy mejorado */
-    background: linear-gradient(135deg, #fff 0%, #fff 45%, #f9f9f9 46%, #f9f9f9 100%);
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
 
+    box-shadow: none;
     filter: none;
 }
 
-/* Sombra simétrica para imagen 2 */
+/* Estética Suave para Imagen 2 */
 .surprise-img:last-child {
-    border: 7px solid #000;
-    background-color: transparent;
+    border: none;
+    background: none;
     padding: 0;
-    border-radius: 4px;
-    box-shadow:
-        -10px 10px 0px #000,
-        /* Sombra hacia la izquierda */
-        -15px 15px 35px rgba(255, 105, 180, 0.4);
+    border-radius: 0;
 
-    background: linear-gradient(135deg, #fff 0%, #fff 45%, #f9f9f9 46%, #f9f9f9 100%);
+    /* Misma Máscara Perimetral Fina */
+    -webkit-mask-image:
+        linear-gradient(to bottom, transparent, black 10px, black calc(100% - 10px), transparent),
+        linear-gradient(to right, transparent, black 10px, black calc(100% - 10px), transparent);
+    mask-image:
+        linear-gradient(to bottom, transparent, black 10px, black calc(100% - 10px), transparent),
+        linear-gradient(to right, transparent, black 10px, black calc(100% - 10px), transparent);
+
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
+
+    box-shadow: none;
+    filter: none;
 }
 
 /* ============================================
