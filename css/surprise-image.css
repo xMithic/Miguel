@@ -548,3 +548,19 @@ body.show-surprise .heart-3 {
         font-size: 2.5rem;
     }
 }
+
+@media (max-width: 480px) {
+
+    /* IMAGEN 1 (Fondo): Aumentamos para que se sienta como un poster de fondo */
+    .surprise-img:first-child {
+        max-width: 95vw;
+        max-height: 90vh;
+        /* Al usar max-width/height con object-fit: contain, no se deforma */
+    }
+
+    /* IMAGEN 2 (Frente): Reducimos un poco para dar jerarquía a la del fondo */
+    .surprise-img:last-child {
+        max-width: 75vw;
+        max-height: 75vh;
+    }
+}
